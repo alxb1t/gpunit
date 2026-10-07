@@ -1,0 +1,15 @@
+{
+  "pods": [
+    {"id": "pod-abc123", "name": "gpunit-isekai", "status": "RUNNING",
+     "image": "ghcr.io/alxb1t/isekai@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+    {"id": "pod-old", "name": "gpunit-isekai", "status": "EXITED",
+     "image": "ghcr.io/alxb1t/isekai@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+    {"id": "pod-gone", "name": "gpunit-isekai", "status": "TERMINATED",
+     "image": "ghcr.io/alxb1t/isekai@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+    {"id": "pod-lookalike", "name": "gpunit-isekai", "status": "RUNNING",
+     "image": "ghcr.io/alxb1t/isekai-tools@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+    {"id": "pod-other", "name": "gpunit-other", "status": "RUNNING",
+     "image": "ghcr.io/alxb1t/other@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+  ],
+  "pagination": {"nextCursor": null, "hasNextPage": false}
+}

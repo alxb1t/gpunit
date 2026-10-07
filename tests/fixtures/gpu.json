@@ -1,0 +1,11 @@
+{
+  "id": "NVIDIA GeForce RTX 4090",
+  "name": "RTX 4090",
+  "pool": "ADA_24",
+  "manufacturer": "NVIDIA",
+  "memory": 24,
+  "secure": true,
+  "community": true,
+  "price": {"secure": 0.69, "community": 0.34, "serverless": 0.00031},
+  "maxCount": {"secure": 8, "community": 8}
+}

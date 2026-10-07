@@ -6,7 +6,7 @@ The package, then the provider, the session, `run`, the boot, the handover, and 
 ## Progress
 
 - [x] 1 — The skeleton
-- [ ] 2 — The provider
+- [x] 2 — The provider
 - [ ] 3 — The session
 - [ ] 4 — Run and ssh
 - [ ] 5 — The boot
@@ -30,15 +30,15 @@ The package, then the provider, the session, `run`, the boot, the handover, and 
 
 ## 2 — The provider
 
-- [ ] 2.1 Write `gpunit/provider.py` per [D2](design.md#d2): the protocol, `GpuInfo`, `VolumeInfo`, `PodInfo`, and the exceptions `Lost`, `Refused`, `Unknown`, `NoImage`.
+- [x] 2.1 Write `gpunit/provider.py` per [D2](design.md#d2): the protocol, `GpuInfo`, `VolumeInfo`, `PodInfo`, and the exceptions `Lost`, `Refused`, `Unknown`, `NoImage`.
   Verify: `grep -c '^class ' gpunit/provider.py` prints `8`.
-- [ ] 2.2 Write `tests/fixtures/` — `gpu.json`, `volume.json`, `pod_created.json`, `pod_running.json`, `pod_pending.json`, `pods_page.json`, `log.txt`, `problem.json` — in RunPod's v2 shape as [Context](design.md#context) lists it.
+- [x] 2.2 Write `tests/fixtures/` — `gpu.json`, `volume.json`, `pod_created.json`, `pod_running.json`, `pod_pending.json`, `pods_page.json`, `log.txt`, `problem.json` — in RunPod's v2 shape as [Context](design.md#context) lists it.
   Verify: `ls tests/fixtures | wc -l` prints `8`.
-- [ ] 2.3 Write `gpunit/runpod.py` per [D3](design.md#d3) with `urllib`'s opener injectable, and `tests/test_runpod.py` on a fake opener: each verb against its fixture; a 400 create raises `Refused`; a 503, a transport failure and a 201 without an id raise `Lost`; a 404 gpu raises `Unknown`; a listed pod with no image raises `NoImage`; the log's last fingerprint wins; a cursor answered twice refuses; `RUNPOD_API_KEY` unset refuses at construction (`spec:secrets:no-key-refused`).
+- [x] 2.3 Write `gpunit/runpod.py` per [D3](design.md#d3) with `urllib`'s opener injectable, and `tests/test_runpod.py` on a fake opener: each verb against its fixture; a 400 create raises `Refused`; a 503, a transport failure and a 201 without an id raise `Lost`; a 404 gpu raises `Unknown`; a listed pod with no image raises `NoImage`; the log's last fingerprint wins; a cursor answered twice refuses; `RUNPOD_API_KEY` unset refuses at construction (`spec:secrets:no-key-refused`).
   Verify: `grep -c 'def test_' tests/test_runpod.py` prints a number of at least `12`, and `grep -c 'Authorization' gpunit/runpod.py` prints `1`.
-- [ ] 2.4 Write `tests/fakes.py`: `FakeProvider` implementing the protocol from scripted answers, recording every call with its arguments.
+- [x] 2.4 Write `tests/fakes.py`: `FakeProvider` implementing the protocol from scripted answers, recording every call with its arguments.
   Verify: `grep -c 'class FakeProvider' tests/fakes.py` prints `1`.
-- [ ] 2.5 Test `spec:secrets:dotenv-ignored`: a `.env` beside the spec with the key set and the variable unset refuses.
+- [x] 2.5 Test `spec:secrets:dotenv-ignored`: a `.env` beside the spec with the key set and the variable unset refuses.
   Verify: `grep -l 'spec:secrets:dotenv-ignored' tests/*.py | wc -l` prints `1`.
 
 ## 3 — The session
