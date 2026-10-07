@@ -4,3 +4,6 @@
 # The session files: a keypair and a pod record, never history.
 .gpunit/
 .venv/
+
+# Python bytecode, rewritten on every import.
+__pycache__/
