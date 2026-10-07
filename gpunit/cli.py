@@ -7,7 +7,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import NoReturn
 
-from gpunit import log, session
+from gpunit import log, run, session
 from gpunit.provider import Lost, Provider
 from gpunit.runpod import RunPod
 from gpunit.spec import Spec, load_spec
@@ -83,10 +83,17 @@ def _down(
     return session.down(spec, provider(), State(Path.cwd()))
 
 
-def _not_built(
+def _ssh(
     args: argparse.Namespace, spec: Spec, command: list[str], provider: Lazy
 ) -> int:
-    log.refuse(f"gpunit {args.verb} is not built yet")
+    session.ssh(State(Path.cwd()))
+    return FAILED  # reached only when the exec failed
+
+
+def _run_verb(
+    args: argparse.Namespace, spec: Spec, command: list[str], provider: Lazy
+) -> int:
+    return run.run(spec, provider(), State(Path.cwd()), command)
 
 
 Verb = Callable[[argparse.Namespace, Spec, list[str], Lazy], int]
@@ -94,8 +101,8 @@ VERBS: dict[str, Verb] = {
     "up": _up,
     "status": _status,
     "down": _down,
-    "ssh": _not_built,
-    "run": _not_built,
+    "ssh": _ssh,
+    "run": _run_verb,
 }
 
 

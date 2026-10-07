@@ -16,3 +16,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   refused, a 5xx or a lost answer `Lost`, a listing that never reads a look-alike or a bare pod as ours.
 - `gpunit up`, `status` and `down`: one create per card, a lost create exits `3` and is swept later, the wait
   and the host-key check tear down on failure, and `down` never reads a 404 as gone.
+- `gpunit run -- <cmd>` and `gpunit ssh`: the session handed over in the environment, the tunnel reopened,
+  teardown on exit and on every signal; a busy local port refuses before anything is rented.

@@ -8,7 +8,7 @@ The package, then the provider, the session, `run`, the boot, the handover, and 
 - [x] 1 — The skeleton
 - [x] 2 — The provider
 - [x] 3 — The session
-- [ ] 4 — Run and ssh
+- [x] 4 — Run and ssh
 - [ ] 5 — The boot
 - [ ] 6 — The handover
 - [ ] 7 — ⚠️ **HUMAN · METERED** — make live
@@ -54,11 +54,11 @@ The package, then the provider, the session, `run`, the boot, the handover, and 
 
 ## 4 — Run and ssh
 
-- [ ] 4.1 Write `ssh` in `gpunit/session.py` and bind `session:ssh:uses-record` in `tests/test_ssh.py`, with `os.execvp` injectable.
+- [x] 4.1 Write `ssh` in `gpunit/session.py` and bind `session:ssh:uses-record` in `tests/test_ssh.py`, with `os.execvp` injectable.
   Verify: `grep -c 'session:ssh:uses-record' tests/test_ssh.py` prints `1`.
-- [ ] 4.2 Write `gpunit/run.py` per [D10](design.md#d10) and `tests/test_run.py` binding every `run:*` scenario but `run:ports:busy-refuses`, and `cli:exits:stdout-is-the-commands`, the tunnel a stub `ssh` on `PATH`, the signals sent to the process under test.
+- [x] 4.2 Write `gpunit/run.py` per [D10](design.md#d10) and `tests/test_run.py` binding every `run:*` scenario but `run:ports:busy-refuses`, and `cli:exits:stdout-is-the-commands`, the tunnel a stub `ssh` on `PATH`, the signals sent to the process under test.
   Verify: `grep -c '@pytest.mark.spec' tests/test_run.py` prints a number of at least `7`.
-- [ ] 4.3 Add the busy-port check before any request and the one `up` warning when `.gpunit/` is not gitignored, per [D5](design.md#d5).
+- [x] 4.3 Add the busy-port check before any request and the one `up` warning when `.gpunit/` is not gitignored, per [D5](design.md#d5).
   Verify: `grep -c 'run:ports:busy-refuses' tests/test_run.py` prints `1`.
 
 ## 5 — The boot

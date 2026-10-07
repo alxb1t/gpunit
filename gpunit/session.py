@@ -1,6 +1,7 @@
 """Open, report and close one GPU session: `up`, `status`, `down`."""
 
 import json
+import os
 import shutil
 import subprocess
 import time
@@ -38,6 +39,7 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
     """
     if shutil.which("ssh-keygen") is None:
         log.refuse("ssh-keygen is not on PATH; install OpenSSH")
+    _warn_unignored(state)
     if state.pod.exists():
         log.refuse(f"a pod is already recorded in {state.pod}; run gpunit down")
     if state.pending.exists():
@@ -65,6 +67,32 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
     _verify_host_key(spec, provider, state, record)
     log.say(f"session up: pod {record.id}, root@{record.host} -p {record.port}")
     return record
+
+
+def ssh_command(state: State, record: Record) -> list[str]:
+    """Return the `ssh` argv that opens a shell on the recorded pod."""
+    return [
+        "ssh",
+        "-i",
+        str(state.key),
+        "-o",
+        f"UserKnownHostsFile={state.known_hosts}",
+        "-o",
+        "StrictHostKeyChecking=yes",
+        f"root@{record.host}",
+        "-p",
+        str(record.port),
+    ]
+
+
+def ssh(
+    state: State, *, execvp: Callable[[str, list[str]], object] | None = None
+) -> None:
+    """Replace this process with `ssh` to the recorded pod; refuse with no record."""
+    record = state.read()
+    if record is None or record.host is None:
+        log.refuse("no session is recorded; run gpunit up")
+    (execvp or os.execvp)("ssh", ssh_command(state, record))
 
 
 def status(provider: Callable[[], Provider], state: State, *, as_json: bool) -> int:
@@ -132,6 +160,23 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
     if record is None:
         state.clear_session()
     return 0
+
+
+def _warn_unignored(state: State) -> None:
+    if shutil.which("git") is None:
+        return
+    # 1 is "not ignored"; 128 is "not a repository", where nothing can be committed.
+    # The slash matters: `.gpunit/` matches a directory not yet made only with it.
+    checked = subprocess.run(
+        ["git", "check-ignore", "-q", f"{state.dir.name}/"],
+        cwd=state.dir.parent,
+        capture_output=True,
+        check=False,
+    )
+    if checked.returncode == 1:
+        log.say(
+            f"warning: {state.dir.name}/ is not gitignored; it will hold a private key"
+        )
 
 
 def _refuse_listed(spec: Spec, provider: Provider) -> None:

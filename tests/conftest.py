@@ -35,6 +35,14 @@ echo "# $1:$port SSH-2.0-OpenSSH_9.6"
 echo "[$1]:$port ssh-ed25519 AAAAhostkey"
 """
 
+# The tunnel: logs its argv to $GPUNIT_TEST_SSH_LOG, then holds, or exits at once
+# when $GPUNIT_TEST_SSH_EXIT is set.
+SSH = """#!/bin/bash
+echo "$@" >> "${GPUNIT_TEST_SSH_LOG:-/dev/null}"
+[ -z "${GPUNIT_TEST_SSH_EXIT:-}" ] || exit 1
+exec sleep 30
+"""
+
 
 @pytest.fixture
 def clock(monkeypatch: pytest.MonkeyPatch) -> FakeClock:
@@ -47,7 +55,8 @@ def clock(monkeypatch: pytest.MonkeyPatch) -> FakeClock:
 def stubs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    for name, script in (("ssh-keygen", SSH_KEYGEN), ("ssh-keyscan", SSH_KEYSCAN)):
+    stubbed = (("ssh-keygen", SSH_KEYGEN), ("ssh-keyscan", SSH_KEYSCAN), ("ssh", SSH))
+    for name, script in stubbed:
         (bin_dir / name).write_text(script, encoding="utf-8")
         (bin_dir / name).chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
