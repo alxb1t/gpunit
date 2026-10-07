@@ -1,2 +1,6 @@
 # Run output, not source: `git add -A` would sweep it into history.
 .minions/
+
+# The session files: a keypair and a pod record, never history.
+.gpunit/
+.venv/

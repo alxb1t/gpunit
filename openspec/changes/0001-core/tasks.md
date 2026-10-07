@@ -5,7 +5,7 @@ The package, then the provider, the session, `run`, the boot, the handover, and 
 
 ## Progress
 
-- [ ] 1 — The skeleton
+- [x] 1 — The skeleton
 - [ ] 2 — The provider
 - [ ] 3 — The session
 - [ ] 4 — Run and ssh
@@ -15,17 +15,17 @@ The package, then the provider, the session, `run`, the boot, the handover, and 
 
 ## 1 — The skeleton
 
-- [ ] 1.1 **HALT CHECK** — the repo holds the bootstrap alone, and `uv`, `openspec`, `ssh-keygen` are on `PATH`.
+- [x] 1.1 **HALT CHECK** — the repo holds the bootstrap alone, and `uv`, `openspec`, `ssh-keygen` are on `PATH`.
   Verify: `ls pyproject.toml gpunit 2>&1 | grep -c 'No such file'` prints `2`, and `command -v uv openspec ssh-keygen | wc -l` prints `3`.
-- [ ] 1.2 Write `pyproject.toml` per [D1](design.md#d1): hatchling, `requires-python = ">=3.11"`, no dependencies, the `dev` group from [Dependencies](design.md#dependencies), `[project.scripts] gpunit = "gpunit.cli:main"`, ruff's `select`, the `spec` marker; then `uv sync` to write `uv.lock`.
+- [x] 1.2 Write `pyproject.toml` per [D1](design.md#d1): hatchling, `requires-python = ">=3.11"`, no dependencies, the `dev` group from [Dependencies](design.md#dependencies), `[project.scripts] gpunit = "gpunit.cli:main"`, ruff's `select`, the `spec` marker; then `uv sync` to write `uv.lock`.
   Verify: `grep -c '^dependencies = \[\]' pyproject.toml` prints `1`, and `uv run python -c 'import tomllib'` exits 0.
-- [ ] 1.3 Write `gpunit/__init__.py`, `__main__.py`, `log.py` and `cli.py` with the parser for `up`, `status`, `down`, `ssh`, `run -- <cmd>` and `--spec`, each verb a stub that exits `2` for usage faults per [D12](design.md#d12); tests in `tests/test_cli.py` for `cli:verbs:unknown-verb-exits-2` and `cli:verbs:run-without-command-exits-2`.
+- [x] 1.3 Write `gpunit/__init__.py`, `__main__.py`, `log.py` and `cli.py` with the parser for `up`, `status`, `down`, `ssh`, `run -- <cmd>` and `--spec`, each verb a stub that exits `2` for usage faults per [D12](design.md#d12); tests in `tests/test_cli.py` for `cli:verbs:unknown-verb-exits-2` and `cli:verbs:run-without-command-exits-2`.
   Verify: `uv run gpunit frobnicate; echo $?` prints `2`, and `grep -c 'cli:verbs:' tests/test_cli.py` prints `2`.
-- [ ] 1.4 Write `gpunit/spec.py` per [D4](design.md#d4) and `tests/test_spec.py` binding every `spec:file:*`, `spec:image:*` and `spec:ceiling:required` scenario.
+- [x] 1.4 Write `gpunit/spec.py` per [D4](design.md#d4) and `tests/test_spec.py` binding every `spec:file:*`, `spec:image:*` and `spec:ceiling:required` scenario.
   Verify: `grep -c 'mark.spec("spec:' tests/test_spec.py` prints `6`.
-- [ ] 1.5 Write `gpunit/state.py` per [D5](design.md#d5) and `tests/test_state.py`: the record round-trips, the key files are `0600`.
+- [x] 1.5 Write `gpunit/state.py` per [D5](design.md#d5) and `tests/test_state.py`: the record round-trips, the key files are `0600`.
   Verify: `grep -c '0o600' tests/test_state.py` prints `1`.
-- [ ] 1.6 Replace the `gate` recipe in `Makefile` with the commands of [D13](design.md#d13), in that order; add `.gpunit/` and `.venv/` to `.gitignore`.
+- [x] 1.6 Replace the `gate` recipe in `Makefile` with the commands of [D13](design.md#d13), in that order; add `.gpunit/` and `.venv/` to `.gitignore`.
   Verify: `make -n gate | grep -c 'uv run'` prints `4`, and `make gate` exits 0.
 
 ## 2 — The provider
