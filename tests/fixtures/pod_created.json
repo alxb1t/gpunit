@@ -1,0 +1,7 @@
+{
+  "id": "pod-abc123",
+  "name": "gpunit-isekai",
+  "image": "ghcr.io/alxb1t/isekai@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "status": "PENDING",
+  "ssh": null
+}

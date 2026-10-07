@@ -1,0 +1,46 @@
+[project]
+name = "gpunit"
+dynamic = ["version"]
+description = "Open, use and close a RunPod GPU session from any project."
+readme = "README.md"
+requires-python = ">=3.11"
+# Stdlib only: a consumer installs gpunit as a dev tool and inherits nothing (0001 design D1).
+dependencies = []
+
+[project.scripts]
+gpunit = "gpunit.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "gpunit/__init__.py"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.0",
+    "ty>=0.0.64",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "D", "ANN"]
+# D203/D211 and D212/D213 are exclusive pairs; selecting `D` enables both halves.
+ignore = ["D203", "D213"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["gpunit", "tests"]
+
+[tool.ruff.lint.per-file-ignores]
+# A test's name is its description.
+"tests/*" = ["D1"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+# pytest ignores an unregistered marker silently; registering it makes a typo fail.
+addopts = ["--strict-markers"]
+markers = [
+    "spec(key): binds this test to a keyed scenario in openspec/",
+]

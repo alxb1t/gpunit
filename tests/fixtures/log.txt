@@ -1,0 +1,7 @@
+: keep-alive
+data: {"line": "2026-10-07T10:00:00Z step: sshd"}
+data: {"line": "gpunit host key: SHA256:FirstKeyFromAnEarlierBoot0000000000000000000"}
+data: {"line": "echo gpunit host key: SHA256:EchoedNotPrinted000000000000000000000000000"}
+data: not json
+data: {"line": "gpunit host key: SHA256:LastKeyWins+/111111111111111111111111111111"}
+data: {"line": "2026-10-07T10:00:05Z step: the command"}
