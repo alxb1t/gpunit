@@ -22,3 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fresh host key, the fingerprint line, and the command as a child whose code is boot's.
 - `README.md` and `CLAUDE.md` describe the package: a consumer's steps, the verbs and exit codes, the spend rules,
   the layout and the invariants.
+
+### Fixed
+
+- RunPod requests send `User-Agent: gpunit/<version>`: RunPod's Cloudflare refused Python's default agent
+  with a 403 (code 1010), which `make live` found.

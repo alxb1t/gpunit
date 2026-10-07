@@ -10,7 +10,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from gpunit import log
+from gpunit import __version__, log
 from gpunit.provider import (
     GpuInfo,
     Lost,
@@ -206,6 +206,8 @@ class RunPod:
         data = None if body is None else json.dumps(body).encode()
         request = urllib.request.Request(API + path, data=data, method=method)
         request.add_header("Authorization", f"Bearer {self._key}")
+        # RunPod's Cloudflare refuses Python's default agent with a 403 (code 1010).
+        request.add_header("User-Agent", f"gpunit/{__version__}")
         if data is not None:
             request.add_header("Content-Type", "application/json")
         return request
