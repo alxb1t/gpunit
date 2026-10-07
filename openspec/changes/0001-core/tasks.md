@@ -7,7 +7,7 @@ The package, then the provider, the session, `run`, the boot, the handover, and 
 
 - [x] 1 — The skeleton
 - [x] 2 — The provider
-- [ ] 3 — The session
+- [x] 3 — The session
 - [ ] 4 — Run and ssh
 - [ ] 5 — The boot
 - [ ] 6 — The handover
@@ -43,13 +43,13 @@ The package, then the provider, the session, `run`, the boot, the handover, and 
 
 ## 3 — The session
 
-- [ ] 3.1 Write `up` in `gpunit/session.py` per [D7](design.md#d7) and [D8](design.md#d8) with `cli.main(argv, provider=…)` wiring; `tests/test_up.py` binds every `session:one:*`, `session:place:*`, `session:lost:*`, `session:wait:*`, `session:volume:*`, `session:key:fresh-per-session`, `session:create:secure-and-22`, `spec:ceiling:reaches-the-pod` and `cli:exits:refusal-exits-1`, with `ssh-keygen`, `ssh-keyscan` stubbed on `PATH` and the sleeps injectable.
+- [x] 3.1 Write `up` in `gpunit/session.py` per [D7](design.md#d7) and [D8](design.md#d8) with `cli.main(argv, provider=…)` wiring; `tests/test_up.py` binds every `session:one:*`, `session:place:*`, `session:lost:*`, `session:wait:*`, `session:volume:*`, `session:key:fresh-per-session`, `session:create:secure-and-22`, `spec:ceiling:reaches-the-pod` and `cli:exits:refusal-exits-1`, with `ssh-keygen`, `ssh-keyscan` stubbed on `PATH` and the sleeps injectable.
   Verify: `grep -c '@pytest.mark.spec' tests/test_up.py` prints a number of at least `17`.
-- [ ] 3.2 Add the host-key verification and `tests/test_hostkey.py` binding `session:hostkey:match-recorded`, `session:hostkey:mismatch-tears-down`, `session:hostkey:no-line-tears-down`.
+- [x] 3.2 Add the host-key verification and `tests/test_hostkey.py` binding `session:hostkey:match-recorded`, `session:hostkey:mismatch-tears-down`, `session:hostkey:no-line-tears-down`.
   Verify: `grep -c 'session:hostkey:' tests/test_hostkey.py` prints `3`.
-- [ ] 3.3 Write `down` per [D9](design.md#d9) and `tests/test_down.py` binding every `session:down:*` and `session:key:deleted-at-teardown`.
+- [x] 3.3 Write `down` per [D9](design.md#d9) and `tests/test_down.py` binding every `session:down:*` and `session:key:deleted-at-teardown`.
   Verify: `grep -c 'session:down:' tests/test_down.py` prints `4`.
-- [ ] 3.4 Write `status` and `tests/test_status.py` binding `cli:status:json` and `cli:status:no-record`.
+- [x] 3.4 Write `status` and `tests/test_status.py` binding `cli:status:json` and `cli:status:no-record`.
   Verify: `grep -c 'cli:status:' tests/test_status.py` prints `2`.
 
 ## 4 — Run and ssh

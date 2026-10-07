@@ -14,3 +14,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The gate grows to `uv sync`, ruff, ty and pytest before `openspec validate`, so the package is checked offline.
 - The `Provider` seam and its RunPod implementation on `urllib`: the key only in a request header, a 400
   refused, a 5xx or a lost answer `Lost`, a listing that never reads a look-alike or a bare pod as ours.
+- `gpunit up`, `status` and `down`: one create per card, a lost create exits `3` and is swept later, the wait
+  and the host-key check tear down on failure, and `down` never reads a 404 as gone.

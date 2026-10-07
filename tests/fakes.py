@@ -1,6 +1,11 @@
-"""A `Provider` that answers from a script and records every call."""
+"""A `Provider` and an HTTP opener that answer from a script and record every call."""
 
+import io
+import json
+import urllib.error
+import urllib.request
 from collections.abc import Mapping, Sequence
+from email.message import Message
 from typing import TypeVar
 
 from gpunit.provider import GpuInfo, PodInfo, VolumeInfo
@@ -10,6 +15,25 @@ T = TypeVar("T")
 
 RUNNING = PodInfo(status="RUNNING", host="203.0.113.7", port=40022)
 CARD = GpuInfo(vram_gb=24, hourly=0.69)
+# What the stub `ssh-keygen -lf` answers for the scanned key (tests/conftest.py).
+SERVED = "SHA256:served"
+KEY_LINE = f"gpunit host key: {SERVED}"
+
+
+class FakeClock:
+    """A clock whose sleeps advance it at once."""
+
+    def __init__(self) -> None:
+        """Start at 0."""
+        self.now = 0.0
+
+    def monotonic(self) -> float:
+        """Return the time slept so far."""
+        return self.now
+
+    def sleep(self, seconds: float) -> None:
+        """Advance the clock."""
+        self.now += seconds
 
 
 class FakeProvider:
@@ -25,7 +49,7 @@ class FakeProvider:
         volumes: Mapping[str, VolumeInfo | Exception] | None = None,
         creates: Sequence[str | Exception] = ("pod-1",),
         gets: Sequence[PodInfo | None] = (RUNNING,),
-        logs: Sequence[list[str]] = ([],),
+        logs: Sequence[list[str]] = ([KEY_LINE],),
         listings: Sequence[list[tuple[str, str]] | Exception] = ([],),
         deletes: Mapping[str, int] | None = None,
         stops: Mapping[str, int] | None = None,
@@ -94,3 +118,45 @@ def _raise_or(answer: T | Exception) -> T:
     if isinstance(answer, Exception):
         raise answer
     return answer
+
+
+Answer = tuple[int, bytes] | Exception
+
+
+class _Response(io.BytesIO):
+    def __init__(self, status: int, body: bytes) -> None:
+        super().__init__(body)
+        self.status = status
+
+
+class FakeOpener(urllib.request.OpenerDirector):
+    """Answer each request from the script, as urllib would: a 4xx/5xx is raised."""
+
+    def __init__(self, *answers: Answer) -> None:
+        super().__init__()
+        self.answers = list(answers)
+        self.requests: list[urllib.request.Request] = []
+
+    def open(
+        self,
+        fullurl: str | urllib.request.Request,
+        data: object = None,
+        timeout: float | None = None,
+    ) -> _Response:
+        assert isinstance(fullurl, urllib.request.Request)
+        assert timeout is not None
+        self.requests.append(fullurl)
+        answer = self.answers.pop(0)
+        if isinstance(answer, Exception):
+            raise answer
+        status, body = answer
+        if status >= 400:
+            raise urllib.error.HTTPError(
+                fullurl.full_url, status, "", Message(), io.BytesIO(body)
+            )
+        return _Response(status, body)
+
+    def sent(self, index: int = -1) -> dict[str, object]:
+        data = self.requests[index].data
+        assert isinstance(data, bytes)
+        return json.loads(data)

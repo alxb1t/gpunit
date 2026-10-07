@@ -3,17 +3,24 @@
 import argparse
 import os
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import NoReturn
 
-from gpunit import log
+from gpunit import log, session
+from gpunit.provider import Lost, Provider
+from gpunit.runpod import RunPod
 from gpunit.spec import Spec, load_spec
+from gpunit.state import State
 
 USAGE = (
     "gpunit {up,status,down,ssh} [--spec PATH] | gpunit run [--spec PATH] -- <command>"
 )
 
 OK, FAILED, USAGE_FAULT, LOST = 0, 1, 2, 3
+
+
+Lazy = Callable[[], Provider]
 
 
 class Usage(Exception):
@@ -57,19 +64,49 @@ def parse(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
     return args, command or []
 
 
-def _not_built(args: argparse.Namespace, spec: Spec, command: list[str]) -> int:
+def _up(
+    args: argparse.Namespace, spec: Spec, command: list[str], provider: Lazy
+) -> int:
+    session.up(spec, provider(), State(Path.cwd()))
+    return OK
+
+
+def _status(
+    args: argparse.Namespace, spec: Spec, command: list[str], provider: Lazy
+) -> int:
+    return session.status(provider, State(Path.cwd()), as_json=args.json)
+
+
+def _down(
+    args: argparse.Namespace, spec: Spec, command: list[str], provider: Lazy
+) -> int:
+    return session.down(spec, provider(), State(Path.cwd()))
+
+
+def _not_built(
+    args: argparse.Namespace, spec: Spec, command: list[str], provider: Lazy
+) -> int:
     log.refuse(f"gpunit {args.verb} is not built yet")
 
 
-VERBS = {verb: _not_built for verb in ("up", "status", "down", "ssh", "run")}
+Verb = Callable[[argparse.Namespace, Spec, list[str], Lazy], int]
+VERBS: dict[str, Verb] = {
+    "up": _up,
+    "status": _status,
+    "down": _down,
+    "ssh": _not_built,
+    "run": _not_built,
+}
 
 
-def main(argv: list[str] | None = None, *, provider: object | None = None) -> NoReturn:
+def main(
+    argv: list[str] | None = None, *, provider: Provider | None = None
+) -> NoReturn:
     """Run one verb and exit: 0 done, 1 refused or failed, 2 usage, 3 lost."""
     sys.exit(_run(sys.argv[1:] if argv is None else argv, provider))
 
 
-def _run(argv: list[str], provider: object | None) -> int:
+def _run(argv: list[str], provider: Provider | None) -> int:
     try:
         args, command = parse(argv)
     except Usage as fault:
@@ -78,6 +115,9 @@ def _run(argv: list[str], provider: object | None) -> int:
         return USAGE_FAULT
     try:
         spec = load_spec(args.spec)
-        return VERBS[args.verb](args, spec, command)
+        # Built only when a verb asks: no key is needed to read a spec or no record.
+        return VERBS[args.verb](args, spec, command, lambda: provider or RunPod())
     except log.Refusal:
         return FAILED
+    except Lost:
+        return LOST

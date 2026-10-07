@@ -1,9 +1,7 @@
 import dataclasses
-import io
 import json
 import urllib.error
 import urllib.request
-from email.message import Message
 from pathlib import Path
 
 import pytest
@@ -21,12 +19,11 @@ from gpunit.provider import (
 )
 from gpunit.runpod import RunPod
 from gpunit.spec import Spec
+from tests.fakes import Answer, FakeOpener
 from tests.helpers import IMAGE
 
 FIXTURES = Path(__file__).parent / "fixtures"
 KEY = "rpa_test_key"
-
-Answer = tuple[int, bytes] | Exception
 
 
 def fixture(name: str) -> bytes:
@@ -36,45 +33,6 @@ def fixture(name: str) -> bytes:
 def page(pods: list[dict[str, str]], cursor: str | None) -> bytes:
     more = {"nextCursor": cursor, "hasNextPage": cursor is not None}
     return json.dumps({"pods": pods, "pagination": more}).encode()
-
-
-class _Response(io.BytesIO):
-    def __init__(self, status: int, body: bytes) -> None:
-        super().__init__(body)
-        self.status = status
-
-
-class FakeOpener(urllib.request.OpenerDirector):
-    """Answer each request from the script, as urllib would: a 4xx/5xx is raised."""
-
-    def __init__(self, *answers: Answer) -> None:
-        super().__init__()
-        self.answers = list(answers)
-        self.requests: list[urllib.request.Request] = []
-
-    def open(
-        self,
-        fullurl: str | urllib.request.Request,
-        data: object = None,
-        timeout: float | None = None,
-    ) -> _Response:
-        assert isinstance(fullurl, urllib.request.Request)
-        assert timeout is not None
-        self.requests.append(fullurl)
-        answer = self.answers.pop(0)
-        if isinstance(answer, Exception):
-            raise answer
-        status, body = answer
-        if status >= 400:
-            raise urllib.error.HTTPError(
-                fullurl.full_url, status, "", Message(), io.BytesIO(body)
-            )
-        return _Response(status, body)
-
-    def sent(self, index: int = -1) -> dict[str, object]:
-        data = self.requests[index].data
-        assert isinstance(data, bytes)
-        return json.loads(data)
 
 
 def runpod(*answers: Answer) -> tuple[RunPod, FakeOpener]:

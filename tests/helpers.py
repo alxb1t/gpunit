@@ -1,11 +1,12 @@
 """Write a spec and run the CLI in-process, for the tests."""
 
 from pathlib import Path
-from typing import NoReturn
+from typing import NoReturn, cast
 
 import pytest
 
 from gpunit import cli
+from gpunit.provider import Provider
 
 IMAGE = "ghcr.io/alxb1t/isekai@sha256:" + "a" * 64
 
@@ -36,5 +37,5 @@ def write_spec(cwd: Path, text: str = VALID) -> Path:
 def gpunit(argv: list[str], provider: object | None = None) -> int | str | None:
     """Run the CLI and return its exit code."""
     with pytest.raises(SystemExit) as exited:
-        cli.main(argv, provider=provider)
+        cli.main(argv, provider=cast(Provider | None, provider))
     return exited.value.code
