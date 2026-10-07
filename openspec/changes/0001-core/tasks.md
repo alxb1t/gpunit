@@ -9,7 +9,7 @@ The package, then the provider, the session, `run`, the boot, the handover, and 
 - [x] 2 — The provider
 - [x] 3 — The session
 - [x] 4 — Run and ssh
-- [ ] 5 — The boot
+- [x] 5 — The boot
 - [ ] 6 — The handover
 - [ ] 7 — ⚠️ **HUMAN · METERED** — make live
 
@@ -63,9 +63,9 @@ The package, then the provider, the session, `run`, the boot, the handover, and 
 
 ## 5 — The boot
 
-- [ ] 5.1 Write `boot/boot.sh` per [D11](design.md#d11) from isekai's `start.sh:12-32` and `tools/stop_pod.sh`.
+- [x] 5.1 Write `boot/boot.sh` per [D11](design.md#d11) from isekai's `start.sh:12-32` and `tools/stop_pod.sh`.
   Verify: `bash -n boot/boot.sh` exits 0, and `grep -c 'gpunit host key: ' boot/boot.sh` prints `1`.
-- [ ] 5.2 Write `tests/test_boot.py`: `boot.sh` run under `bash` in `tmp_path` with stub `sshd`, `ssh-keygen`, `curl` and `sleep` on `PATH`, binding every `boot:*` scenario.
+- [x] 5.2 Write `tests/test_boot.py`: `boot.sh` run under `bash` in `tmp_path` with stub `sshd`, `ssh-keygen`, `curl` and `sleep` on `PATH`, binding every `boot:*` scenario.
   Verify: `grep -c '@pytest.mark.spec("boot:' tests/test_boot.py` prints `8`.
 
 ## 6 — The handover
