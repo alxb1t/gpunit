@@ -10,7 +10,7 @@ The package, then the provider, the session, `run`, the boot, the handover, and 
 - [x] 3 — The session
 - [x] 4 — Run and ssh
 - [x] 5 — The boot
-- [ ] 6 — The handover
+- [x] 6 — The handover
 - [ ] 7 — ⚠️ **HUMAN · METERED** — make live
 
 ## 1 — The skeleton
@@ -70,9 +70,9 @@ The package, then the provider, the session, `run`, the boot, the handover, and 
 
 ## 6 — The handover
 
-- [ ] 6.1 Write `README.md`: what gpunit is, the consumer's steps (`gpunit.toml`, the Dockerfile lines of [D11](design.md#d11), `uv add --dev … && uv run gpunit run -- …`), the verbs and exit codes, the spend rules, `make live`.
+- [x] 6.1 Write `README.md`: what gpunit is, the consumer's steps (`gpunit.toml`, the Dockerfile lines of [D11](design.md#d11), `uv add --dev … && uv run gpunit run -- …`), the verbs and exit codes, the spend rules, `make live`.
   Verify: `grep -c 'ADD --checksum' README.md` prints `1`, and `grep -c 'gpunit run --' README.md` prints a number of at least `1`.
-- [ ] 6.2 Rewrite `CLAUDE.md`'s *Layout* for the package of [D1](design.md#d1) and its gate line for [D13](design.md#d13); add the invariants: no runtime dependency, the key never on argv, the ceiling required, a 404 never gone, `make live` never in CI.
+- [x] 6.2 Rewrite `CLAUDE.md`'s *Layout* for the package of [D1](design.md#d1) and its gate line for [D13](design.md#d13); add the invariants: no runtime dependency, the key never on argv, the ceiling required, a 404 never gone, `make live` never in CI.
   Verify: `grep -c 'no code yet' CLAUDE.md` prints `0`, and `grep -c 'make live' CLAUDE.md` prints `1`.
 
 ## 7 — ⚠️ **HUMAN · METERED** — make live

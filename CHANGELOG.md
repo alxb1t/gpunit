@@ -20,3 +20,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   teardown on exit and on every signal; a busy local port refuses before anything is rented.
 - `boot/boot.sh`, the pod's half: the ceiling and an exit trap that stop the pod with backoff, sshd on a
   fresh host key, the fingerprint line, and the command as a child whose code is boot's.
+- `README.md` and `CLAUDE.md` describe the package: a consumer's steps, the verbs and exit codes, the spend rules,
+  the layout and the invariants.
