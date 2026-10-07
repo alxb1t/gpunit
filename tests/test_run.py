@@ -127,6 +127,17 @@ def test_a_failed_teardown_is_exit_1(cwd: Path) -> None:
     assert (cwd / ".gpunit" / "pod").exists()
 
 
+@pytest.mark.spec("run:teardown:failure-is-1")
+def test_an_interrupt_with_a_failed_teardown_is_exit_1(cwd: Path) -> None:
+    # 130 would read as "interrupted and torn down" while the pod may still bill.
+    provider = FakeProvider(deletes={"pod-1": 404})
+    command = ["bash", "-c", "kill -INT $PPID; exec sleep 30"]
+
+    assert gpunit(["run", "--", *command], provider=provider) == 1
+    assert provider.named("delete") == [("pod-1",)]
+    assert (cwd / ".gpunit" / "pod").exists()
+
+
 @pytest.mark.spec("run:tunnel:reopened")
 def test_a_dead_tunnel_is_reopened(
     cwd: Path,

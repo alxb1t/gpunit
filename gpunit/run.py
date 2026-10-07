@@ -45,8 +45,8 @@ class _Children:
 def run(spec: Spec, provider: Provider, state: State, command: list[str]) -> int:
     """Open the session, run `command` with it, tear it down; return the exit code.
 
-    e.g. the command's code; 1 when the teardown failed; 3 after a lost create;
-    128 + the signal's number after a signal.
+    e.g. the command's code; 1 when the teardown failed, even after a signal; 3 after
+    a lost create; 128 + the signal's number after a signal and a teardown.
     """
     _refuse_busy_ports(spec)
     children = _Children()
@@ -87,11 +87,12 @@ def _run(
             if children.tunnel is not None:
                 _kill(children.tunnel)
             torn_down = session.down(spec, provider, state) == 0
+    # A failed teardown outranks the signal: 128 + n says the pod is gone.
+    if not torn_down:
+        return LOST_EXIT if code == LOST_EXIT else 1
     if children.signal is not None:
         return 128 + children.signal
-    if code == LOST_EXIT or torn_down:
-        return code
-    return 1
+    return code
 
 
 def _supervise(

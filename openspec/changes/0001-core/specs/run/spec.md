@@ -30,7 +30,7 @@ naming the port.
 
 The system SHALL tear the session down when the command exits, on `SIGINT`, `SIGTERM` and `SIGHUP`, and after a
 lost create; SHALL ignore a second interrupt while tearing down; SHALL kill the tunnel first; and SHALL exit with
-the command's code when the teardown succeeded, `1` when it did not, `3` after a lost create.
+the command's code when the teardown succeeded, `1` when it did not, even after a signal, `3` after a lost create.
 
 #### Scenario: the command's exit tears down
 - **Key:** `run:teardown:on-exit`

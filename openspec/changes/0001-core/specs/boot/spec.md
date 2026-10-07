@@ -7,7 +7,7 @@ at its ceiling whatever happens to the machine that made it, and proves its host
 
 ### Requirement: Boot refuses what it cannot run on
 
-`boot.sh -- <command>` SHALL exit `1` naming the gap when `sshd` is not on the image, or when any of
+`boot.sh -- <command>` SHALL exit `1` naming the gap when `sshd` or `curl` is not on the image, or when any of
 `RUNPOD_API_KEY`, `RUNPOD_POD_ID`, `PUBLIC_KEY`, `GPUNIT_CEILING` is unset or empty, or when no command follows
 `--`; and SHALL stop the pod before exiting when the gap is found after the ceiling is armed.
 
@@ -44,8 +44,9 @@ API with the key the provider injected; the stop SHALL retry on any answer but a
 
 ### Requirement: Sshd on a fresh host key, and the fingerprint printed
 
-Boot SHALL install `PUBLIC_KEY` as the only authorized key, generate an Ed25519 host key when none exists, start
-`sshd` serving that key alone, and print one line `gpunit host key: SHA256:<fingerprint>` to stdout.
+Boot SHALL install `PUBLIC_KEY` as the only authorized key, generate a fresh Ed25519 host key on every boot, never
+serving one the image supplied, start `sshd` serving that key alone, and print one line
+`gpunit host key: SHA256:<fingerprint>` to stdout.
 
 #### Scenario: the fingerprint line
 - **Key:** `boot:sshd:fingerprint-printed`

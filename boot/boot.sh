@@ -8,7 +8,6 @@
 set -uo pipefail
 
 API="https://api.runpod.io/v2"
-HOST_KEY=/etc/ssh/ssh_host_ed25519_key
 RETRY_S=30
 MAX_RETRY_S=300
 
@@ -37,6 +36,8 @@ stop() {
 # 1. Check: nothing is armed yet, so a refusal here stops nothing.
 [ "${1:-}" = "--" ] && shift
 command -v sshd >/dev/null || refuse "sshd is not on PATH; install openssh-server in the image"
+# Without curl every stop fails, and the ceiling would retry while the pod bills.
+command -v curl >/dev/null || refuse "curl is not on PATH; install curl in the image"
 for name in RUNPOD_API_KEY RUNPOD_POD_ID PUBLIC_KEY GPUNIT_CEILING; do
   [ -n "${!name:-}" ] || refuse "$name is unset or empty"
 done
@@ -53,14 +54,15 @@ say "step: the ceiling, ${GPUNIT_CEILING}s"
 ) &
 trap stop EXIT
 
-# 3. sshd: the session's key alone, and a host key made on this pod.
+# 3. sshd: the session's key alone, and a host key made on this pod at each boot,
+#    in a new directory: never one the image baked in, as openssh-server's install does.
 say "step: sshd"
 mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
 (umask 077 && printf '%s\n' "$PUBLIC_KEY" > "$HOME/.ssh/authorized_keys")
 chmod 600 "$HOME/.ssh/authorized_keys"
 mkdir -p /run/sshd 2>/dev/null
-[ -f "$HOST_KEY" ] || ssh-keygen -q -t ed25519 -N '' -f "$HOST_KEY" \
-  || refuse "the host key could not be made"
+HOST_KEY="$(mktemp -d)/ssh_host_ed25519_key" || refuse "the host key's directory could not be made"
+ssh-keygen -q -t ed25519 -N '' -f "$HOST_KEY" || refuse "the host key could not be made"
 # sshd re-execs itself, so it is started by its absolute path.
 "$(command -v sshd)" -o HostKey="$HOST_KEY" || refuse "sshd did not start"
 

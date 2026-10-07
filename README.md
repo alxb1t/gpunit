@@ -37,7 +37,7 @@ The design: [openspec/changes/0001-core/design.md](openspec/changes/0001-core/de
    MODE = "render"
    ```
 
-2. **Make `boot.sh` the image's entrypoint.** It needs `openssh-server` in the image, and BuildKit for
+2. **Make `boot.sh` the image's entrypoint.** It needs `openssh-server` and `curl` in the image, and BuildKit for
    the checksum; on an older Docker, copy the file in.
 
    ```dockerfile
@@ -79,7 +79,7 @@ Each verb reads `gpunit.toml` from the working directory, or the file `--spec <p
 | `1` | refused or failed; the teardown failed |
 | `2` | usage: an unknown verb, a missing command, an unreadable spec path |
 | `3` | a create's answer was lost; a pod may exist and bill — run `gpunit down` |
-| `128+n` | `run` was stopped by signal `n` and tore down |
+| `128+n` | `run` was stopped by signal `n` and tore down; a failed teardown is still `1` |
 
 gpunit's own lines go to stderr, each opening with the UTC time; stdout belongs to the command.
 

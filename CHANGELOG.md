@@ -29,3 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - RunPod requests send `User-Agent: gpunit/<version>`: RunPod's Cloudflare refused Python's default agent
   with a 403 (code 1010), which `make live` found.
+- `gpunit run` exits `1` when a signal is followed by a failed teardown; it exited `128+n`, which reads as torn down.
+- `boot.sh` makes a fresh host key in a new directory on every boot; it served any key the image baked in, as
+  installing `openssh-server` on Debian or Ubuntu does.
+- `boot.sh` refuses an image without `curl`; the ceiling's stop needs it, and without it retried forever.

@@ -185,9 +185,9 @@ root@<host> -p <port>` line. No app-health wait: the consumer polls its own port
 `boot/boot.sh -- <cmd>`, bash, `set -uo pipefail`:
 
 ```
-1 check: sshd on PATH; RUNPOD_API_KEY, RUNPOD_POD_ID, PUBLIC_KEY, GPUNIT_CEILING; a command after --
+1 check: sshd and curl on PATH; RUNPOD_API_KEY, RUNPOD_POD_ID, PUBLIC_KEY, GPUNIT_CEILING; a command after --
 2 arm:   ( sleep "$GPUNIT_CEILING"; stop ) &   and   trap stop EXIT
-3 sshd:  authorized_keys from PUBLIC_KEY; ssh-keygen ed25519 host key if none; sshd -o HostKey=…
+3 sshd:  authorized_keys from PUBLIC_KEY; ssh-keygen a fresh ed25519 host key in a mktemp -d dir; sshd -o HostKey=…
 4 print: "gpunit host key: SHA256:…"
 5 run:   "$@" as a child; SIGTERM forwarded; wait; exit its code (the trap stops the pod)
 ```

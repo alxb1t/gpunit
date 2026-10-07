@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 import signal
 import subprocess
 from dataclasses import dataclass
@@ -83,6 +84,7 @@ def pod(tmp_path: Path, pod_bin: Path) -> dict[str, str]:
         "PUBLIC_KEY": "ssh-ed25519 AAAAsession gpunit-isekai",
         "GPUNIT_CEILING": "7",
         "HOLD_CEILING": "1",
+        "TMPDIR": str(tmp_path),
         **{
             name: str(tmp_path / f"{name.lower()}.txt")
             for name in (
@@ -132,14 +134,25 @@ def boot(env: dict[str, str], *command: str) -> Boot:
 
 
 @pytest.mark.spec("boot:refuse:no-sshd")
-def test_no_sshd_refuses(pod: dict[str, str], tmp_path: Path) -> None:
-    without_sshd = {name: script for name, script in STUBS.items() if name != "sshd"}
-    pod["PATH"] = f"{install_stubs(tmp_path / 'bin', without_sshd)}:/usr/bin:/bin"
+@pytest.mark.parametrize(
+    ("tool", "named"),
+    [("sshd", "install openssh-server"), ("curl", "install curl")],
+)
+def test_a_missing_tool_refuses(
+    tool: str, named: str, pod: dict[str, str], tmp_path: Path
+) -> None:
+    # A PATH of the stubs and the few tools step 1 needs: the machine's own sshd or
+    # curl must not stand in for the missing one.
+    without = {name: script for name, script in STUBS.items() if name != tool}
+    bin_dir = install_stubs(tmp_path / "bin", without)
+    for name in ("bash", "date", "touch"):
+        (bin_dir / name).symlink_to(str(shutil.which(name)))
+    pod["PATH"] = str(bin_dir)
 
     result = boot(pod, "touch", f"{pod['HOME']}/ran")
 
     assert result.code == 1
-    assert "openssh-server" in result.err
+    assert named in result.err
     assert not (Path(pod["HOME"]) / "ran").exists()
     assert result.curl == []
 
@@ -213,7 +226,10 @@ def test_the_fingerprint_line(pod: dict[str, str]) -> None:
     ]
     assert printed == [f"gpunit host key: {FINGERPRINT}"]
     assert re.fullmatch(r"gpunit host key: SHA256:[A-Za-z0-9+/]+", printed[0])
-    host_key = "/etc/ssh/ssh_host_ed25519_key"
+    # The served key is the one made on this boot, never one the image baked in.
+    [made] = [line.split() for line in result.keygen if "-t ed25519" in line]
+    host_key = made[made.index("-f") + 1]
+    assert not host_key.startswith("/etc/ssh/")
     assert result.sshd == [f"-o HostKey={host_key}"]
     assert f"-lf {host_key}.pub" in result.keygen
 
