@@ -3,15 +3,15 @@ from pathlib import Path
 import pytest
 
 from gpunit.provider import Lost
-from gpunit.state import Record, State
-from tests.fakes import FakeProvider
-from tests.helpers import IMAGE, gpunit
+from gpunit.state import State
+from tests.fakes import RECORD, FakeProvider
+from tests.helpers import gpunit
 
 
 def recorded(cwd: Path) -> State:
     state = State(cwd)
     state.keygen("gpunit-isekai")
-    state.write(Record("pod-1", IMAGE, "203.0.113.7", 40022, "2026-10-07T00:00:00Z"))
+    state.write(RECORD)
     state.write_known_hosts("[203.0.113.7]:40022 ssh-ed25519 AAAAhostkey")
     return state
 

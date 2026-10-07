@@ -3,24 +3,20 @@
 import argparse
 import os
 import sys
-from collections.abc import Callable
 from pathlib import Path
 from typing import NoReturn
 
 from gpunit import log, run, session
 from gpunit.provider import Lost, Provider
 from gpunit.runpod import RunPod
-from gpunit.spec import Spec, load_spec
+from gpunit.spec import load_spec
 from gpunit.state import State
 
 USAGE = (
     "gpunit {up,status,down,ssh} [--spec PATH] | gpunit run [--spec PATH] -- <command>"
 )
 
-OK, FAILED, USAGE_FAULT, LOST = 0, 1, 2, 3
-
-
-Lazy = Callable[[], Provider]
+FAILED, USAGE_FAULT = 1, 2
 
 
 class Usage(Exception):
@@ -64,48 +60,6 @@ def parse(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
     return args, command or []
 
 
-def _up(
-    args: argparse.Namespace, spec: Spec, command: list[str], provider: Lazy
-) -> int:
-    session.up(spec, provider(), State(Path.cwd()))
-    return OK
-
-
-def _status(
-    args: argparse.Namespace, spec: Spec, command: list[str], provider: Lazy
-) -> int:
-    return session.status(provider, State(Path.cwd()), as_json=args.json)
-
-
-def _down(
-    args: argparse.Namespace, spec: Spec, command: list[str], provider: Lazy
-) -> int:
-    return session.down(spec, provider(), State(Path.cwd()))
-
-
-def _ssh(
-    args: argparse.Namespace, spec: Spec, command: list[str], provider: Lazy
-) -> int:
-    session.ssh(State(Path.cwd()))
-    return FAILED  # reached only when the exec failed
-
-
-def _run_verb(
-    args: argparse.Namespace, spec: Spec, command: list[str], provider: Lazy
-) -> int:
-    return run.run(spec, provider(), State(Path.cwd()), command)
-
-
-Verb = Callable[[argparse.Namespace, Spec, list[str], Lazy], int]
-VERBS: dict[str, Verb] = {
-    "up": _up,
-    "status": _status,
-    "down": _down,
-    "ssh": _ssh,
-    "run": _run_verb,
-}
-
-
 def main(
     argv: list[str] | None = None, *, provider: Provider | None = None
 ) -> NoReturn:
@@ -120,11 +74,28 @@ def _run(argv: list[str], provider: Provider | None) -> int:
         log.say(f"usage: {fault}")
         log.say(f"usage: {USAGE}")
         return USAGE_FAULT
+
+    # Built only when a verb asks: no key is needed to read a spec or no record.
+    def lazy() -> Provider:
+        return provider or RunPod()
+
+    state = State(Path.cwd())
     try:
         spec = load_spec(args.spec)
-        # Built only when a verb asks: no key is needed to read a spec or no record.
-        return VERBS[args.verb](args, spec, command, lambda: provider or RunPod())
+        match args.verb:
+            case "up":
+                session.up(spec, lazy(), state)
+                return 0
+            case "status":
+                return session.status(lazy, state, as_json=args.json)
+            case "down":
+                return session.down(spec, lazy(), state)
+            case "ssh":
+                session.ssh(state)
+                return FAILED  # reached only when the exec failed
+            case _:
+                return run.run(spec, lazy(), state, command)
     except log.Refusal:
         return FAILED
     except Lost:
-        return LOST
+        return run.LOST_EXIT

@@ -65,23 +65,28 @@ def _run(
     command: list[str],
     children: _Children,
 ) -> int:
-    code = 1
-    record: Record | None = None
+    code, teardown, torn_down = 1, True, False
+    # One handler for the whole run: a signal raised while opening, even just after
+    # `up` returned, still reaches the teardown below.
     try:
-        # A refusal here propagates: `up` tore down whatever it had made.
         record = session.up(spec, provider, state)
+        children.opening = False
+        if children.signal is None:
+            code = _supervise(spec, state, record, command, children)
+    except log.Refusal:
+        # `up` tore down whatever it had made; a refusal before the create made nothing.
+        teardown = False
+        raise
     except Lost:
         code = LOST_EXIT
     except _Interrupted:
         pass
-    children.opening = False
-    try:
-        if record is not None and children.signal is None:
-            code = _supervise(spec, state, record, command, children)
     finally:
-        if children.tunnel is not None:
-            _kill(children.tunnel)
-        torn_down = session.down(spec, provider, state) == 0
+        children.opening = False
+        if teardown:
+            if children.tunnel is not None:
+                _kill(children.tunnel)
+            torn_down = session.down(spec, provider, state) == 0
     if children.signal is not None:
         return 128 + children.signal
     if code == LOST_EXIT or torn_down:

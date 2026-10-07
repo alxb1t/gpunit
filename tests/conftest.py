@@ -7,7 +7,7 @@ import pytest
 
 from gpunit import session
 from tests.fakes import SERVED, FakeClock
-from tests.helpers import write_spec
+from tests.helpers import install_stubs, write_spec
 
 # Writes the keypair `-f` names; `-lf -` answers $GPUNIT_TEST_SERVED for any key.
 SSH_KEYGEN = f"""#!/bin/bash
@@ -51,16 +51,18 @@ def clock(monkeypatch: pytest.MonkeyPatch) -> FakeClock:
     return fake
 
 
+@pytest.fixture(scope="session")
+def ssh_bin(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    # Once per session: macOS makes the first run of a new executable slow, and each
+    # stub reads its behaviour from the test's environment, so they can be shared.
+    scripts = {"ssh-keygen": SSH_KEYGEN, "ssh-keyscan": SSH_KEYSCAN, "ssh": SSH}
+    return install_stubs(tmp_path_factory.mktemp("bin"), scripts)
+
+
 @pytest.fixture
-def stubs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    bin_dir = tmp_path / "bin"
-    bin_dir.mkdir()
-    stubbed = (("ssh-keygen", SSH_KEYGEN), ("ssh-keyscan", SSH_KEYSCAN), ("ssh", SSH))
-    for name, script in stubbed:
-        (bin_dir / name).write_text(script, encoding="utf-8")
-        (bin_dir / name).chmod(0o755)
-    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
-    return bin_dir
+def stubs(ssh_bin: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    monkeypatch.setenv("PATH", f"{ssh_bin}{os.pathsep}{os.environ['PATH']}")
+    return ssh_bin
 
 
 @pytest.fixture

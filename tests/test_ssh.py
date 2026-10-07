@@ -4,14 +4,14 @@ import pytest
 
 from gpunit import session
 from gpunit.log import Refusal
-from gpunit.state import Record, State
-from tests.helpers import IMAGE
+from gpunit.state import State
+from tests.fakes import RECORD
 
 
 @pytest.mark.spec("session:ssh:uses-record")
 def test_ssh_uses_the_record(tmp_path: Path) -> None:
     state = State(tmp_path)
-    state.write(Record("pod-1", IMAGE, "203.0.113.7", 40022, "2026-10-07T00:00:00Z"))
+    state.write(RECORD)
     execs: list[tuple[str, list[str]]] = []
 
     session.ssh(state, execvp=lambda file, argv: execs.append((file, argv)))

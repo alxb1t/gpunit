@@ -10,6 +10,14 @@ from gpunit.spec import Spec
 _HOST_KEY = re.compile(r"^gpunit host key: (SHA256:[A-Za-z0-9+/]+)\s*$")
 
 
+def pod_name(project: str) -> str:
+    """Return the name every pod of `project` carries.
+
+    e.g. "isekai" → "gpunit-isekai"
+    """
+    return f"gpunit-{project}"
+
+
 def fingerprint(lines: list[str]) -> str | None:
     """Return the last host-key fingerprint the pod's log printed, or None.
 

@@ -32,7 +32,7 @@ _OPTIONAL: dict[str, tuple[type, ...]] = {
     "timeout": (int,),
     "env": (dict,),
 }
-_KNOWN = [*_REQUIRED, *_OPTIONAL]
+_TYPES = _REQUIRED | _OPTIONAL
 
 
 @dataclass(frozen=True)
@@ -80,15 +80,15 @@ def load_spec(path: Path) -> Spec:
     except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as fault:
         log.refuse(f"{path}: {fault}")
     for key in raw:
-        if key not in _KNOWN:
-            near = difflib.get_close_matches(key, _KNOWN, n=1)
+        if key not in _TYPES:
+            near = difflib.get_close_matches(key, list(_TYPES), n=1)
             hint = f"; did you mean {near[0]!r}?" if near else ""
             log.refuse(f"{path}: unknown key {key!r}{hint}")
     for key in _REQUIRED:
         if key not in raw:
             log.refuse(f"{path}: {key!r} is required")
     for key, value in raw.items():
-        _check_type(path, key, value, {**_REQUIRED, **_OPTIONAL}[key])
+        _check_type(path, key, value, _TYPES[key])
 
     if not DIGEST.search(raw["image"]):
         log.refuse(f"{path}: 'image' must end in @sha256:<64 hex>, not a tag")
@@ -101,7 +101,7 @@ def load_spec(path: Path) -> Spec:
     return Spec(
         project=raw["project"],
         image=raw["image"],
-        gpus=_strings(path, "gpus", raw["gpus"]),
+        gpus=_gpus(path, raw["gpus"]),
         vram_gb=raw["vram_gb"],
         ceiling_s=ceiling_s,
         disk_gb=raw["disk_gb"],
@@ -122,10 +122,11 @@ def _check_type(path: Path, key: str, value: object, kinds: tuple[type, ...]) ->
         log.refuse(f"{path}: {key!r} must be {names}, not {type(value).__name__}")
 
 
-def _strings(path: Path, key: str, items: list[object]) -> tuple[str, ...]:
-    if not items or not all(isinstance(item, str) for item in items):
-        log.refuse(f"{path}: {key!r} must be a non-empty list of strings")
-    return tuple(str(item) for item in items)
+def _gpus(path: Path, items: list[object]) -> tuple[str, ...]:
+    names = tuple(item for item in items if isinstance(item, str))
+    if not names or len(names) != len(items):
+        log.refuse(f"{path}: 'gpus' must be a non-empty list of strings")
+    return names
 
 
 def _port(path: Path, item: object) -> Port:
@@ -144,4 +145,4 @@ def _env(path: Path, table: dict[str, object]) -> dict[str, str]:
     for key, value in table.items():
         if not isinstance(value, str):
             log.refuse(f"{path}: env {key!r} must be str, not {type(value).__name__}")
-    return {key: str(value) for key, value in table.items()}
+    return {key: value for key, value in table.items() if isinstance(value, str)}

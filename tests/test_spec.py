@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from gpunit.spec import Port, load_spec
-from tests.helpers import VALID, NoRequests, gpunit, write_spec
+from tests.helpers import NO_REQUESTS, VALID, gpunit, write_spec
 
 
 def _without(key: str) -> str:
@@ -19,7 +19,7 @@ def test_a_missing_required_field_is_named(
     monkeypatch.chdir(tmp_path)
     write_spec(tmp_path, _without("gpus ="))
 
-    assert gpunit(["up"], provider=NoRequests()) == 1
+    assert gpunit(["up"], provider=NO_REQUESTS) == 1
     assert "'gpus' is required" in capsys.readouterr().err
 
 
@@ -30,7 +30,7 @@ def test_an_unknown_key_is_refused_naming_the_nearest(
     monkeypatch.chdir(tmp_path)
     write_spec(tmp_path, _without("gpus =") + 'gpu = "RTX 4090"\n')
 
-    assert gpunit(["up"], provider=NoRequests()) == 1
+    assert gpunit(["up"], provider=NO_REQUESTS) == 1
     assert "unknown key 'gpu'; did you mean 'gpus'?" in capsys.readouterr().err
 
 
@@ -64,7 +64,7 @@ def test_an_image_without_a_digest_is_refused(
     monkeypatch.chdir(tmp_path)
     write_spec(tmp_path, _without("image =") + f'image = "{image}"\n')
 
-    assert gpunit(["up"], provider=NoRequests()) == 1
+    assert gpunit(["up"], provider=NO_REQUESTS) == 1
     assert "@sha256:<64 hex>" in capsys.readouterr().err
 
 
@@ -80,5 +80,5 @@ def test_no_ceiling_no_pod(
     text = _without("ceiling =") + ("" if ceiling is None else f"ceiling = {ceiling}\n")
     write_spec(tmp_path, text)
 
-    assert gpunit(["up"], provider=NoRequests()) == 1
+    assert gpunit(["up"], provider=NO_REQUESTS) == 1
     assert "'ceiling'" in capsys.readouterr().err

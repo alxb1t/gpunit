@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.helpers import install_stubs
+
 BOOT = Path(__file__).parent.parent / "boot" / "boot.sh"
 KEY = "rpa_pod_key"
 POD = "pod-xyz"
@@ -61,21 +63,20 @@ class Boot:
     keygen: list[str]
 
 
+STUBS = {"curl": CURL, "sleep": SLEEP, "sshd": SSHD, "ssh-keygen": SSH_KEYGEN}
+
+
+@pytest.fixture(scope="module")
+def pod_bin(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    # Shared: each stub reads its behaviour and its logs from the test's environment.
+    return install_stubs(tmp_path_factory.mktemp("bin"), STUBS)
+
+
 @pytest.fixture
-def pod(tmp_path: Path) -> dict[str, str]:
-    stubs = tmp_path / "bin"
-    stubs.mkdir()
-    for name, script in (
-        ("curl", CURL),
-        ("sleep", SLEEP),
-        ("sshd", SSHD),
-        ("ssh-keygen", SSH_KEYGEN),
-    ):
-        (stubs / name).write_text(script, encoding="utf-8")
-        (stubs / name).chmod(0o755)
+def pod(tmp_path: Path, pod_bin: Path) -> dict[str, str]:
     (tmp_path / "home").mkdir()
     return {
-        "PATH": f"{stubs}:/usr/bin:/bin",
+        "PATH": f"{pod_bin}:/usr/bin:/bin",
         "HOME": str(tmp_path / "home"),
         "RUNPOD_API_KEY": KEY,
         "RUNPOD_POD_ID": POD,
@@ -131,8 +132,9 @@ def boot(env: dict[str, str], *command: str) -> Boot:
 
 
 @pytest.mark.spec("boot:refuse:no-sshd")
-def test_no_sshd_refuses(pod: dict[str, str]) -> None:
-    (Path(pod["PATH"].split(":")[0]) / "sshd").unlink()
+def test_no_sshd_refuses(pod: dict[str, str], tmp_path: Path) -> None:
+    without_sshd = {name: script for name, script in STUBS.items() if name != "sshd"}
+    pod["PATH"] = f"{install_stubs(tmp_path / 'bin', without_sshd)}:/usr/bin:/bin"
 
     result = boot(pod, "touch", f"{pod['HOME']}/ran")
 

@@ -10,7 +10,7 @@ import pytest
 from gpunit import run
 from gpunit.provider import Lost
 from tests.fakes import FakeProvider
-from tests.helpers import VALID, NoRequests, gpunit, write_spec
+from tests.helpers import NO_REQUESTS, VALID, gpunit, write_spec
 
 
 @pytest.fixture
@@ -140,7 +140,11 @@ def test_a_dead_tunnel_is_reopened(
     monkeypatch.setenv("GPUNIT_TEST_SSH_EXIT", "1")
     monkeypatch.setattr(run, "TUNNEL_POLL_S", 0.1)
 
-    assert gpunit(["run", "--", "sleep", "1"], provider=FakeProvider()) == 0
+    # Runs until the tunnel has been opened twice.
+    reopened = f'until [ "$(wc -l < "{tunnels}")" -ge 2 ]; do sleep 0.05; done'
+    command = ["bash", "-c", reopened]
+
+    assert gpunit(["run", "--", *command], provider=FakeProvider()) == 0
     opened = tunnels.read_text(encoding="utf-8").splitlines()
     assert len(opened) >= 2
     assert f"-L{free_port}:localhost:8188" in opened[0]
@@ -154,7 +158,7 @@ def test_a_busy_port_refuses_before_any_request(
 ) -> None:
     with_port(cwd, listening)
 
-    assert gpunit(["run", "--", "true"], provider=NoRequests()) == 1
+    assert gpunit(["run", "--", "true"], provider=NO_REQUESTS) == 1
     assert f"local port {listening} already answers" in capfd.readouterr().err
 
 

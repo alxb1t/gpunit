@@ -7,10 +7,16 @@ import pytest
 from gpunit.provider import GpuInfo, Lost, Refused, Unknown, VolumeInfo
 from gpunit.runpod import RunPod
 from gpunit.state import State
-from tests.fakes import KEY_LINE, RUNNING, FakeClock, FakeOpener, FakeProvider
-from tests.helpers import IMAGE, VALID, NoRequests, gpunit, write_spec
-
-FIXTURES = Path(__file__).parent / "fixtures"
+from tests.fakes import (
+    KEY_LINE,
+    RUNNING,
+    FakeClock,
+    FakeOpener,
+    FakeProvider,
+    fixture,
+    page,
+)
+from tests.helpers import IMAGE, NO_REQUESTS, VALID, gpunit, write_spec
 
 
 def creates(provider: FakeProvider) -> list[str]:
@@ -24,7 +30,7 @@ def test_a_recorded_pod_refuses_up(
     (cwd / ".gpunit").mkdir()
     (cwd / ".gpunit" / "pod").write_text("{}", encoding="utf-8")
 
-    assert gpunit(["up"], provider=NoRequests()) == 1
+    assert gpunit(["up"], provider=NO_REQUESTS) == 1
     assert "run gpunit down" in capsys.readouterr().err
 
 
@@ -32,7 +38,7 @@ def test_a_recorded_pod_refuses_up(
 def test_a_pending_create_refuses_up(cwd: Path) -> None:
     State(cwd).mark_pending()
 
-    assert gpunit(["up"], provider=NoRequests()) == 1
+    assert gpunit(["up"], provider=NO_REQUESTS) == 1
 
 
 @pytest.mark.spec("session:one:listed-refuses")
@@ -179,7 +185,7 @@ def test_no_ssh_keygen_refuses_before_any_request(
 ) -> None:
     monkeypatch.setenv("PATH", str(cwd / "nothing"))
 
-    assert gpunit(["up"], provider=NoRequests()) == 1
+    assert gpunit(["up"], provider=NO_REQUESTS) == 1
     assert "ssh-keygen is not on PATH" in capsys.readouterr().err
 
 
@@ -190,7 +196,7 @@ def test_a_refusal_is_one_stamped_stderr_line(
     State(cwd).write_known_hosts("x")
     (cwd / ".gpunit" / "pod").write_text("{}", encoding="utf-8")
 
-    assert gpunit(["up"], provider=NoRequests()) == 1
+    assert gpunit(["up"], provider=NO_REQUESTS) == 1
     out, err = capsys.readouterr()
     assert out == ""
     assert re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ refused: .+\n", err)
@@ -199,15 +205,14 @@ def test_a_refusal_is_one_stamped_stderr_line(
 def up_over_http(cwd: Path) -> FakeOpener:
     """Run `up` on RunPod over scripted HTTP answers; return the opener."""
     write_spec(cwd, VALID + 'volume = "v1"\nports = [8188]\n')
-    pods = {"pods": [], "pagination": {"nextCursor": None, "hasNextPage": False}}
     log = f"data: {json.dumps({'line': KEY_LINE})}\n".encode()
     opener = FakeOpener(
-        (200, json.dumps(pods).encode()),
-        (200, (FIXTURES / "volume.json").read_bytes()),
-        (200, (FIXTURES / "gpu.json").read_bytes()),
-        (200, (FIXTURES / "gpu.json").read_bytes()),
-        (201, (FIXTURES / "pod_created.json").read_bytes()),
-        (200, (FIXTURES / "pod_running.json").read_bytes()),
+        (200, page([], None)),
+        (200, fixture("volume.json")),
+        (200, fixture("gpu.json")),
+        (200, fixture("gpu.json")),
+        (201, fixture("pod_created.json")),
+        (200, fixture("pod_running.json")),
         (200, log),
     )
     provider = RunPod({"RUNPOD_API_KEY": "rpa_test"}, opener=opener)

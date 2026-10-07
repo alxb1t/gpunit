@@ -19,6 +19,7 @@ from gpunit.provider import (
     Refused,
     Unknown,
     VolumeInfo,
+    pod_name,
 )
 from gpunit.spec import Spec
 
@@ -94,7 +95,7 @@ class RunPod:
         if spec.cuda is not None:
             card["minCudaVersion"] = spec.cuda
         body: dict[str, object] = {
-            "name": f"gpunit-{spec.project}",
+            "name": pod_name(spec.project),
             "image": spec.image,
             "gpu": card,
             "ports": ["22/tcp"],
@@ -115,13 +116,12 @@ class RunPod:
         answer = self._call("POST", "/pods", body)
         if answer.status == 400:
             raise Refused(_report(f"create on {gpu!r}", answer))
-        if answer.status == 201:
-            try:
-                pod_id = answer.json(201)["id"]
-            except (TypeError, KeyError, ValueError):
-                pod_id = None
-            if isinstance(pod_id, str) and pod_id:
-                return pod_id
+        try:
+            pod_id = answer.json(201)["id"]
+        except (TypeError, KeyError, ValueError):
+            pod_id = None
+        if isinstance(pod_id, str) and pod_id:
+            return pod_id
         raise Lost(_report(f"create on {gpu!r}", answer))
 
     def get(self, pod_id: str) -> PodInfo | None:
@@ -158,7 +158,7 @@ class RunPod:
 
     def list(self, project: str, image: str) -> list[tuple[str, str]]:
         """Return (id, status) of each live project pod; raise `Lost` or `NoImage`."""
-        name, repo = f"gpunit-{project}", image.split("@", 1)[0]
+        name, repo = pod_name(project), image.split("@", 1)[0]
         live: list[tuple[str, str]] = []
         cursor: str | None = None
         seen: set[str] = set()

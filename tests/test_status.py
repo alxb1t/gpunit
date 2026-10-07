@@ -3,16 +3,14 @@ from pathlib import Path
 
 import pytest
 
-from gpunit.state import Record, State
-from tests.fakes import FakeProvider
-from tests.helpers import IMAGE, NoRequests, gpunit
+from gpunit.state import State
+from tests.fakes import RECORD, FakeProvider
+from tests.helpers import IMAGE, NO_REQUESTS, gpunit
 
 
 @pytest.mark.spec("cli:status:json")
 def test_status_as_json(cwd: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    State(cwd).write(
-        Record("pod-1", IMAGE, "203.0.113.7", 40022, "2026-10-07T00:00:00Z")
-    )
+    State(cwd).write(RECORD)
 
     assert gpunit(["status", "--json"], provider=FakeProvider()) == 0
     assert json.loads(capsys.readouterr().out) == {
@@ -26,5 +24,5 @@ def test_status_as_json(cwd: Path, capsys: pytest.CaptureFixture[str]) -> None:
 
 @pytest.mark.spec("cli:status:no-record")
 def test_no_record(cwd: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    assert gpunit(["status"], provider=NoRequests()) == 0
+    assert gpunit(["status"], provider=NO_REQUESTS) == 0
     assert capsys.readouterr().out == "no session is recorded\n"

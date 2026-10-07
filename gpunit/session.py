@@ -7,10 +7,19 @@ import subprocess
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, replace
-from typing import NoReturn
+from typing import NoReturn, TypeVar
 
 from gpunit import log
-from gpunit.provider import Lost, NoImage, Provider, Refused, Unknown, fingerprint
+from gpunit.provider import (
+    Lost,
+    NoImage,
+    PodInfo,
+    Provider,
+    Refused,
+    Unknown,
+    fingerprint,
+    pod_name,
+)
 from gpunit.spec import Spec
 from gpunit.state import Record, State
 
@@ -19,6 +28,8 @@ LOG_WAIT_S = 60
 # sshd can answer after the port is mapped, so the scan waits longer than the log.
 SCAN_WAIT_S = 180
 LOG_TAIL = 5000
+
+T = TypeVar("T")
 
 
 @dataclass(frozen=True)
@@ -52,13 +63,13 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
             log.refuse(f"volume {spec.volume} could not be read: {fault}")
     cards = _placeable(spec, provider)
 
-    pubkey = state.keygen(f"gpunit-{spec.project}")
+    pubkey = state.keygen(pod_name(spec.project))
     state.mark_pending()
     pod_id = _create(spec, provider, cards, pubkey)
     if pod_id is None:
         state.clear_pending()
         log.refuse("no card in 'gpus' was placed")
-    record = Record(id=pod_id, image=spec.image, host=None, port=None, created=_utc())
+    record = Record(pod_id, spec.image, host=None, port=None, created=log.utc())
     state.write(record)
     state.clear_pending()
     log.say(f"pod {pod_id} created; waiting for SSH")
@@ -187,7 +198,7 @@ def _refuse_listed(spec: Spec, provider: Provider) -> None:
     if listed:
         pods = ", ".join(f"{pod_id} ({pod_status})" for pod_id, pod_status in listed)
         log.refuse(
-            f"a gpunit-{spec.project} pod already exists: {pods}; run gpunit down"
+            f"a {pod_name(spec.project)} pod already exists: {pods}; run gpunit down"
         )
 
 
@@ -222,29 +233,31 @@ def _create(
             log.say(str(refusal))
         except Lost as lost:
             log.say(str(lost))
-            log.say(f"the create's outcome is unknown: a gpunit-{spec.project} pod may")
-            log.say("exist and bill; run gpunit down, which finds and deletes it")
+            log.say(f"the create's outcome is unknown: a {pod_name(spec.project)}")
+            log.say(
+                "pod may exist and bill; run gpunit down, which finds and deletes it"
+            )
             raise
     return None
 
 
 def _wait(spec: Spec, provider: Provider, state: State, record: Record) -> Record:
-    deadline = CLOCK.monotonic() + spec.timeout_s
-    while True:
+    def mapped() -> PodInfo | None:
         # A failed poll is "not yet", never an abort: an abort would skip the teardown.
         info = provider.get(record.id)
-        if info is not None and info.host and info.port:
-            ready = replace(record, host=info.host, port=info.port)
-            state.write(ready)
-            return ready
-        if CLOCK.monotonic() >= deadline:
-            _tear_down(
-                spec,
-                provider,
-                state,
-                f"pod {record.id} got no host and port 22 within {spec.timeout_s}s",
-            )
-        CLOCK.sleep(POLL_S)
+        return info if info is not None and info.host and info.port else None
+
+    info = _poll(spec.timeout_s, mapped)
+    if info is None:
+        _tear_down(
+            spec,
+            provider,
+            state,
+            f"pod {record.id} got no host and port 22 within {spec.timeout_s}s",
+        )
+    ready = replace(record, host=info.host, port=info.port)
+    state.write(ready)
+    return ready
 
 
 def _verify_host_key(
@@ -274,7 +287,7 @@ def _verify_host_key(
     log.say(f"host key verified: {printed}")
 
 
-def _poll(seconds: int, attempt: Callable[[], str | None]) -> str | None:
+def _poll(seconds: int, attempt: Callable[[], T | None]) -> T | None:
     deadline = CLOCK.monotonic() + seconds
     while True:
         found = attempt()
@@ -313,7 +326,3 @@ def _tear_down(spec: Spec, provider: Provider, state: State, reason: str) -> NoR
     log.say(f"{reason}; tearing the pod down")
     down(spec, provider, state)
     log.refuse(reason)
-
-
-def _utc() -> str:
-    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

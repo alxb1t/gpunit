@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.helpers import NoRequests, gpunit, write_spec
+from tests.helpers import NO_REQUESTS, gpunit, write_spec
 
 
 @pytest.mark.spec("cli:verbs:unknown-verb-exits-2")
@@ -12,7 +12,7 @@ def test_an_unknown_verb_exits_2_with_a_usage_line(
     monkeypatch.chdir(tmp_path)
     write_spec(tmp_path)
 
-    assert gpunit(["frobnicate"], provider=NoRequests()) == 2
+    assert gpunit(["frobnicate"], provider=NO_REQUESTS) == 2
     err = capsys.readouterr().err
     assert "usage: gpunit" in err
 
@@ -28,5 +28,5 @@ def test_run_without_a_command_exits_2_naming_the_form(
     monkeypatch.chdir(tmp_path)
     write_spec(tmp_path)
 
-    assert gpunit(argv, provider=NoRequests()) == 2
+    assert gpunit(argv, provider=NO_REQUESTS) == 2
     assert "gpunit run -- <command>" in capsys.readouterr().err

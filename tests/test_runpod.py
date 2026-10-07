@@ -1,5 +1,4 @@
 import dataclasses
-import json
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -19,20 +18,10 @@ from gpunit.provider import (
 )
 from gpunit.runpod import RunPod
 from gpunit.spec import Spec
-from tests.fakes import Answer, FakeOpener
+from tests.fakes import Answer, FakeOpener, fixture, page
 from tests.helpers import IMAGE
 
-FIXTURES = Path(__file__).parent / "fixtures"
 KEY = "rpa_test_key"
-
-
-def fixture(name: str) -> bytes:
-    return (FIXTURES / name).read_bytes()
-
-
-def page(pods: list[dict[str, str]], cursor: str | None) -> bytes:
-    more = {"nextCursor": cursor, "hasNextPage": cursor is not None}
-    return json.dumps({"pods": pods, "pagination": more}).encode()
 
 
 def runpod(*answers: Answer) -> tuple[RunPod, FakeOpener]:

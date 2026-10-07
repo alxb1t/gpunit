@@ -6,14 +6,19 @@ import urllib.error
 import urllib.request
 from collections.abc import Mapping, Sequence
 from email.message import Message
+from pathlib import Path
 from typing import TypeVar
 
 from gpunit.provider import GpuInfo, PodInfo, VolumeInfo
 from gpunit.spec import Spec
+from gpunit.state import Record
+from tests.helpers import IMAGE
 
 T = TypeVar("T")
 
+FIXTURES = Path(__file__).parent / "fixtures"
 RUNNING = PodInfo(status="RUNNING", host="203.0.113.7", port=40022)
+RECORD = Record("pod-1", IMAGE, RUNNING.host, RUNNING.port, "2026-10-07T00:00:00Z")
 CARD = GpuInfo(vram_gb=24, hourly=0.69)
 # What the stub `ssh-keygen -lf` answers for the scanned key (tests/conftest.py).
 SERVED = "SHA256:served"
@@ -52,7 +57,6 @@ class FakeProvider:
         logs: Sequence[list[str]] = ([KEY_LINE],),
         listings: Sequence[list[tuple[str, str]] | Exception] = ([],),
         deletes: Mapping[str, int] | None = None,
-        stops: Mapping[str, int] | None = None,
     ) -> None:
         """Script the answers; a card or volume not named answers `CARD` or fails."""
         self.gpus = dict(gpus or {})
@@ -62,7 +66,6 @@ class FakeProvider:
         self.logs = [list(lines) for lines in logs]
         self.listings = list(listings)
         self.deletes = dict(deletes or {})
-        self.stops = dict(stops or {})
         self.calls: list[tuple[str, tuple[object, ...]]] = []
 
     def named(self, verb: str) -> list[tuple[object, ...]]:
@@ -105,9 +108,9 @@ class FakeProvider:
         return self.deletes.get(pod_id, 204)
 
     def stop(self, pod_id: str) -> int:
-        """Answer the pod's scripted status, or 200."""
+        """Answer 200."""
         self.calls.append(("stop", (pod_id,)))
-        return self.stops.get(pod_id, 200)
+        return 200
 
 
 def _next(script: list[T]) -> T:
@@ -118,6 +121,17 @@ def _raise_or(answer: T | Exception) -> T:
     if isinstance(answer, Exception):
         raise answer
     return answer
+
+
+def fixture(name: str) -> bytes:
+    """Return the body of `tests/fixtures/<name>`."""
+    return (FIXTURES / name).read_bytes()
+
+
+def page(pods: list[dict[str, str]], cursor: str | None) -> bytes:
+    """Return one page of RunPod's pod listing; `cursor` None is the last page."""
+    more = {"nextCursor": cursor, "hasNextPage": cursor is not None}
+    return json.dumps({"pods": pods, "pagination": more}).encode()
 
 
 Answer = tuple[int, bytes] | Exception

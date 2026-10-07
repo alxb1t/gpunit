@@ -9,10 +9,14 @@ class Refusal(Exception):
     """A verb refused; `cli` turns it into exit 1."""
 
 
+def utc() -> str:
+    """Return the UTC time now, e.g. "2026-10-07T15:32:09Z"."""
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
 def say(text: str) -> None:
     """Write one line, `<UTC> <text>`, to stderr."""
-    stamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    print(f"{stamp} {text}", file=sys.stderr, flush=True)
+    print(f"{utc()} {text}", file=sys.stderr, flush=True)
 
 
 def refuse(text: str) -> NoReturn:

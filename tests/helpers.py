@@ -1,5 +1,6 @@
-"""Write a spec and run the CLI in-process, for the tests."""
+"""Write a spec, install stub commands, and run the CLI in-process, for the tests."""
 
+from collections.abc import Mapping
 from pathlib import Path
 from typing import NoReturn, cast
 
@@ -27,6 +28,10 @@ class NoRequests:
         raise AssertionError(f"a request was made: {name}")
 
 
+# The one provider that does not satisfy the protocol by its methods; cast here alone.
+NO_REQUESTS = cast(Provider, NoRequests())
+
+
 def write_spec(cwd: Path, text: str = VALID) -> Path:
     """Write `gpunit.toml` into `cwd` and return its path."""
     path = cwd / "gpunit.toml"
@@ -34,8 +39,17 @@ def write_spec(cwd: Path, text: str = VALID) -> Path:
     return path
 
 
-def gpunit(argv: list[str], provider: object | None = None) -> int | str | None:
+def install_stubs(bin_dir: Path, scripts: Mapping[str, str]) -> Path:
+    """Write each script into `bin_dir` as an executable of its name; return the dir."""
+    bin_dir.mkdir(exist_ok=True)
+    for name, script in scripts.items():
+        (bin_dir / name).write_text(script, encoding="utf-8")
+        (bin_dir / name).chmod(0o755)
+    return bin_dir
+
+
+def gpunit(argv: list[str], provider: Provider | None = None) -> int | str | None:
     """Run the CLI and return its exit code."""
     with pytest.raises(SystemExit) as exited:
-        cli.main(argv, provider=cast(Provider | None, provider))
+        cli.main(argv, provider=provider)
     return exited.value.code
