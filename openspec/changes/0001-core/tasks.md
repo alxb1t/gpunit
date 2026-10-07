@@ -11,7 +11,7 @@ The package, then the provider, the session, `run`, the boot, the handover, and 
 - [x] 4 — Run and ssh
 - [x] 5 — The boot
 - [x] 6 — The handover
-- [ ] 7 — ⚠️ **HUMAN · METERED** — make live
+- [x] 7 — ⚠️ **HUMAN · METERED** — make live
 
 ## 1 — The skeleton
 
@@ -77,7 +77,7 @@ The package, then the provider, the session, `run`, the boot, the handover, and 
 
 ## 7 — ⚠️ **HUMAN · METERED** — make live
 
-- [ ] 7.1 Write `live/Dockerfile` and `live/gpunit.toml` per [D14](design.md#d14), and the `live` recipe in `Makefile` that prints the price and the maximum before `gpunit run`.
+- [x] 7.1 Write `live/Dockerfile` and `live/gpunit.toml` per [D14](design.md#d14), and the `live` recipe in `Makefile` that prints the price and the maximum before `gpunit run`.
   Verify: `grep -c 'ceiling = "10m"' live/gpunit.toml` prints `1`, and `make -n live | grep -c 'gpunit run'` prints `1`.
-- [ ] 7.2 **HUMAN · METERED** — build and push `ghcr.io/alxb1t/gpunit-live` for `linux/amd64`, write its digest into `live/gpunit.toml`, run `make live` with `RUNPOD_API_KEY` set, confirm with `gpunit status` and the RunPod console that no pod is left, and append the run's last lines with the date to `live/last_run.txt`.
+- [x] 7.2 **HUMAN · METERED** — build and push `ghcr.io/alxb1t/gpunit-live` for `linux/amd64`, write its digest into `live/gpunit.toml`, run `make live` with `RUNPOD_API_KEY` set, confirm with `gpunit status` and the RunPod console that no pod is left, and append the run's last lines with the date to `live/last_run.txt`.
   Verify: `grep -c '@sha256:' live/gpunit.toml` prints `1`, and `grep -c 'NVIDIA-SMI' live/last_run.txt` prints a number of at least `1`.
