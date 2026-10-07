@@ -42,8 +42,29 @@ fi
 exit 0
 """
 
+# Logs its argv, then the host keys it would serve as OpenSSH does: HostKey is a list,
+# so each HostKey of its config (-f, else the image's) and each -o HostKey adds one.
 SSHD = """#!/bin/bash
 echo "$@" >> "$SSHD_LOG"
+config=$SSHD_IMAGE_CONFIG
+: > "$SSHD_SERVED"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -f) config=$2; shift ;;
+    -o) [ "${2#HostKey=}" = "$2" ] || echo "${2#HostKey=}" >> "$SSHD_SERVED"; shift ;;
+  esac
+  shift
+done
+awk 'tolower($1) == "hostkey" { gsub(/"/, "", $2); print $2 }' "$config" \\
+  >> "$SSHD_SERVED"
+"""
+
+# The image's own sshd_config, as a base that generates its host keys at build time
+# ships it. A path in the test's directory: the machine's /etc/ssh is never read.
+IMAGE_CONFIG = """\
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_ed25519_key
+UsePAM yes
 """
 
 SSH_KEYGEN = f"""#!/bin/bash
@@ -61,6 +82,7 @@ class Boot:
     curl: list[str]
     sleeps: list[str]
     sshd: list[str]
+    served: list[str]
     keygen: list[str]
 
 
@@ -76,6 +98,8 @@ def pod_bin(tmp_path_factory: pytest.TempPathFactory) -> Path:
 @pytest.fixture
 def pod(tmp_path: Path, pod_bin: Path) -> dict[str, str]:
     (tmp_path / "home").mkdir()
+    image_config = tmp_path / "image_sshd_config"
+    image_config.write_text(IMAGE_CONFIG, encoding="utf-8")
     return {
         "PATH": f"{pod_bin}:/usr/bin:/bin",
         "HOME": str(tmp_path / "home"),
@@ -85,6 +109,7 @@ def pod(tmp_path: Path, pod_bin: Path) -> dict[str, str]:
         "GPUNIT_CEILING": "7",
         "HOLD_CEILING": "1",
         "TMPDIR": str(tmp_path),
+        "SSHD_IMAGE_CONFIG": str(image_config),
         **{
             name: str(tmp_path / f"{name.lower()}.txt")
             for name in (
@@ -92,6 +117,7 @@ def pod(tmp_path: Path, pod_bin: Path) -> dict[str, str]:
                 "CURL_CODES",
                 "SLEEP_LOG",
                 "SSHD_LOG",
+                "SSHD_SERVED",
                 "KEYGEN_LOG",
             )
         },
@@ -129,6 +155,7 @@ def boot(env: dict[str, str], *command: str) -> Boot:
         curl=lines("CURL_LOG"),
         sleeps=lines("SLEEP_LOG"),
         sshd=lines("SSHD_LOG"),
+        served=lines("SSHD_SERVED"),
         keygen=lines("KEYGEN_LOG"),
     )
 
@@ -226,11 +253,16 @@ def test_the_fingerprint_line(pod: dict[str, str]) -> None:
     ]
     assert printed == [f"gpunit host key: {FINGERPRINT}"]
     assert re.fullmatch(r"gpunit host key: SHA256:[A-Za-z0-9+/]+", printed[0])
-    # The served key is the one made on this boot, never one the image baked in.
+    # The served key is the one made on this boot, and it alone: never one the image
+    # baked in, even when the image's sshd_config names its own HostKey lines.
     [made] = [line.split() for line in result.keygen if "-t ed25519" in line]
     host_key = made[made.index("-f") + 1]
     assert not host_key.startswith("/etc/ssh/")
-    assert result.sshd == [f"-o HostKey={host_key}"]
+    assert result.served == [host_key]
+    # The stub follows no Include, so boot's config must name none.
+    [started] = result.sshd
+    config = Path(started.removeprefix("-f ")).read_text(encoding="utf-8")
+    assert "include" not in config.lower()
     assert f"-lf {host_key}.pub" in result.keygen
 
 

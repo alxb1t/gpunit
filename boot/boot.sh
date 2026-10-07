@@ -61,10 +61,21 @@ mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
 (umask 077 && printf '%s\n' "$PUBLIC_KEY" > "$HOME/.ssh/authorized_keys")
 chmod 600 "$HOME/.ssh/authorized_keys"
 mkdir -p /run/sshd 2>/dev/null
-HOST_KEY="$(mktemp -d)/ssh_host_ed25519_key" || refuse "the host key's directory could not be made"
+SSHD_DIR="$(mktemp -d)" || refuse "sshd's directory could not be made"
+HOST_KEY="$SSHD_DIR/ssh_host_ed25519_key"
 ssh-keygen -q -t ed25519 -N '' -f "$HOST_KEY" || refuse "the host key could not be made"
+# sshd's config is boot's own, not the image's: HostKey is a list, so a key the image's
+# sshd_config names would be served beside the fresh one, and -o HostKey only adds.
+cat > "$SSHD_DIR/sshd_config" <<EOF || refuse "sshd's config could not be written"
+HostKey "$HOST_KEY"
+PermitRootLogin prohibit-password
+AuthorizedKeysFile .ssh/authorized_keys
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+Subsystem sftp internal-sftp
+EOF
 # sshd re-execs itself, so it is started by its absolute path.
-"$(command -v sshd)" -o HostKey="$HOST_KEY" || refuse "sshd did not start"
+"$(command -v sshd)" -f "$SSHD_DIR/sshd_config" || refuse "sshd did not start"
 
 # 4. Print: the line the laptop checks the scanned key against, over the API's log.
 echo "gpunit host key: $(ssh-keygen -lf "$HOST_KEY.pub" | awk '{print $2}')"

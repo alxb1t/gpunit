@@ -45,8 +45,8 @@ API with the key the provider injected; the stop SHALL retry on any answer but a
 ### Requirement: Sshd on a fresh host key, and the fingerprint printed
 
 Boot SHALL install `PUBLIC_KEY` as the only authorized key, generate a fresh Ed25519 host key on every boot, never
-serving one the image supplied, start `sshd` serving that key alone, and print one line
-`gpunit host key: SHA256:<fingerprint>` to stdout.
+serving one the image supplied, start `sshd` on a config of its own, not the image's, serving that key alone, and
+print one line `gpunit host key: SHA256:<fingerprint>` to stdout.
 
 #### Scenario: the fingerprint line
 - **Key:** `boot:sshd:fingerprint-printed`

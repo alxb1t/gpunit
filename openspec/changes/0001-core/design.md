@@ -187,13 +187,16 @@ root@<host> -p <port>` line. No app-health wait: the consumer polls its own port
 ```
 1 check: sshd and curl on PATH; RUNPOD_API_KEY, RUNPOD_POD_ID, PUBLIC_KEY, GPUNIT_CEILING; a command after --
 2 arm:   ( sleep "$GPUNIT_CEILING"; stop ) &   and   trap stop EXIT
-3 sshd:  authorized_keys from PUBLIC_KEY; ssh-keygen a fresh ed25519 host key in a mktemp -d dir; sshd -o HostKey=…
+3 sshd:  authorized_keys from PUBLIC_KEY; ssh-keygen a fresh ed25519 host key in a mktemp -d dir; sshd -f on a
+         config boot writes there: that HostKey alone, root by key, no password, sftp internal
 4 print: "gpunit host key: SHA256:…"
 5 run:   "$@" as a child; SIGTERM forwarded; wait; exit its code (the trap stops the pod)
 ```
 
 `stop` is `stop_pod.sh`'s loop: `POST /pods/$RUNPOD_POD_ID/action {"action":"stop"}` with `curl`, the key on a
-file descriptor, retry doubling from 30 s to 300 s until `200`. A consumer's Dockerfile:
+file descriptor, retry doubling from 30 s to 300 s until `200`. sshd runs on boot's config, never the image's:
+`HostKey` is a list, so a key the image's `sshd_config` names would be served too, and `-o HostKey` only adds
+to it. A consumer's Dockerfile:
 
 ```
 ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.1.0/boot/boot.sh /opt/gpunit/boot.sh

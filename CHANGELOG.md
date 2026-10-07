@@ -33,3 +33,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `boot.sh` makes a fresh host key in a new directory on every boot; it served any key the image baked in, as
   installing `openssh-server` on Debian or Ubuntu does.
 - `boot.sh` refuses an image without `curl`; the ceiling's stop needs it, and without it retried forever.
+- `boot.sh` starts sshd on a config of its own that names only the fresh host key; `-o HostKey` added it to
+  the keys the image's `sshd_config` names, so an image naming its own `HostKey` lines served those too.
