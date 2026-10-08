@@ -5,8 +5,9 @@
 The system SHALL tear the session down when the command exits, on `SIGINT`, `SIGTERM` and `SIGHUP`, and after a
 lost create; SHALL ignore a second interrupt while tearing down; SHALL kill the tunnel first; and SHALL exit with
 the command's code when the teardown succeeded — `128 + n` for a command killed by signal `n` — `1` when it did
-not, even after a signal, `3` after a lost create. An interrupt that arrives before any create began — no record,
-no pending marker, no lost create — SHALL tear nothing down and delete no pod, and `run` SHALL exit `128 + n`.
+not, even after a signal, `3` after a lost create. An interrupt that arrives before this run began a create — no
+record or pending marker written since the run started, no lost create — SHALL tear nothing down and delete no pod,
+not even one an earlier `gpunit up` recorded, and `run` SHALL exit `128 + n`.
 
 #### Scenario: the command's exit tears down
 - **Key:** `run:teardown:on-exit`
@@ -32,6 +33,11 @@ no pending marker, no lost create — SHALL tear nothing down and delete no pod,
 - **Key:** `run:teardown:interrupt-before-create`
 - **WHEN** `SIGINT` arrives while `up` reads the catalogue, before any create
 - **THEN** `run` lists and deletes no pod after the signal, stderr says no create began, and `run` exits `130`
+
+#### Scenario: an interrupt beside an earlier record deletes nothing
+- **Key:** `run:teardown:interrupt-beside-record`
+- **WHEN** a pod is already recorded by an earlier `gpunit up`, and `SIGINT` arrives during `up`'s tool check
+- **THEN** `run` lists and deletes no pod, the record remains, stderr says no create began, and `run` exits `130`
 
 #### Scenario: a failed teardown is exit 1
 - **Key:** `run:teardown:failure-is-1`

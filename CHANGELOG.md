@@ -10,18 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 - `boot.sh` runs the command under `env -u RUNPOD_API_KEY`: the account-wide key stays boot's, for the stop,
-  and never reaches the app. Boot refuses an image without coreutils' `env`.
+  and is not in the command's environment. The command still runs as root beside boot, so it can read the key
+  from boot's own environment in `/proc`; run no code on the pod you would not trust with the key. Boot refuses
+  an image without coreutils' `env`.
 
 ### Fixed
 
 - An interrupt before any create began tears nothing down: `run` no longer sweeps another working copy's pod
-  of the same project, and says no create began.
+  of the same project, and says no create began. A record or pending marker left by an earlier `gpunit up`
+  no longer counts as this run's create: an interrupt before `up` refuses deletes neither that session's pod
+  nor any other listed one.
 - A host-key line pushed out of the log's last 5000 lines is read again from the create's time, so a boot
   that logs heavily no longer tears a healthy pod down; `created` is stamped before the create.
 - A stop answered `401` or `403` says the key cannot stop this pod and to delete it by hand, then retries,
   instead of an outage's message.
-- README: the image needs coreutils' `env`, the command on the pod does not see `RUNPOD_API_KEY`, and the pins
-  move to `v0.1.2`.
+- README: the image needs coreutils' `env`, the command's environment on the pod does not carry
+  `RUNPOD_API_KEY` (though a root command can still read it from boot's process), and the pins move to `v0.1.2`.
 - `make live` passed on a rebuilt `live` image carrying this `boot.sh`: the host key verified, `nvidia-smi` ran
   over `GPUNIT_SSH`, and the pod was deleted; it is the first live run of `AllowUsers root`. The tail is in
   `live/last_run.txt`.
