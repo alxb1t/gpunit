@@ -1,7 +1,7 @@
 # The session `make live` opens: one card, ten minutes at most, no volume.
 project = "live"
 # Pushed by hand for linux/amd64; a rebuild moves the digest.
-image = "ghcr.io/alxb1t/gpunit-live@sha256:73236f1b371c7890ddaac8ce4b314ab91d84603b58d36a98150a49b5596f5cb7"
+image = "ghcr.io/alxb1t/gpunit-live@sha256:2cde9a229462f9d5514051aee2a6ab8d30dede6462734b90d0ce8ebcd36663ab"
 # The cheapest secure-cloud cards in stock, tried in order; stock moves by the hour.
 gpus = ["NVIDIA RTX A4500", "NVIDIA RTX A5000", "NVIDIA A40", "NVIDIA RTX A6000"]
 vram_gb = 16

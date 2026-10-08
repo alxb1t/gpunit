@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The curl refusal is its own test under `boot:refuse:no-curl`, apart from the sshd one.
 - README: the design link points at the archive, the pins move to `v0.1.1`, a spend rule says gpunit's ssh is
   its own, and the `128+n` row covers a command killed by a signal.
+- `make live` passed on a rebuilt `live` image carrying this `boot.sh`: the host key verified and `nvidia-smi`
+  ran over `GPUNIT_SSH` under `-F none`, with sshd on `UsePAM yes`; the run's tail is in `live/last_run.txt`.
 
 ## [0.1.0] - 2026-10-07
 

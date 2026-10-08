@@ -10,7 +10,7 @@ Every new test carries `@pytest.mark.spec` with the key its task names.
 - [x] 3 — Run
 - [x] 4 — The boot
 - [x] 5 — The handover
-- [ ] 6 — ⚠️ **HUMAN · METERED** — make live
+- [x] 6 — ⚠️ **HUMAN · METERED** — make live
 
 ## 1 — The ssh line
 
@@ -53,5 +53,5 @@ Every new test carries `@pytest.mark.spec` with the key its task names.
 
 ## 6 — ⚠️ **HUMAN · METERED** — make live
 
-- [ ] 6.1 **HUMAN · METERED** — rebuild `live/Dockerfile` for `linux/amd64` from the repository root, push `ghcr.io/alxb1t/gpunit-live`, write its new digest into `live/gpunit.toml`, run `make live` with `RUNPOD_API_KEY` set, confirm with `gpunit status --spec live/gpunit.toml` and the RunPod console that no pod is left, and append the run's tail to `live/last_run.txt` under a header `<date> — make live, 0002-paydown`, per [D13](design.md#d13).
+- [x] 6.1 **HUMAN · METERED** — rebuild `live/Dockerfile` for `linux/amd64` from the repository root, push `ghcr.io/alxb1t/gpunit-live`, write its new digest into `live/gpunit.toml`, run `make live` with `RUNPOD_API_KEY` set, confirm with `gpunit status --spec live/gpunit.toml` and the RunPod console that no pod is left, and append the run's tail to `live/last_run.txt` under a header `<date> — make live, 0002-paydown`, per [D13](design.md#d13).
   Verify: `git diff main -- live/gpunit.toml | grep -c '^+image = '` prints `1`, and `grep -c '^2026-.*0002' live/last_run.txt` prints a number of at least `1`.
