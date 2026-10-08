@@ -9,7 +9,7 @@ Every new test carries `@pytest.mark.spec` with the key its task names.
 - [x] 2 — The provider
 - [x] 3 — Run
 - [x] 4 — The boot
-- [ ] 5 — The handover
+- [x] 5 — The handover
 - [ ] 6 — ⚠️ **HUMAN · METERED** — make live
 
 ## 1 — The ssh line
@@ -48,7 +48,7 @@ Every new test carries `@pytest.mark.spec` with the key its task names.
 
 ## 5 — The handover
 
-- [ ] 5.1 In `README.md`, point the design link at the archive, pin `v0.1.1` in the `ADD` URL and `uv add`, add the spend-rule bullet on gpunit's own ssh, and widen the `128+n` row, per [D11](design.md#d11).
+- [x] 5.1 In `README.md`, point the design link at the archive, pin `v0.1.1` in the `ADD` URL and `uv add`, add the spend-rule bullet on gpunit's own ssh, and widen the `128+n` row, per [D11](design.md#d11).
   Verify: `grep -c 'v0.1.0' README.md` prints `0`, `grep -c 'changes/archive/0001-core/design.md' README.md` prints a number of at least `1`, and `grep -c 'ssh_config' README.md` prints a number of at least `1`.
 
 ## 6 — ⚠️ **HUMAN · METERED** — make live

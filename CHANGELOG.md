@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A tunnel that keeps dying is reopened with backoff, 1 s doubling to 30 s, so it no longer floods stderr.
 - `boot.sh` starts sshd with `UsePAM yes`, so a root whose password is locked with `!` still logs in by key.
 - The curl refusal is its own test under `boot:refuse:no-curl`, apart from the sshd one.
+- README: the design link points at the archive, the pins move to `v0.1.1`, a spend rule says gpunit's ssh is
+  its own, and the `128+n` row covers a command killed by a signal.
 
 ## [0.1.0] - 2026-10-07
 

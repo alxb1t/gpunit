@@ -12,8 +12,7 @@ gpunit run -- <cmd>                              boot.sh -- <cmd>
  └─ down: delete · sweep                          stops itself at the ceiling
 ```
 
-The design: [openspec/changes/0001-core/design.md](openspec/changes/0001-core/design.md), archived under
-`openspec/changes/archive/` once released.
+The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/archive/0001-core/design.md).
 
 ## Use it from a project
 
@@ -41,7 +40,7 @@ The design: [openspec/changes/0001-core/design.md](openspec/changes/0001-core/de
    the checksum; on an older Docker, copy the file in.
 
    ```dockerfile
-   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.1.0/boot/boot.sh /opt/gpunit/boot.sh
+   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.1.1/boot/boot.sh /opt/gpunit/boot.sh
    RUN chmod +x /opt/gpunit/boot.sh
    ENTRYPOINT ["/opt/gpunit/boot.sh", "--"]
    CMD ["python3", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
@@ -52,7 +51,7 @@ The design: [openspec/changes/0001-core/design.md](openspec/changes/0001-core/de
 3. **Install and run.** The key comes from the environment alone; gpunit reads no `.env`.
 
    ```sh
-   uv add --dev git+https://github.com/alxb1t/gpunit@v0.1.0
+   uv add --dev git+https://github.com/alxb1t/gpunit@v0.1.1
    echo .gpunit/ >> .gitignore
    export RUNPOD_API_KEY=...
    uv run gpunit run -- python3 render.py
@@ -79,7 +78,7 @@ Each verb reads `gpunit.toml` from the working directory, or the file `--spec <p
 | `1` | refused or failed; the teardown failed |
 | `2` | usage: an unknown verb, a missing command, an unreadable spec path |
 | `3` | a create's answer was lost; a pod may exist and bill — run `gpunit down` |
-| `128+n` | `run` was stopped by signal `n` and tore down; a failed teardown is still `1` |
+| `128+n` | signal `n` stopped `run` or killed its command, and the teardown succeeded; a failed teardown is still `1` |
 
 gpunit's own lines go to stderr, each opening with the UTC time; stdout belongs to the command.
 
@@ -92,6 +91,8 @@ gpunit's own lines go to stderr, each opening with the UTC time; stdout belongs 
 - **One session per project.** `up` refuses on a record, a pending create, or a listed pod.
 - **Secure cloud, port 22 only.** Other ports reach the laptop over the SSH tunnel, never a public proxy.
 - **A fresh keypair per session**, in `.gpunit/`, deleted with the pod.
+- **gpunit's ssh is its own.** No ssh_config is read, and only the session's key is offered; a user who wants
+  their own config runs `ssh -i .gpunit/key` themselves.
 
 ## The proof — `make live`
 
