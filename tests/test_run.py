@@ -180,7 +180,9 @@ def test_a_tunnel_that_keeps_dying_backs_off() -> None:
     backoff = run._Backoff(now=0.0)
     now, waits = 0.0, []
     for _ in range(7):
-        waits.append(backoff.exited(now))
+        wait = backoff.exited(now)
+        assert wait is not None and backoff.exited(now) is None
+        waits.append(wait)
         assert not backoff.due(now + waits[-1] - 0.01)
         now += waits[-1]
         assert backoff.due(now)

@@ -249,6 +249,7 @@ def test_a_failed_stop_retries_with_backoff(pod: dict[str, str]) -> None:
 
 
 @pytest.mark.spec("boot:sshd:fingerprint-printed")
+@pytest.mark.spec("boot:sshd:pam-on")
 def test_the_fingerprint_line(pod: dict[str, str]) -> None:
     result = boot(pod, "true")
 
@@ -267,6 +268,7 @@ def test_the_fingerprint_line(pod: dict[str, str]) -> None:
     [started] = result.sshd
     config = Path(started.removeprefix("-f ")).read_text(encoding="utf-8")
     assert "include" not in config.lower()
+    assert "UsePAM yes" in config.splitlines()
     assert f"-lf {host_key}.pub" in result.keygen
 
 
@@ -288,12 +290,3 @@ def test_the_childs_code(pod: dict[str, str]) -> None:
     assert result.err.index("the command exited 3") < result.err.index(
         "the pod is stopping"
     )
-
-
-@pytest.mark.spec("boot:sshd:pam-on")
-def test_sshd_runs_with_pam(pod: dict[str, str]) -> None:
-    result = boot(pod, "true")
-
-    [started] = [line.split() for line in result.sshd]
-    config = Path(started[started.index("-f") + 1]).read_text(encoding="utf-8")
-    assert "UsePAM yes" in config.splitlines()

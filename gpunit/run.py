@@ -55,8 +55,10 @@ class _Backoff:
         self.opened_at = now
         self.reopen_at: float | None = None
 
-    def exited(self, now: float) -> float:
-        """Schedule the reopening of a tunnel that exited at `now`; return its wait."""
+    def exited(self, now: float) -> float | None:
+        """Schedule a dead tunnel's reopening once; return its wait, else None."""
+        if self.reopen_at is not None:
+            return None
         if now - self.opened_at >= REOPEN_CAP_S:
             self.wait = REOPEN_FIRST_S
         wait = self.wait
@@ -156,8 +158,8 @@ def _supervise(
         if children.tunnel is None or children.tunnel.poll() is None:
             continue
         now = time.monotonic()
-        if backoff.reopen_at is None:
-            wait = backoff.exited(now)
+        wait = backoff.exited(now)
+        if wait is not None:
             returncode = children.tunnel.returncode
             log.say(f"the tunnel exited ({returncode}); reopening it in {wait:g}s")
         if backoff.due(now):

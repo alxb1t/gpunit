@@ -1,6 +1,5 @@
 import dataclasses
 import io
-import json
 import urllib.error
 import urllib.request
 import urllib.response
@@ -166,15 +165,12 @@ def test_the_logs_last_fingerprint_wins() -> None:
 
 @pytest.mark.spec("session:hostkey:quiet-stream-ends-read")
 def test_a_quiet_stream_ends_the_read() -> None:
-    keys = ["SHA256:FromAnEarlierBoot", "SHA256:FromThisBoot"]
-    events = [
-        f"data: {json.dumps({'line': f'gpunit host key: {key}'})}\n" for key in keys
-    ]
-    provider, opener = runpod(quiet("".join(events).encode()))
+    # log.txt holds an earlier boot's host-key line, then this boot's.
+    provider, opener = runpod(quiet(fixture("log.txt")))
 
     lines = provider.log("pod-abc123", tail=5000)
 
-    assert fingerprint(lines) == "SHA256:FromThisBoot"
+    assert fingerprint(lines) == "SHA256:LastKeyWins+/111111111111111111111111111111"
     assert opener.timeouts == [LOG_IDLE_S]
 
 

@@ -16,7 +16,7 @@ from tests.fakes import (
     fixture,
     page,
 )
-from tests.helpers import IMAGE, NO_REQUESTS, VALID, gpunit, install_stubs, write_spec
+from tests.helpers import IMAGE, NO_REQUESTS, VALID, gpunit, write_spec
 
 
 def creates(provider: FakeProvider) -> list[str]:
@@ -196,10 +196,10 @@ def test_no_ssh_keyscan_refuses_before_any_request(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    some = install_stubs(
-        cwd / "bin",
-        {tool: (ssh_bin / tool).read_text() for tool in ("ssh", "ssh-keygen")},
-    )
+    some = cwd / "bin"
+    some.mkdir()
+    for tool in ("ssh", "ssh-keygen"):
+        (some / tool).symlink_to(ssh_bin / tool)
     monkeypatch.setenv("PATH", str(some))
 
     assert gpunit(["up"], provider=NO_REQUESTS) == 1
