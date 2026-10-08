@@ -1,6 +1,7 @@
 import dataclasses
 import io
 import urllib.error
+import urllib.parse
 import urllib.request
 import urllib.response
 from email.message import Message
@@ -161,6 +162,17 @@ def test_the_logs_last_fingerprint_wins() -> None:
         fingerprint(lines[:2]) == "SHA256:FirstKeyFromAnEarlierBoot0000000000000000000"
     )
     assert fingerprint(["echo gpunit host key: SHA256:abc"]) is None
+
+
+@pytest.mark.spec("session:hostkey:since-fallback")
+def test_a_since_read_starts_there_and_sends_no_tail() -> None:
+    provider, opener = runpod((200, fixture("log.txt")))
+
+    lines = provider.log("pod-abc123", tail=5000, since="2026-10-07T00:00:00Z")
+
+    query = urllib.parse.urlsplit(opener.requests[0].full_url).query
+    assert query == "since=2026-10-07T00%3A00%3A00Z&source=container"
+    assert fingerprint(lines) == "SHA256:LastKeyWins+/111111111111111111111111111111"
 
 
 @pytest.mark.spec("session:hostkey:quiet-stream-ends-read")

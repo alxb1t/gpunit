@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - An interrupt before any create began tears nothing down: `run` no longer sweeps another working copy's pod
   of the same project, and says no create began.
+- A host-key line pushed out of the log's last 5000 lines is read again from the create's time, so a boot
+  that logs heavily no longer tears a healthy pod down; `created` is stamped before the create.
 
 ## [0.1.1] - 2026-10-08
 

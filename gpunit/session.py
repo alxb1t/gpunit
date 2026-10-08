@@ -68,12 +68,14 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
     cards = _placeable(spec, provider)
 
     pubkey = state.keygen(pod_name(spec.project))
+    # Before the create, so a log read `since` it holds the whole boot (0003 design D2).
+    created = log.utc()
     state.mark_pending()
     pod_id = _create(spec, provider, cards, pubkey)
     if pod_id is None:
         state.clear_pending()
         log.refuse("no card in 'gpus' was placed")
-    record = Record(pod_id, spec.image, host=None, port=None, created=log.utc())
+    record = Record(pod_id, spec.image, host=None, port=None, created=created)
     state.write(record)
     state.clear_pending()
     log.say(f"pod {pod_id} created; waiting for SSH")
@@ -277,9 +279,13 @@ def _verify_host_key(
 ) -> None:
     # The fingerprint comes over the authenticated API, never over the connection
     # it vouches for; nothing connects until the two agree.
-    printed = _poll(
-        LOG_WAIT_S, lambda: fingerprint(provider.log(record.id, tail=LOG_TAIL))
-    )
+    def read() -> str | None:
+        # A boot that logs heavily pushes the key line out of the tail.
+        return fingerprint(provider.log(record.id, tail=LOG_TAIL)) or fingerprint(
+            provider.log(record.id, tail=LOG_TAIL, since=record.created)
+        )
+
+    printed = _poll(LOG_WAIT_S, read)
     if printed is None:
         _tear_down(spec, provider, state, f"no host-key line within {LOG_WAIT_S}s")
     scanned = _poll(SCAN_WAIT_S, lambda: _scan(str(record.host), int(record.port or 0)))

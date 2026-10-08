@@ -6,7 +6,7 @@ The interrupt's teardown, the host-key read, the boot, the README, then the one 
 ## Progress
 
 - [x] 1 — The interrupt
-- [ ] 2 — The host-key read
+- [x] 2 — The host-key read
 - [ ] 3 — The boot
 - [ ] 4 — The handover
 - [ ] 5 — ⚠️ **HUMAN · METERED** — make live
@@ -20,9 +20,9 @@ The interrupt's teardown, the host-key read, the boot, the README, then the one 
 
 ## 2 — The host-key read
 
-- [ ] 2.1 Add `since` to `Provider.log` in `gpunit/provider.py`, to `RunPod.log` in `gpunit/runpod.py` and to `FakeProvider.log` in `tests/fakes.py`, per [D2](design.md#d2); in `tests/test_runpod.py` assert a `since` read queries `since=<since>&source=container` and sends no `tail`.
+- [x] 2.1 Add `since` to `Provider.log` in `gpunit/provider.py`, to `RunPod.log` in `gpunit/runpod.py` and to `FakeProvider.log` in `tests/fakes.py`, per [D2](design.md#d2); in `tests/test_runpod.py` assert a `since` read queries `since=<since>&source=container` and sends no `tail`.
   Verify: `grep -c 'since: str | None = None' gpunit/provider.py gpunit/runpod.py tests/fakes.py` prints `1` for each file.
-- [ ] 2.2 In `gpunit/session.py`, stamp `created` before `_create` and read the log again from it when the tail holds no key, per [D2](design.md#d2); in `tests/test_hostkey.py` bind `session:hostkey:since-fallback`.
+- [x] 2.2 In `gpunit/session.py`, stamp `created` before `_create` and read the log again from it when the tail holds no key, per [D2](design.md#d2); in `tests/test_hostkey.py` bind `session:hostkey:since-fallback`.
   Verify: `grep -c 'since=record.created' gpunit/session.py` prints `1`, and `grep -c 'session:hostkey:since-fallback' tests/test_hostkey.py` prints `1`.
 
 ## 3 — The boot

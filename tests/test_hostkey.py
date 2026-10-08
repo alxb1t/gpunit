@@ -1,8 +1,10 @@
+import json
 from pathlib import Path
 
 import pytest
 
-from tests.fakes import FakeClock, FakeProvider
+from gpunit import log
+from tests.fakes import KEY_LINE, SERVED, FakeClock, FakeProvider
 from tests.helpers import gpunit
 
 
@@ -46,3 +48,22 @@ def test_no_fingerprint_or_no_scan_tears_down(
     assert gpunit(["up"], provider=provider) == 1
     assert provider.named("delete") == [("pod-1",)]
     assert waited <= clock.now < waited + 10
+
+
+@pytest.mark.spec("session:hostkey:since-fallback")
+def test_a_key_line_out_of_the_tail_is_read_from_the_create(
+    cwd: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    provider = FakeProvider(
+        logs=[["a boot that logs heavily"]], since_logs=[[KEY_LINE]]
+    )
+    # The stamp says whether the create had been asked when it was taken.
+    monkeypatch.setattr(
+        log, "utc", lambda: "after" if provider.named("create") else "before"
+    )
+
+    assert gpunit(["up"], provider=provider) == 0
+    created = json.loads((cwd / ".gpunit" / "pod").read_text(encoding="utf-8"))
+    assert created["created"] == "before"
+    assert provider.named("log") == [("pod-1", 5000, None), ("pod-1", 5000, "before")]
+    assert f"host key verified: {SERVED}" in capsys.readouterr().err
