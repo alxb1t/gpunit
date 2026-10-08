@@ -196,6 +196,15 @@ class Redirecting(urllib.request.BaseHandler):
 
 @pytest.mark.spec("spec:secrets:redirect-not-followed")
 def test_a_redirect_is_not_followed(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The baseline: an opener without `_NoRedirect` sends the key to the new host.
+    unguarded = Redirecting()
+    exposed = RunPod(
+        {"RUNPOD_API_KEY": KEY}, opener=urllib.request.build_opener(unguarded)
+    )
+    with pytest.raises(Lost, match="HTTP 302"):
+        exposed.create(SPEC, "RTX 4090", "key", 2700)
+    assert ("elsewhere.example", f"Bearer {KEY}") in unguarded.opened
+
     redirecting = Redirecting()
     build = urllib.request.build_opener
     monkeypatch.setattr(
@@ -212,19 +221,6 @@ def test_a_redirect_is_not_followed(monkeypatch: pytest.MonkeyPatch) -> None:
         request, io.BytesIO(), 302, "Found", Message(), elsewhere
     )
     assert found is None
-
-
-@pytest.mark.spec("spec:secrets:redirect-not-followed")
-def test_urllibs_own_redirect_handler_carries_the_key_away() -> None:
-    # The guard's twin: an opener without `_NoRedirect` sends the key to the new host.
-    redirecting = Redirecting()
-    provider = RunPod(
-        {"RUNPOD_API_KEY": KEY}, opener=urllib.request.build_opener(redirecting)
-    )
-
-    with pytest.raises(Lost, match="HTTP 302"):
-        provider.create(SPEC, "RTX 4090", "key", 2700)
-    assert ("elsewhere.example", f"Bearer {KEY}") in redirecting.opened
 
 
 @pytest.mark.spec("session:one:listed-refuses")

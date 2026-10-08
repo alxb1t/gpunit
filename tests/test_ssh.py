@@ -6,6 +6,7 @@ from gpunit import session
 from gpunit.log import Refusal
 from gpunit.state import State
 from tests.fakes import RECORD
+from tests.helpers import gpunit
 
 
 @pytest.fixture
@@ -52,3 +53,18 @@ def test_no_ssh_refuses(state: State, capsys: pytest.CaptureFixture[str]) -> Non
         session.ssh(state, execvp=missing)
     [line] = capsys.readouterr().err.splitlines()
     assert "'ssh'" in line
+
+
+@pytest.mark.spec("session:ssh:no-ssh-refuses")
+def test_gpunit_ssh_without_ssh_exits_1(
+    cwd: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    State(cwd).write(RECORD)
+    # An empty PATH: the exec finds no `ssh`, so it can never replace this process.
+    empty = cwd / "empty"
+    empty.mkdir()
+    monkeypatch.setenv("PATH", str(empty))
+
+    assert gpunit(["ssh"]) == 1
+    [line] = capsys.readouterr().err.splitlines()
+    assert "ssh could not be run" in line
