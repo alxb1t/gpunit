@@ -9,7 +9,7 @@ The interrupt's teardown, the host-key read, the boot, the README, then the one 
 - [x] 2 — The host-key read
 - [x] 3 — The boot
 - [x] 4 — The handover
-- [ ] 5 — ⚠️ **HUMAN · METERED** — make live
+- [x] 5 — ⚠️ **HUMAN · METERED** — make live
 
 ## 1 — The interrupt
 
@@ -39,5 +39,5 @@ The interrupt's teardown, the host-key read, the boot, the README, then the one 
 
 ## 5 — ⚠️ **HUMAN · METERED** — make live
 
-- [ ] 5.1 **HUMAN · METERED** — rebuild `live/Dockerfile` for `linux/amd64` from the repository root, push `ghcr.io/alxb1t/gpunit-live`, write its new digest into `live/gpunit.toml`, run `make live` with `RUNPOD_API_KEY` set, confirm with `gpunit status --spec live/gpunit.toml` and the RunPod console that no pod is left, and append the run's tail to `live/last_run.txt` under a header `<date> — make live, 0003-consumer-fit`, per [D7](design.md#d7).
+- [x] 5.1 **HUMAN · METERED** — rebuild `live/Dockerfile` for `linux/amd64` from the repository root, push `ghcr.io/alxb1t/gpunit-live`, write its new digest into `live/gpunit.toml`, run `make live` with `RUNPOD_API_KEY` set, confirm with `gpunit status --spec live/gpunit.toml` and the RunPod console that no pod is left, and append the run's tail to `live/last_run.txt` under a header `<date> — make live, 0003-consumer-fit`, per [D7](design.md#d7).
   Verify: `git diff main -- live/gpunit.toml | grep -c '^+image = '` prints `1`, and `grep -c '^2026-.*0003-consumer-fit' live/last_run.txt` prints a number of at least `1`.

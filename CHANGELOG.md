@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instead of an outage's message.
 - README: the image needs coreutils' `env`, the command on the pod does not see `RUNPOD_API_KEY`, and the pins
   move to `v0.1.2`.
+- `make live` passed on a rebuilt `live` image carrying this `boot.sh`: the host key verified, `nvidia-smi` ran
+  over `GPUNIT_SSH`, and the pod was deleted; it is the first live run of `AllowUsers root`. The tail is in
+  `live/last_run.txt`.
 
 ## [0.1.1] - 2026-10-08
 
