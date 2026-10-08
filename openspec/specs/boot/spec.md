@@ -16,6 +16,11 @@ at its ceiling whatever happens to the machine that made it, and proves its host
 - **WHEN** `sshd` is not on `PATH`
 - **THEN** boot exits `1` naming `openssh-server` and starts no command
 
+#### Scenario: no curl
+- **Key:** `boot:refuse:no-curl`
+- **WHEN** `curl` is not on `PATH`
+- **THEN** boot exits `1` naming `curl` and starts no command
+
 #### Scenario: no ceiling
 - **Key:** `boot:refuse:no-ceiling`
 - **WHEN** `GPUNIT_CEILING` is unset
@@ -45,8 +50,8 @@ API with the key the provider injected; the stop SHALL retry on any answer but a
 ### Requirement: Sshd on a fresh host key, and the fingerprint printed
 
 Boot SHALL install `PUBLIC_KEY` as the only authorized key, generate a fresh Ed25519 host key on every boot, never
-serving one the image supplied, start `sshd` on a config of its own, not the image's, serving that key alone, and
-print one line `gpunit host key: SHA256:<fingerprint>` to stdout.
+serving one the image supplied, start `sshd` on a config of its own, not the image's, serving that key alone, to root alone,
+with PAM's account check on, and print one line `gpunit host key: SHA256:<fingerprint>` to stdout.
 
 #### Scenario: the fingerprint line
 - **Key:** `boot:sshd:fingerprint-printed`
@@ -57,6 +62,16 @@ print one line `gpunit host key: SHA256:<fingerprint>` to stdout.
 - **Key:** `boot:sshd:authorized-key`
 - **WHEN** boot starts with `PUBLIC_KEY` set
 - **THEN** `/root/.ssh/authorized_keys` holds that key alone, at mode `0600`
+
+#### Scenario: PAM is on
+- **Key:** `boot:sshd:pam-on`
+- **WHEN** boot starts sshd
+- **THEN** sshd's config holds `UsePAM yes`, so a root whose password is locked with `!` still logs in by key
+
+#### Scenario: root alone is admitted
+- **Key:** `boot:sshd:root-only`
+- **WHEN** boot starts sshd
+- **THEN** sshd's config holds `AllowUsers root`, so a key the image baked in for another account logs no one in
 
 ### Requirement: The command runs as a child
 

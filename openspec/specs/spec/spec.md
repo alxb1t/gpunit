@@ -10,7 +10,7 @@ where secrets come from — so a session cannot be opened without an end, a pin,
 The system SHALL read the session's spec from `gpunit.toml`: `project`, `image`, `gpus` (a preference list),
 `vram_gb`, `ceiling`, `disk_gb`, and optionally `volume`, `ports`, `ram_gb`, `cuda`, `max_hourly`, `timeout` and
 an `[env]` table; and SHALL refuse, naming the field, when a required field is missing, a value has the wrong
-type, or a key is unknown.
+type, a key is unknown, or a port, remote or local, lies outside 1–65535.
 
 #### Scenario: a missing required field is named
 - **Key:** `spec:file:missing-field-named`
@@ -31,6 +31,11 @@ type, or a key is unknown.
 - **Key:** `spec:file:ports-local-override`
 - **WHEN** `ports = [{ remote = 8188, local = 18188 }]`
 - **THEN** the session forwards remote `8188` to local `18188`
+
+#### Scenario: a port out of range is refused
+- **Key:** `spec:file:port-out-of-range`
+- **WHEN** `ports = [70000]`, or `ports = [{ remote = 8188, local = 0 }]`
+- **THEN** `up` refuses naming `ports`, exits `1`, and makes no request
 
 ### Requirement: An image without a digest is refused
 
@@ -60,8 +65,8 @@ and SHALL pass it to the pod as `GPUNIT_CEILING` in seconds.
 ### Requirement: Secrets come from the environment only
 
 The system SHALL read the provider's key from `RUNPOD_API_KEY` in its own environment, SHALL never read a `.env`
-file, SHALL refuse before any request when the variable is empty, and SHALL never place the key on a
-subprocess's command line.
+file, SHALL refuse before any request when the variable is empty, SHALL never place the key on a subprocess's
+command line, and SHALL never follow a redirect with it: a redirect is an answer like any other failure.
 
 #### Scenario: no key, no request
 - **Key:** `spec:secrets:no-key-refused`
@@ -72,3 +77,8 @@ subprocess's command line.
 - **Key:** `spec:secrets:dotenv-ignored`
 - **WHEN** a `.env` holding `RUNPOD_API_KEY=…` sits beside `gpunit.toml` and the variable is unset
 - **THEN** `up` refuses as if no key existed
+
+#### Scenario: a redirect is not followed
+- **Key:** `spec:secrets:redirect-not-followed`
+- **WHEN** the provider's API answers a request with a 302 to another host
+- **THEN** no request reaches that host, and the answer is read as a failure: a lost create, a kept record

@@ -51,7 +51,7 @@ def test_gpu_reads_the_memory_and_the_secure_price() -> None:
     url = opener.requests[0].full_url
     assert url.endswith("/catalog/gpus/NVIDIA%20GeForce%20RTX%204090")
     assert opener.requests[0].get_header("Authorization") == f"Bearer {KEY}"
-    assert opener.requests[0].get_header("User-agent") == "gpunit/0.1.0"
+    assert opener.requests[0].get_header("User-agent") == "gpunit/0.1.1"
 
 
 @pytest.mark.spec("session:place:unknown-card-refuses")
