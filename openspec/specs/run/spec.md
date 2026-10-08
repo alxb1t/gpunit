@@ -31,7 +31,9 @@ naming the port.
 The system SHALL tear the session down when the command exits, on `SIGINT`, `SIGTERM` and `SIGHUP`, and after a
 lost create; SHALL ignore a second interrupt while tearing down; SHALL kill the tunnel first; and SHALL exit with
 the command's code when the teardown succeeded — `128 + n` for a command killed by signal `n` — `1` when it did
-not, even after a signal, `3` after a lost create.
+not, even after a signal, `3` after a lost create. An interrupt that arrives before this run began a create — no
+record or pending marker written since the run started, no lost create — SHALL tear nothing down and delete no pod,
+not even one an earlier `gpunit up` recorded, and `run` SHALL exit `128 + n`.
 
 #### Scenario: the command's exit tears down
 - **Key:** `run:teardown:on-exit`
@@ -52,6 +54,22 @@ not, even after a signal, `3` after a lost create.
 - **Key:** `run:teardown:interrupt`
 - **WHEN** `SIGINT` arrives during the command, and again during the teardown
 - **THEN** the teardown runs to its end once and `run` exits `130`
+
+#### Scenario: an interrupt before the create sweeps nothing
+- **Key:** `run:teardown:interrupt-before-create`
+- **WHEN** `SIGINT` arrives while `up` reads the catalogue, before any create
+- **THEN** `run` lists and deletes no pod after the signal, stderr says no create began, and `run` exits `130`
+
+#### Scenario: an interrupt beside an earlier record deletes nothing
+- **Key:** `run:teardown:interrupt-beside-record`
+- **WHEN** a pod is already recorded by an earlier `gpunit up`, and `SIGINT` arrives during `up`'s tool check
+- **THEN** `run` lists and deletes no pod, the record remains, stderr says no create began, and `run` exits `130`
+
+#### Scenario: a record gone before up still tears down this run's pod
+- **Key:** `run:teardown:record-gone-before-up`
+- **WHEN** a pod is recorded by an earlier `gpunit up` when `run` starts, the record is removed before `up` checks
+  it, and `up` creates a pod
+- **THEN** the command's exit deletes the pod this run created, and `run` exits with the command's code
 
 #### Scenario: a failed teardown is exit 1
 - **Key:** `run:teardown:failure-is-1`

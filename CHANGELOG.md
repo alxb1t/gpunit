@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-08
+
 ### Security
 
 - `boot.sh` runs the command under `env -u RUNPOD_API_KEY`: the account-wide key stays boot's, for the stop,
