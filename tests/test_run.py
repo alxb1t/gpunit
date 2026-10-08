@@ -176,6 +176,29 @@ def test_an_interrupt_beside_an_earlier_record_deletes_nothing(
     assert "no create began; nothing to tear down" in capfd.readouterr().err
 
 
+@pytest.mark.spec("run:teardown:record-gone-before-up")
+def test_a_record_gone_before_up_still_tears_down_this_runs_pod(
+    cwd: Path, monkeypatch: pytest.MonkeyPatch, capfd: pytest.CaptureFixture[str]
+) -> None:
+    # An earlier session's record, removed (by a `gpunit down` elsewhere) before `up`
+    # checks it: `up` then creates, and that pod is this run's.
+    State(cwd).write(RECORD)
+    provider = FakeProvider()
+    which = shutil.which
+
+    def removing(tool: str) -> str | None:
+        State(cwd).pod.unlink(missing_ok=True)
+        return which(tool)
+
+    monkeypatch.setattr(shutil, "which", removing)
+
+    assert gpunit(["run", "--", "true"], provider=provider) == 0
+    assert provider.named("create")
+    assert provider.named("delete") == [("pod-1",)]
+    assert State(cwd).read() is None
+    assert "no create began" not in capfd.readouterr().err
+
+
 @pytest.mark.spec("run:teardown:failure-is-1")
 def test_a_failed_teardown_is_exit_1(cwd: Path) -> None:
     provider = FakeProvider(deletes={"pod-1": 404})

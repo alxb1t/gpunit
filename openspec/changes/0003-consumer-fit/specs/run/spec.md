@@ -39,6 +39,12 @@ not even one an earlier `gpunit up` recorded, and `run` SHALL exit `128 + n`.
 - **WHEN** a pod is already recorded by an earlier `gpunit up`, and `SIGINT` arrives during `up`'s tool check
 - **THEN** `run` lists and deletes no pod, the record remains, stderr says no create began, and `run` exits `130`
 
+#### Scenario: a record gone before up still tears down this run's pod
+- **Key:** `run:teardown:record-gone-before-up`
+- **WHEN** a pod is recorded by an earlier `gpunit up` when `run` starts, the record is removed before `up` checks
+  it, and `up` creates a pod
+- **THEN** the command's exit deletes the pod this run created, and `run` exits with the command's code
+
 #### Scenario: a failed teardown is exit 1
 - **Key:** `run:teardown:failure-is-1`
 - **WHEN** the command exits `0` and the delete answers 404

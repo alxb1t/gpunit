@@ -101,8 +101,6 @@ def _run(
     children: _Children,
 ) -> int:
     code, teardown, failed, lost = 1, True, False, False
-    # A record or marker already here is an earlier session's: `up` refuses beside it.
-    earlier = state.pod.exists() or state.pending.exists()
     # One handler for the whole run: a signal raised while opening, even just after
     # `up` returned, still reaches the teardown below.
     try:
@@ -120,9 +118,9 @@ def _run(
         pass
     finally:
         children.opening = False
-        # The sweep deletes every listed pod: before a create, those are not ours.
-        began = not earlier and (state.pod.exists() or state.pending.exists())
-        if teardown and (lost or began):
+        # The sweep deletes every listed pod: before this run's create, those are not
+        # ours, and a record or marker an earlier session left does not make them so.
+        if teardown and (lost or state.began):
             if children.tunnel is not None:
                 _kill(children.tunnel)
             failed = session.down(spec, provider, state) != 0
