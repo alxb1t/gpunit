@@ -8,7 +8,7 @@ The interrupt's teardown, the host-key read, the boot, the README, then the one 
 - [x] 1 — The interrupt
 - [x] 2 — The host-key read
 - [x] 3 — The boot
-- [ ] 4 — The handover
+- [x] 4 — The handover
 - [ ] 5 — ⚠️ **HUMAN · METERED** — make live
 
 ## 1 — The interrupt
@@ -34,7 +34,7 @@ The interrupt's teardown, the host-key read, the boot, the README, then the one 
 
 ## 4 — The handover
 
-- [ ] 4.1 In `README.md`, name coreutils' `env` in step 2, say in step 3 that the command on the pod does not see `RUNPOD_API_KEY`, and pin `v0.1.2` in the `ADD` URL and `uv add`, per [D5](design.md#d5).
+- [x] 4.1 In `README.md`, name coreutils' `env` in step 2, say in step 3 that the command on the pod does not see `RUNPOD_API_KEY`, and pin `v0.1.2` in the `ADD` URL and `uv add`, per [D5](design.md#d5).
   Verify: `grep -c 'v0.1.1' README.md` prints `0`, and `grep -c 'coreutils' README.md` prints a number of at least `1`.
 
 ## 5 — ⚠️ **HUMAN · METERED** — make live

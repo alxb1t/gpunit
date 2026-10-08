@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that logs heavily no longer tears a healthy pod down; `created` is stamped before the create.
 - A stop answered `401` or `403` says the key cannot stop this pod and to delete it by hand, then retries,
   instead of an outage's message.
+- README: the image needs coreutils' `env`, the command on the pod does not see `RUNPOD_API_KEY`, and the pins
+  move to `v0.1.2`.
 
 ## [0.1.1] - 2026-10-08
 
