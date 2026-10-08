@@ -7,7 +7,7 @@ The interrupt's teardown, the host-key read, the boot, the README, then the one 
 
 - [x] 1 — The interrupt
 - [x] 2 — The host-key read
-- [ ] 3 — The boot
+- [x] 3 — The boot
 - [ ] 4 — The handover
 - [ ] 5 — ⚠️ **HUMAN · METERED** — make live
 
@@ -27,9 +27,9 @@ The interrupt's teardown, the host-key read, the boot, the README, then the one 
 
 ## 3 — The boot
 
-- [ ] 3.1 In `boot/boot.sh`, refuse without `env` and run the command under `env -u RUNPOD_API_KEY`, per [D3](design.md#d3); in `tests/test_boot.py` add `test_no_env_refuses` bound to `boot:refuse:no-env`, and a test bound to `boot:child:no-key`.
+- [x] 3.1 In `boot/boot.sh`, refuse without `env` and run the command under `env -u RUNPOD_API_KEY`, per [D3](design.md#d3); in `tests/test_boot.py` add `test_no_env_refuses` bound to `boot:refuse:no-env`, and a test bound to `boot:child:no-key`.
   Verify: `grep -c 'env -u RUNPOD_API_KEY "\$@" &' boot/boot.sh` prints `1`, and `grep -c -E 'boot:(refuse:no-env|child:no-key)' tests/test_boot.py` prints `2`.
-- [ ] 3.2 In `boot/boot.sh`'s `stop()`, name the key on a 401 and on a 403, and keep retrying, per [D4](design.md#d4); in `tests/test_boot.py` bind `boot:stop:refused-key-named` to `CURL_CODES` of `401`, `403`, `200`.
+- [x] 3.2 In `boot/boot.sh`'s `stop()`, name the key on a 401 and on a 403, and keep retrying, per [D4](design.md#d4); in `tests/test_boot.py` bind `boot:stop:refused-key-named` to `CURL_CODES` of `401`, `403`, `200`.
   Verify: `grep -c 'the key cannot stop this pod' boot/boot.sh` prints `1`, and `grep -c 'boot:stop:refused-key-named' tests/test_boot.py` prints `1`.
 
 ## 4 — The handover
