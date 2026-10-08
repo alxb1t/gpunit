@@ -18,6 +18,10 @@ def pod_name(project: str) -> str:
     return f"gpunit-{project}"
 
 
+# The statuses a delete succeeds with; `down` and `RunPod.delete` read the same set.
+DELETED = (200, 204)
+
+
 def fingerprint(lines: list[str]) -> str | None:
     """Return the last host-key fingerprint the pod's log printed, or None.
 

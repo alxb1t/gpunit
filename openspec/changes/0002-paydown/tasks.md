@@ -6,7 +6,7 @@ Every new test carries `@pytest.mark.spec` with the key its task names.
 ## Progress
 
 - [x] 1 — The ssh line
-- [ ] 2 — The provider
+- [x] 2 — The provider
 - [ ] 3 — Run
 - [ ] 4 — The boot
 - [ ] 5 — The handover
@@ -25,11 +25,11 @@ Every new test carries `@pytest.mark.spec` with the key its task names.
 
 ## 2 — The provider
 
-- [ ] 2.1 In `gpunit/runpod.py`, add `_NoRedirect` and build the default opener with it per [D4](design.md#d4); in `tests/test_runpod.py` bind `spec:secrets:redirect-not-followed` to the opener's handler, `redirect_request` answering `None`, and a scripted 302 on create raising `Lost`.
+- [x] 2.1 In `gpunit/runpod.py`, add `_NoRedirect` and build the default opener with it per [D4](design.md#d4); in `tests/test_runpod.py` bind `spec:secrets:redirect-not-followed` to the opener's handler, `redirect_request` answering `None`, and a scripted 302 on create raising `Lost`.
   Verify: `grep -c 'build_opener(_NoRedirect)' gpunit/runpod.py` prints `1`, and `grep -c 'spec:secrets:redirect-not-followed' tests/test_runpod.py` prints a number of at least `1`.
-- [ ] 2.2 Add `DELETED = (200, 204)` to `gpunit/provider.py`, and use it in `RunPod.delete` and at the recorded pod's and the sweep's delete checks of `down` in `gpunit/session.py`, per [D5](design.md#d5); in `tests/test_down.py` bind `session:down:200-is-success`.
+- [x] 2.2 Add `DELETED = (200, 204)` to `gpunit/provider.py`, and use it in `RunPod.delete` and at the recorded pod's and the sweep's delete checks of `down` in `gpunit/session.py`, per [D5](design.md#d5); in `tests/test_down.py` bind `session:down:200-is-success`.
   Verify: `grep -c 'code == 204' gpunit/session.py` prints `0`, and `grep -c 'session:down:200-is-success' tests/test_down.py` prints `1`.
-- [ ] 2.3 In `gpunit/runpod.py`, add `LOG_IDLE_S = 3` and open the log stream with it per [D6](design.md#d6); in `tests/test_runpod.py` bind `session:hostkey:quiet-stream-ends-read` to a stream that sends an earlier boot's host-key line and this boot's, then raises `TimeoutError`.
+- [x] 2.3 In `gpunit/runpod.py`, add `LOG_IDLE_S = 3` and open the log stream with it per [D6](design.md#d6); in `tests/test_runpod.py` bind `session:hostkey:quiet-stream-ends-read` to a stream that sends an earlier boot's host-key line and this boot's, then raises `TimeoutError`.
   Verify: `grep -c 'timeout=LOG_IDLE_S' gpunit/runpod.py` prints `1`, and `grep -c 'session:hostkey:quiet-stream-ends-read' tests/test_runpod.py` prints `1`.
 
 ## 3 — Run

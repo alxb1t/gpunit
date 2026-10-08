@@ -8,10 +8,12 @@ import urllib.parse
 import urllib.request
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from email.message import Message
+from typing import IO, Any
 
 from gpunit import __version__, log
 from gpunit.provider import (
+    DELETED,
     GpuInfo,
     Lost,
     NoImage,
@@ -26,8 +28,9 @@ from gpunit.spec import Spec
 API = "https://api.runpod.io/v2"
 # Bounded, so a stalled read cannot hold a poll past its deadline.
 TIMEOUT_S = 30
-# The log stream stays open; what arrived by then is what is read.
+# The log stream stays open: a read ends once it goes quiet, or at the cap.
 LOG_READ_S = 10
+LOG_IDLE_S = 3
 MAX_PAGES = 100
 VOLUME_PATH = "/runpod-volume"
 
@@ -44,6 +47,22 @@ class _Answer:
         return json.loads(self.body)
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Follow no redirect: urllib would carry the key's header to the new host."""
+
+    def redirect_request(
+        self,
+        req: urllib.request.Request,
+        fp: IO[bytes],
+        code: int,
+        msg: str,
+        headers: Message,
+        newurl: str,
+    ) -> None:
+        """Return None, so the 3xx is raised as an `HTTPError` and read as one."""
+        return None
+
+
 class RunPod:
     """RunPod's REST v2; the key travels only in a request header."""
 
@@ -56,7 +75,7 @@ class RunPod:
         self._key = environ.get("RUNPOD_API_KEY", "")
         if not self._key:
             log.refuse("RUNPOD_API_KEY is empty; export it (gpunit reads no .env)")
-        self._opener = opener or urllib.request.build_opener()
+        self._opener = opener or urllib.request.build_opener(_NoRedirect)
         self._datacenters: dict[str, str] = {}
 
     def gpu(self, name: str) -> GpuInfo:
@@ -146,7 +165,8 @@ class RunPod:
         lines: list[str] = []
         deadline = time.monotonic() + LOG_READ_S
         try:
-            with self._opener.open(request, timeout=LOG_READ_S) as stream:
+            # A quiet stream raises `TimeoutError`, an `OSError`, after LOG_IDLE_S.
+            with self._opener.open(request, timeout=LOG_IDLE_S) as stream:
                 while time.monotonic() < deadline:
                     raw = stream.readline()
                     if not raw:
@@ -190,7 +210,7 @@ class RunPod:
     def delete(self, pod_id: str) -> int:
         """Delete the pod and return the HTTP status; 0 when no answer came."""
         answer = self._call("DELETE", f"/pods/{_quote(pod_id)}")
-        if answer.status not in (200, 204):
+        if answer.status not in DELETED:
             log.say(_report(f"delete of {pod_id}", answer))
         return answer.status
 

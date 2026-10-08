@@ -1,6 +1,10 @@
 import dataclasses
+import io
+import json
 import urllib.error
 import urllib.request
+import urllib.response
+from email.message import Message
 from pathlib import Path
 
 import pytest
@@ -16,9 +20,9 @@ from gpunit.provider import (
     VolumeInfo,
     fingerprint,
 )
-from gpunit.runpod import RunPod
+from gpunit.runpod import API, LOG_IDLE_S, RunPod, _NoRedirect
 from gpunit.spec import Spec
-from tests.fakes import Answer, FakeOpener, fixture, page
+from tests.fakes import Answer, FakeOpener, fixture, page, quiet
 from tests.helpers import IMAGE
 
 KEY = "rpa_test_key"
@@ -158,6 +162,73 @@ def test_the_logs_last_fingerprint_wins() -> None:
         fingerprint(lines[:2]) == "SHA256:FirstKeyFromAnEarlierBoot0000000000000000000"
     )
     assert fingerprint(["echo gpunit host key: SHA256:abc"]) is None
+
+
+@pytest.mark.spec("session:hostkey:quiet-stream-ends-read")
+def test_a_quiet_stream_ends_the_read() -> None:
+    keys = ["SHA256:FromAnEarlierBoot", "SHA256:FromThisBoot"]
+    events = [
+        f"data: {json.dumps({'line': f'gpunit host key: {key}'})}\n" for key in keys
+    ]
+    provider, opener = runpod(quiet("".join(events).encode()))
+
+    lines = provider.log("pod-abc123", tail=5000)
+
+    assert fingerprint(lines) == "SHA256:FromThisBoot"
+    assert opener.timeouts == [LOG_IDLE_S]
+
+
+class _Found(urllib.response.addinfourl):
+    msg = "Found"
+
+
+class Redirecting(urllib.request.BaseHandler):
+    """Answer every HTTPS request with a 302 to another host; record each one."""
+
+    # Ahead of urllib's own HTTPSHandler, so no request leaves the test.
+    handler_order = 100
+
+    def __init__(self) -> None:
+        self.opened: list[tuple[str, str | None]] = []
+
+    def https_open(self, req: urllib.request.Request) -> _Found:
+        self.opened.append((req.host, req.get_header("Authorization")))
+        headers = Message()
+        headers["Location"] = "https://elsewhere.example/pods"
+        return _Found(io.BytesIO(b""), headers, req.full_url, 302)
+
+
+@pytest.mark.spec("spec:secrets:redirect-not-followed")
+def test_a_redirect_is_not_followed(monkeypatch: pytest.MonkeyPatch) -> None:
+    redirecting = Redirecting()
+    build = urllib.request.build_opener
+    monkeypatch.setattr(
+        urllib.request, "build_opener", lambda *handlers: build(*handlers, redirecting)
+    )
+    provider = RunPod({"RUNPOD_API_KEY": KEY})
+
+    with pytest.raises(Lost, match="HTTP 302"):
+        provider.create(SPEC, "RTX 4090", "key", 2700)
+    assert redirecting.opened == [("api.runpod.io", f"Bearer {KEY}")]
+    request = urllib.request.Request(API + "/pods")
+    elsewhere = "https://elsewhere.example/pods"
+    found = _NoRedirect().redirect_request(
+        request, io.BytesIO(), 302, "Found", Message(), elsewhere
+    )
+    assert found is None
+
+
+@pytest.mark.spec("spec:secrets:redirect-not-followed")
+def test_urllibs_own_redirect_handler_carries_the_key_away() -> None:
+    # The guard's twin: an opener without `_NoRedirect` sends the key to the new host.
+    redirecting = Redirecting()
+    provider = RunPod(
+        {"RUNPOD_API_KEY": KEY}, opener=urllib.request.build_opener(redirecting)
+    )
+
+    with pytest.raises(Lost, match="HTTP 302"):
+        provider.create(SPEC, "RTX 4090", "key", 2700)
+    assert ("elsewhere.example", f"Bearer {KEY}") in redirecting.opened
 
 
 @pytest.mark.spec("session:one:listed-refuses")

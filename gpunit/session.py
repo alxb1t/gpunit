@@ -11,6 +11,7 @@ from typing import NoReturn, TypeVar
 
 from gpunit import log
 from gpunit.provider import (
+    DELETED,
     Lost,
     NoImage,
     PodInfo,
@@ -147,7 +148,7 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
     record = state.read()
     if record is not None:
         code = provider.delete(record.id)
-        if code == 204:
+        if code in DELETED:
             state.clear_session()
             log.say(f"pod {record.id} deleted")
         elif code == 404:
@@ -171,7 +172,7 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
         if record is not None and pod_id == record.id:
             continue
         code = provider.delete(pod_id)
-        if code == 204:
+        if code in DELETED:
             log.say(f"swept pod {pod_id} ({pod_status})")
         else:
             log.say(f"delete of swept pod {pod_id} answered HTTP {code}")
