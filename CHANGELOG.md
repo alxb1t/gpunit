@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- An interrupt before any create began tears nothing down: `run` no longer sweeps another working copy's pod
+  of the same project, and says no create began.
+
 ## [0.1.1] - 2026-10-08
 
 ### Security

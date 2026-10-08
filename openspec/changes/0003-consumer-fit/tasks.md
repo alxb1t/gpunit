@@ -5,7 +5,7 @@ The interrupt's teardown, the host-key read, the boot, the README, then the one 
 
 ## Progress
 
-- [ ] 1 — The interrupt
+- [x] 1 — The interrupt
 - [ ] 2 — The host-key read
 - [ ] 3 — The boot
 - [ ] 4 — The handover
@@ -13,9 +13,9 @@ The interrupt's teardown, the host-key read, the boot, the README, then the one 
 
 ## 1 — The interrupt
 
-- [ ] 1.1 **HALT CHECK** — none of this change's fixes is built yet.
+- [x] 1.1 **HALT CHECK** — none of this change's fixes is built yet.
   Verify: `cat gpunit/*.py boot/boot.sh | grep -c -E 'env -u RUNPOD_API_KEY|no create began|cannot stop this pod|since: str'` prints `0`.
-- [ ] 1.2 In `gpunit/run.py`, tear down in `_run`'s `finally` only when a create began, per [D1](design.md#d1); in `tests/test_run.py` bind `run:teardown:interrupt-before-create` to a `FakeProvider` whose `gpu()` sends `SIGINT`.
+- [x] 1.2 In `gpunit/run.py`, tear down in `_run`'s `finally` only when a create began, per [D1](design.md#d1); in `tests/test_run.py` bind `run:teardown:interrupt-before-create` to a `FakeProvider` whose `gpu()` sends `SIGINT`.
   Verify: `grep -c 'no create began' gpunit/run.py` prints `1`, and `grep -c 'run:teardown:interrupt-before-create' tests/test_run.py` prints `1`.
 
 ## 2 — The host-key read
