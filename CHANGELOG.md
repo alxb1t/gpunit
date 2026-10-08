@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The pod's log read ends once the stream is quiet for 3 s, not after a fixed 10 s.
 - `run` exits `128 + n` when signal `n` killed the command, as a shell does, not a negative code.
 - A tunnel that keeps dying is reopened with backoff, 1 s doubling to 30 s, so it no longer floods stderr.
+- `boot.sh` starts sshd with `UsePAM yes`, so a root whose password is locked with `!` still logs in by key.
+- The curl refusal is its own test under `boot:refuse:no-curl`, apart from the sshd one.
 
 ## [0.1.0] - 2026-10-07
 

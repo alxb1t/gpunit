@@ -8,7 +8,7 @@ Every new test carries `@pytest.mark.spec` with the key its task names.
 - [x] 1 — The ssh line
 - [x] 2 — The provider
 - [x] 3 — Run
-- [ ] 4 — The boot
+- [x] 4 — The boot
 - [ ] 5 — The handover
 - [ ] 6 — ⚠️ **HUMAN · METERED** — make live
 
@@ -41,9 +41,9 @@ Every new test carries `@pytest.mark.spec` with the key its task names.
 
 ## 4 — The boot
 
-- [ ] 4.1 Add `UsePAM yes` to boot's sshd config in `boot/boot.sh` per [D9](design.md#d9); in `tests/test_boot.py` bind `boot:sshd:pam-on` to a test that reads the config sshd was started with.
+- [x] 4.1 Add `UsePAM yes` to boot's sshd config in `boot/boot.sh` per [D9](design.md#d9); in `tests/test_boot.py` bind `boot:sshd:pam-on` to a test that reads the config sshd was started with.
   Verify: `grep -c '^UsePAM yes$' boot/boot.sh` prints `1`, and `grep -c 'boot:sshd:pam-on' tests/test_boot.py` prints `1`.
-- [ ] 4.2 Split `test_a_missing_tool_refuses` in `tests/test_boot.py` into `test_no_sshd_refuses` and `test_no_curl_refuses` over one helper, per [D10](design.md#d10).
+- [x] 4.2 Split `test_a_missing_tool_refuses` in `tests/test_boot.py` into `test_no_sshd_refuses` and `test_no_curl_refuses` over one helper, per [D10](design.md#d10).
   Verify: `grep -c 'def test_a_missing_tool_refuses' tests/test_boot.py` prints `0`, and `grep -c 'boot:refuse:no-curl' tests/test_boot.py` prints `1`.
 
 ## 5 — The handover
