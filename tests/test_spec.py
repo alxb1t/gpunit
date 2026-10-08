@@ -82,3 +82,29 @@ def test_no_ceiling_no_pod(
 
     assert gpunit(["up"], provider=NO_REQUESTS) == 1
     assert "'ceiling'" in capsys.readouterr().err
+
+
+@pytest.mark.spec("spec:file:port-out-of-range")
+@pytest.mark.parametrize(
+    "ports", ["[70000]", "[{ remote = 8188, local = 0 }]"], ids=["remote", "local"]
+)
+def test_a_port_out_of_range_is_refused(
+    ports: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    write_spec(tmp_path, VALID + f"ports = {ports}\n")
+
+    assert gpunit(["up"], provider=NO_REQUESTS) == 1
+    assert "outside 1-65535" in capsys.readouterr().err
+
+
+@pytest.mark.spec("spec:file:port-out-of-range")
+def test_the_range_ends_are_ports(tmp_path: Path) -> None:
+    spec = load_spec(
+        write_spec(tmp_path, VALID + "ports = [{ remote = 65535, local = 1 }]\n")
+    )
+
+    assert spec.ports == (Port(remote=65535, local=1),)

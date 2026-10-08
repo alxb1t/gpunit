@@ -130,6 +130,14 @@ def _gpus(path: Path, items: list[object]) -> tuple[str, ...]:
 
 
 def _port(path: Path, item: object) -> Port:
+    port = _port_type(path, item)
+    for side in (port.remote, port.local):
+        if not 1 <= side <= 65535:
+            log.refuse(f"{path}: 'ports' holds {side}, outside 1-65535")
+    return port
+
+
+def _port_type(path: Path, item: object) -> Port:
     if isinstance(item, int) and not isinstance(item, bool):
         return Port(remote=item, local=item)
     if isinstance(item, dict) and set(item) <= {"remote", "local"} and "remote" in item:

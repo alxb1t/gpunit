@@ -5,7 +5,7 @@ Every new test carries `@pytest.mark.spec` with the key its task names.
 
 ## Progress
 
-- [ ] 1 — The ssh line
+- [x] 1 — The ssh line
 - [ ] 2 — The provider
 - [ ] 3 — Run
 - [ ] 4 — The boot
@@ -14,13 +14,13 @@ Every new test carries `@pytest.mark.spec` with the key its task names.
 
 ## 1 — The ssh line
 
-- [ ] 1.1 **HALT CHECK** — none of this change's fixes is built yet.
+- [x] 1.1 **HALT CHECK** — none of this change's fixes is built yet.
   Verify: `cat gpunit/*.py boot/boot.sh | grep -c -E 'IdentitiesOnly|UsePAM|_NoRedirect|LOG_IDLE_S|_Backoff'` prints `0`.
-- [ ] 1.2 In `gpunit/session.py`, open `ssh_command`'s argv with `-F none -o IdentitiesOnly=yes` per [D1](design.md#d1); in `tests/test_ssh.py` add a test bound to `session:ssh:own-config-only`, and in `tests/test_run.py` add that mark and asserts for `-F none` and `IdentitiesOnly=yes` on `opened[0]` to `test_a_dead_tunnel_is_reopened`.
+- [x] 1.2 In `gpunit/session.py`, open `ssh_command`'s argv with `-F none -o IdentitiesOnly=yes` per [D1](design.md#d1); in `tests/test_ssh.py` add a test bound to `session:ssh:own-config-only`, and in `tests/test_run.py` add that mark and asserts for `-F none` and `IdentitiesOnly=yes` on `opened[0]` to `test_a_dead_tunnel_is_reopened`.
   Verify: `grep -c 'session:ssh:own-config-only' tests/test_ssh.py tests/test_run.py` prints `1` for each file, and `uv run pytest -q tests/test_ssh.py tests/test_run.py` exits 0.
-- [ ] 1.3 In `gpunit/session.py`, check `ssh`, `ssh-keygen` and `ssh-keyscan` in `up`, and refuse on the exec's `OSError` in `ssh()`, per [D2](design.md#d2); rewrite the comment at `gpunit/cli.py:95`. Update `test_no_ssh_keygen_refuses_before_any_request` in `tests/test_up.py` for the new message; add `session:tools:missing-refuses` there (a `PATH` of stubs for `ssh` and `ssh-keygen` alone) and `session:ssh:no-ssh-refuses` in `tests/test_ssh.py` (an `execvp` that raises `FileNotFoundError`).
+- [x] 1.3 In `gpunit/session.py`, check `ssh`, `ssh-keygen` and `ssh-keyscan` in `up`, and refuse on the exec's `OSError` in `ssh()`, per [D2](design.md#d2); rewrite the comment at `gpunit/cli.py:95`. Update `test_no_ssh_keygen_refuses_before_any_request` in `tests/test_up.py` for the new message; add `session:tools:missing-refuses` there (a `PATH` of stubs for `ssh` and `ssh-keygen` alone) and `session:ssh:no-ssh-refuses` in `tests/test_ssh.py` (an `execvp` that raises `FileNotFoundError`).
   Verify: `grep -c 'reached only when the exec failed' gpunit/cli.py` prints `0`, and `grep -c -E 'session:(tools:missing-refuses|ssh:no-ssh-refuses)' tests/test_up.py tests/test_ssh.py` prints `1` for each file.
-- [ ] 1.4 In `gpunit/spec.py`, refuse a port outside 1–65535 in `_port` per [D3](design.md#d3); in `tests/test_spec.py` bind `spec:file:port-out-of-range` to `ports = [70000]` and to `{ remote = 8188, local = 0 }`.
+- [x] 1.4 In `gpunit/spec.py`, refuse a port outside 1–65535 in `_port` per [D3](design.md#d3); in `tests/test_spec.py` bind `spec:file:port-out-of-range` to `ports = [70000]` and to `{ remote = 8188, local = 0 }`.
   Verify: `grep -c '65535' gpunit/spec.py` prints a number of at least `1`, and `grep -c 'spec:file:port-out-of-range' tests/test_spec.py` prints a number of at least `1`.
 
 ## 2 — The provider

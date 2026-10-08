@@ -16,7 +16,7 @@ from tests.fakes import (
     fixture,
     page,
 )
-from tests.helpers import IMAGE, NO_REQUESTS, VALID, gpunit, write_spec
+from tests.helpers import IMAGE, NO_REQUESTS, VALID, gpunit, install_stubs, write_spec
 
 
 def creates(provider: FakeProvider) -> list[str]:
@@ -186,7 +186,24 @@ def test_no_ssh_keygen_refuses_before_any_request(
     monkeypatch.setenv("PATH", str(cwd / "nothing"))
 
     assert gpunit(["up"], provider=NO_REQUESTS) == 1
-    assert "ssh-keygen is not on PATH" in capsys.readouterr().err
+    assert "not on PATH: ssh, ssh-keygen, ssh-keyscan;" in capsys.readouterr().err
+
+
+@pytest.mark.spec("session:tools:missing-refuses")
+def test_no_ssh_keyscan_refuses_before_any_request(
+    cwd: Path,
+    ssh_bin: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    some = install_stubs(
+        cwd / "bin",
+        {tool: (ssh_bin / tool).read_text() for tool in ("ssh", "ssh-keygen")},
+    )
+    monkeypatch.setenv("PATH", str(some))
+
+    assert gpunit(["up"], provider=NO_REQUESTS) == 1
+    assert "not on PATH: ssh-keyscan; install OpenSSH" in capsys.readouterr().err
 
 
 @pytest.mark.spec("cli:exits:refusal-exits-1")

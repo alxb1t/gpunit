@@ -54,7 +54,7 @@ def test_the_environment_names_the_session(
     env = dict(line.split("=", 1) for line in capfd.readouterr().out.splitlines())
     assert env["GPUNIT_HOST"] == "203.0.113.7"
     assert env["GPUNIT_PORT_8188"] == str(free_port)
-    assert env["GPUNIT_SSH"].startswith("ssh -i ")
+    assert env["GPUNIT_SSH"].startswith("ssh -F none -o IdentitiesOnly=yes -i ")
     assert env["GPUNIT_SSH"].endswith(" root@203.0.113.7 -p 40022")
 
 
@@ -139,6 +139,7 @@ def test_an_interrupt_with_a_failed_teardown_is_exit_1(cwd: Path) -> None:
 
 
 @pytest.mark.spec("run:tunnel:reopened")
+@pytest.mark.spec("session:ssh:own-config-only")
 def test_a_dead_tunnel_is_reopened(
     cwd: Path,
     free_port: int,
@@ -160,6 +161,8 @@ def test_a_dead_tunnel_is_reopened(
     assert len(opened) >= 2
     assert f"-L{free_port}:localhost:8188" in opened[0]
     assert "ExitOnForwardFailure=yes" in opened[0]
+    assert "-F none" in opened[0]
+    assert "IdentitiesOnly=yes" in opened[0]
     assert "reopening it" in capfd.readouterr().err
 
 

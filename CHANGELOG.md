@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Every ssh line is gpunit's own: `-F none -o IdentitiesOnly=yes`, so a user's ssh_config cannot forward their
+  agent, proxy or multiplex to the pod.
+
+### Fixed
+
+- `up` checks `ssh`, `ssh-keygen` and `ssh-keyscan` before any request, so a missing tool no longer leaks a pod;
+  `gpunit ssh` without `ssh` refuses instead of a traceback.
+- `gpunit.toml` refuses a port outside 1–65535 before anything is rented.
+
 ## [0.1.0] - 2026-10-07
 
 ### Added

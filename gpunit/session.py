@@ -28,6 +28,8 @@ LOG_WAIT_S = 60
 # sshd can answer after the port is mapped, so the scan waits longer than the log.
 SCAN_WAIT_S = 180
 LOG_TAIL = 5000
+# Checked before the create: a tool missing after it leaves a pod rented.
+SSH_TOOLS = ("ssh", "ssh-keygen", "ssh-keyscan")
 
 T = TypeVar("T")
 
@@ -48,8 +50,9 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
 
     Refuse when it cannot; raise `Lost` when a create's answer did not arrive.
     """
-    if shutil.which("ssh-keygen") is None:
-        log.refuse("ssh-keygen is not on PATH; install OpenSSH")
+    missing = [tool for tool in SSH_TOOLS if shutil.which(tool) is None]
+    if missing:
+        log.refuse(f"not on PATH: {', '.join(missing)}; install OpenSSH")
     _warn_unignored(state)
     if state.pod.exists():
         log.refuse(f"a pod is already recorded in {state.pod}; run gpunit down")
@@ -82,8 +85,13 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
 
 def ssh_command(state: State, record: Record) -> list[str]:
     """Return the `ssh` argv that opens a shell on the recorded pod."""
+    # Every ssh line is gpunit's own: no ssh_config, no agent key (0002 design D1).
     return [
         "ssh",
+        "-F",
+        "none",
+        "-o",
+        "IdentitiesOnly=yes",
         "-i",
         str(state.key),
         "-o",
@@ -99,11 +107,14 @@ def ssh_command(state: State, record: Record) -> list[str]:
 def ssh(
     state: State, *, execvp: Callable[[str, list[str]], object] | None = None
 ) -> None:
-    """Replace this process with `ssh` to the recorded pod; refuse with no record."""
+    """Replace this process with `ssh` to the recorded pod; refuse when it cannot."""
     record = state.read()
     if record is None or record.host is None:
         log.refuse("no session is recorded; run gpunit up")
-    (execvp or os.execvp)("ssh", ssh_command(state, record))
+    try:
+        (execvp or os.execvp)("ssh", ssh_command(state, record))
+    except OSError as fault:
+        log.refuse(f"ssh could not be run: {fault}")
 
 
 def status(provider: Callable[[], Provider], state: State, *, as_json: bool) -> int:
