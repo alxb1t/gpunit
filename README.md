@@ -48,8 +48,10 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
 
    `<digest>` is the file's sha256 at the tag: `curl -sL <the URL above> | shasum -a 256`.
 
-3. **Install and run.** The key comes from the environment alone; gpunit reads no `.env`. The command on the pod
-   does not see `RUNPOD_API_KEY`: boot keeps it to stop the pod.
+3. **Install and run.** The key comes from the environment alone; gpunit reads no `.env`. The command's
+   environment on the pod does not carry `RUNPOD_API_KEY`: boot keeps it to stop the pod. The command runs as
+   root beside boot, though, so it can still read the key from boot's own environment in `/proc`; run nothing
+   on the pod you would not trust with the key.
 
    ```sh
    uv add --dev git+https://github.com/alxb1t/gpunit@v0.1.2
