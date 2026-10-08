@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `gpunit.toml` refuses a port outside 1–65535 before anything is rented.
 - A delete answering `200` is a success for `down` and the sweep, as it already was for `RunPod.delete`.
 - The pod's log read ends once the stream is quiet for 3 s, not after a fixed 10 s.
+- `run` exits `128 + n` when signal `n` killed the command, as a shell does, not a negative code.
+- A tunnel that keeps dying is reopened with backoff, 1 s doubling to 30 s, so it no longer floods stderr.
 
 ## [0.1.0] - 2026-10-07
 

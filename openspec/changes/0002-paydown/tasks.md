@@ -7,7 +7,7 @@ Every new test carries `@pytest.mark.spec` with the key its task names.
 
 - [x] 1 — The ssh line
 - [x] 2 — The provider
-- [ ] 3 — Run
+- [x] 3 — Run
 - [ ] 4 — The boot
 - [ ] 5 — The handover
 - [ ] 6 — ⚠️ **HUMAN · METERED** — make live
@@ -34,9 +34,9 @@ Every new test carries `@pytest.mark.spec` with the key its task names.
 
 ## 3 — Run
 
-- [ ] 3.1 In `gpunit/run.py`, map a negative code from `wait()` to `128 - code` per [D7](design.md#d7); in `tests/test_run.py` bind `run:teardown:signalled-command` to `gpunit run -- bash -c 'kill -9 $$'` exiting `137`.
+- [x] 3.1 In `gpunit/run.py`, map a negative code from `wait()` to `128 - code` per [D7](design.md#d7); in `tests/test_run.py` bind `run:teardown:signalled-command` to `gpunit run -- bash -c 'kill -9 $$'` exiting `137`.
   Verify: `grep -c 'run:teardown:signalled-command' tests/test_run.py` prints `1`, and `uv run pytest -q tests/test_run.py` exits 0.
-- [ ] 3.2 In `gpunit/run.py`, add `REOPEN_FIRST_S`, `REOPEN_CAP_S` and `_Backoff`, and reopen the tunnel only when it is due, per [D8](design.md#d8); in `tests/test_run.py` bind `run:tunnel:backoff` to `_Backoff` driven with explicit times, and set `REOPEN_FIRST_S` to `0.1` in `test_a_dead_tunnel_is_reopened`.
+- [x] 3.2 In `gpunit/run.py`, add `REOPEN_FIRST_S`, `REOPEN_CAP_S` and `_Backoff`, and reopen the tunnel only when it is due, per [D8](design.md#d8); in `tests/test_run.py` bind `run:tunnel:backoff` to `_Backoff` driven with explicit times, and set `REOPEN_FIRST_S` to `0.1` in `test_a_dead_tunnel_is_reopened`.
   Verify: `grep -c 'class _Backoff' gpunit/run.py` prints `1`, and `grep -c 'run:tunnel:backoff' tests/test_run.py` prints `1`.
 
 ## 4 — The boot

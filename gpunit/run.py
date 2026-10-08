@@ -5,6 +5,7 @@ import shlex
 import signal
 import socket
 import subprocess
+import time
 from types import FrameType
 
 from gpunit import log, session
@@ -15,6 +16,9 @@ from gpunit.state import Record, State
 LOST_EXIT = 3
 SIGNALS = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
 TUNNEL_POLL_S = 1.0
+# A tunnel that cannot bind dies at once; each reopening waits longer (0002 design D8).
+REOPEN_FIRST_S = 1.0
+REOPEN_CAP_S = 30.0
 
 
 class _Interrupted(Exception):
@@ -42,11 +46,40 @@ class _Children:
             raise _Interrupted
 
 
+class _Backoff:
+    """When a dead tunnel may reopen: the wait doubles, and resets after one lived."""
+
+    def __init__(self, now: float) -> None:
+        """Start with the first wait, the tunnel opened at `now`."""
+        self.wait = REOPEN_FIRST_S
+        self.opened_at = now
+        self.reopen_at: float | None = None
+
+    def exited(self, now: float) -> float:
+        """Schedule the reopening of a tunnel that exited at `now`; return its wait."""
+        if now - self.opened_at >= REOPEN_CAP_S:
+            self.wait = REOPEN_FIRST_S
+        wait = self.wait
+        self.reopen_at = now + wait
+        self.wait = min(wait * 2, REOPEN_CAP_S)
+        return wait
+
+    def due(self, now: float) -> bool:
+        """Return whether the scheduled reopening is due at `now`."""
+        return self.reopen_at is not None and now >= self.reopen_at
+
+    def opened(self, now: float) -> None:
+        """Record a tunnel reopened at `now`."""
+        self.opened_at = now
+        self.reopen_at = None
+
+
 def run(spec: Spec, provider: Provider, state: State, command: list[str]) -> int:
     """Open the session, run `command` with it, tear it down; return the exit code.
 
-    e.g. the command's code; 1 when the teardown failed, even after a signal; 3 after
-    a lost create; 128 + the signal's number after a signal and a teardown.
+    e.g. the command's code, 128 + n when a signal n killed it; 1 when the teardown
+    failed, even after a signal; 3 after a lost create; 128 + the signal's number
+    after a signal and a teardown.
     """
     _refuse_busy_ports(spec)
     children = _Children()
@@ -100,6 +133,7 @@ def _supervise(
 ) -> int:
     if spec.ports:
         children.tunnel = _tunnel(spec, state, record)
+    backoff = _Backoff(time.monotonic())
     env = os.environ | {
         "GPUNIT_HOST": str(record.host),
         "GPUNIT_SSH": shlex.join(session.ssh_command(state, record)),
@@ -114,12 +148,21 @@ def _supervise(
         children.command.terminate()
     while True:
         try:
-            return children.command.wait(timeout=TUNNEL_POLL_S)
+            code = children.command.wait(timeout=TUNNEL_POLL_S)
+            # Popen reads a death by signal n as -n; a shell says 128 + n.
+            return 128 - code if code < 0 else code
         except subprocess.TimeoutExpired:
             pass
-        if children.tunnel is not None and children.tunnel.poll() is not None:
-            log.say(f"the tunnel exited ({children.tunnel.returncode}); reopening it")
+        if children.tunnel is None or children.tunnel.poll() is None:
+            continue
+        now = time.monotonic()
+        if backoff.reopen_at is None:
+            wait = backoff.exited(now)
+            returncode = children.tunnel.returncode
+            log.say(f"the tunnel exited ({returncode}); reopening it in {wait:g}s")
+        if backoff.due(now):
             children.tunnel = _tunnel(spec, state, record)
+            backoff.opened(now)
 
 
 def _tunnel(spec: Spec, state: State, record: Record) -> subprocess.Popen[bytes]:

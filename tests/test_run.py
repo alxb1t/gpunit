@@ -96,6 +96,14 @@ def test_the_commands_failure_is_passed_through(cwd: Path) -> None:
     assert provider.named("delete") == [("pod-1",)]
 
 
+@pytest.mark.spec("run:teardown:signalled-command")
+def test_a_command_killed_by_a_signal_exits_128_plus_n(cwd: Path) -> None:
+    provider = FakeProvider()
+
+    assert gpunit(["run", "--", "bash", "-c", "kill -9 $$"], provider=provider) == 137
+    assert provider.named("delete") == [("pod-1",)]
+
+
 @pytest.mark.spec("run:teardown:interrupt")
 @pytest.mark.parametrize(
     ("number", "code"),
@@ -151,6 +159,7 @@ def test_a_dead_tunnel_is_reopened(
     monkeypatch.setenv("GPUNIT_TEST_SSH_LOG", str(tunnels))
     monkeypatch.setenv("GPUNIT_TEST_SSH_EXIT", "1")
     monkeypatch.setattr(run, "TUNNEL_POLL_S", 0.1)
+    monkeypatch.setattr(run, "REOPEN_FIRST_S", 0.1)
 
     # Runs until the tunnel has been opened twice.
     reopened = f'until [ "$(wc -l < "{tunnels}")" -ge 2 ]; do sleep 0.05; done'
@@ -163,7 +172,22 @@ def test_a_dead_tunnel_is_reopened(
     assert "ExitOnForwardFailure=yes" in opened[0]
     assert "-F none" in opened[0]
     assert "IdentitiesOnly=yes" in opened[0]
-    assert "reopening it" in capfd.readouterr().err
+    assert "reopening it in 0.1s" in capfd.readouterr().err
+
+
+@pytest.mark.spec("run:tunnel:backoff")
+def test_a_tunnel_that_keeps_dying_backs_off() -> None:
+    backoff = run._Backoff(now=0.0)
+    now, waits = 0.0, []
+    for _ in range(7):
+        waits.append(backoff.exited(now))
+        assert not backoff.due(now + waits[-1] - 0.01)
+        now += waits[-1]
+        assert backoff.due(now)
+        backoff.opened(now)
+
+    assert waits == [1, 2, 4, 8, 16, 30, 30]
+    assert backoff.exited(now + 30) == 1
 
 
 @pytest.mark.spec("run:ports:busy-refuses")
