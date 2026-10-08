@@ -121,7 +121,8 @@ tunnel exits at t ──▶ lived ≥ 30 s? ──yes──▶ wait = 1
 
 `UsePAM yes` goes into the heredoc at `boot/boot.sh:69-76`, after `PasswordAuthentication no`. With
 `KbdInteractiveAuthentication no` and `PasswordAuthentication no`, PAM adds only its account check. The new test
-reads boot's config and finds the line.
+reads boot's config and finds the line. `AllowUsers root` follows it (0002·S1): with PAM on, sshd no longer refuses a
+`!`-locked account itself, so boot admits root alone, and a key the image baked in for another account opens nothing.
 
 ### D10
 
@@ -144,7 +145,9 @@ design is a record, not a live page. The card closes moot: it is listed under `b
 
 A **HUMAN · METERED** phase: rebuild `live/Dockerfile` for `linux/amd64`, push it, write the new digest into
 `live/gpunit.toml`, run `make live` with `RUNPOD_API_KEY` set, and append the run's tail to `live/last_run.txt`.
-It proves the tunnel and `GPUNIT_SSH` connect under `-F none`, and `nvidia-smi` runs.
+It proves `GPUNIT_SSH` connects under `-F none` to a boot whose sshd runs on `UsePAM yes`, the host key verifies, and
+`nvidia-smi` runs. `live/gpunit.toml` sets no `ports`, so no tunnel opens: the tunnel's `-F none` line is checked
+against the gate's stubs only. The image predates `AllowUsers root` (0002·S1), which the stub-backed boot test holds.
 
 ## Dependencies
 
@@ -158,6 +161,9 @@ None.
   documents it. A failure refuses visibly; it rents nothing new.
 - **A slow connect to the log endpoint takes more than 3 s** → that read returns empty, and the host-key poll
   retries every 5 s within its 60 s.
+- **A command that logs at least every 3 s keeps the read open to the 10 s cap** → the stream is live after its
+  backfill, so it never goes quiet, even once this boot's host-key line has arrived. The cost is at most 0.1.0's;
+  ending the read at that line would break last-wins over a backfill still arriving, so the cap stays the bound.
 - **`UsePAM yes` on an image whose PAM stack denies root** → the scan still verifies the host key, and `ssh` fails
   visibly; the ceiling bounds the spend.
 

@@ -47,6 +47,17 @@ def test_a_200_is_a_success(cwd: Path, capsys: pytest.CaptureFixture[str]) -> No
     assert "swept pod pod-7 (RUNNING)" in capsys.readouterr().err
 
 
+@pytest.mark.spec("spec:secrets:redirect-not-followed")
+def test_a_redirected_delete_keeps_the_record(
+    cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    state = recorded(cwd)
+
+    assert gpunit(["down"], provider=FakeProvider(deletes={"pod-1": 302})) == 1
+    assert state.pod.exists()
+    assert "answered HTTP 302; the record is kept" in capsys.readouterr().err
+
+
 @pytest.mark.spec("session:down:sweep-unrecorded")
 @pytest.mark.parametrize(
     ("answer", "code", "pending_kept"),

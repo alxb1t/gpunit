@@ -98,7 +98,9 @@ def test_a_port_out_of_range_is_refused(
     write_spec(tmp_path, VALID + f"ports = {ports}\n")
 
     assert gpunit(["up"], provider=NO_REQUESTS) == 1
-    assert "outside 1-65535" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "'ports'" in err
+    assert "outside 1-65535" in err
 
 
 @pytest.mark.spec("spec:file:port-out-of-range")

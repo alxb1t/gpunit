@@ -67,6 +67,7 @@ ssh-keygen -q -t ed25519 -N '' -f "$HOST_KEY" || refuse "the host key could not 
 # sshd's config is boot's own, not the image's: HostKey is a list, so a key the image's
 # sshd_config names would be served beside the fresh one, and -o HostKey only adds.
 # UsePAM: without it, sshd refuses a root whose password is locked with `!`.
+# AllowUsers: root alone, so a key the image baked in for another account is not served.
 cat > "$SSHD_DIR/sshd_config" <<EOF || refuse "sshd's config could not be written"
 HostKey "$HOST_KEY"
 PermitRootLogin prohibit-password
@@ -74,6 +75,7 @@ AuthorizedKeysFile .ssh/authorized_keys
 PasswordAuthentication no
 KbdInteractiveAuthentication no
 UsePAM yes
+AllowUsers root
 Subsystem sftp internal-sftp
 EOF
 # sshd re-execs itself, so it is started by its absolute path.

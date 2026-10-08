@@ -250,6 +250,7 @@ def test_a_failed_stop_retries_with_backoff(pod: dict[str, str]) -> None:
 
 @pytest.mark.spec("boot:sshd:fingerprint-printed")
 @pytest.mark.spec("boot:sshd:pam-on")
+@pytest.mark.spec("boot:sshd:root-only")
 def test_the_fingerprint_line(pod: dict[str, str]) -> None:
     result = boot(pod, "true")
 
@@ -269,6 +270,7 @@ def test_the_fingerprint_line(pod: dict[str, str]) -> None:
     config = Path(started.removeprefix("-f ")).read_text(encoding="utf-8")
     assert "include" not in config.lower()
     assert "UsePAM yes" in config.splitlines()
+    assert "AllowUsers root" in config.splitlines()
     assert f"-lf {host_key}.pub" in result.keygen
 
 
