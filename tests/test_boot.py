@@ -318,12 +318,10 @@ def test_the_childs_code(pod: dict[str, str]) -> None:
 
 @pytest.mark.spec("boot:child:no-key")
 def test_the_child_holds_no_key(pod: dict[str, str]) -> None:
-    printed = Path(pod["HOME"]) / "env.txt"
-
-    result = boot(pod, "sh", "-c", f'env > "{printed}"')
+    result = boot(pod, "env")
 
     assert result.code == 0
-    names = [line.split("=", 1)[0] for line in printed.read_text().splitlines()]
+    names = [line.split("=", 1)[0] for line in result.out.splitlines()]
     assert "RUNPOD_POD_ID" in names
     assert "RUNPOD_API_KEY" not in names
     [stop] = result.curl
