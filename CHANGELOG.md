@@ -24,8 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A tunnel that keeps dying is reopened with backoff, 1 s doubling to 30 s, so it no longer floods stderr.
 - `boot.sh` starts sshd with `UsePAM yes`, so a root whose password is locked with `!` still logs in by key.
 - The curl refusal is its own test under `boot:refuse:no-curl`, apart from the sshd one.
-- `session:ssh:no-ssh-refuses` is checked through the CLI too: `gpunit ssh` without `ssh` exits `1`; the redirect
-  test's unguarded-opener control is its baseline, no longer a test of its own under the scenario.
+- `session:ssh:no-ssh-refuses` is checked through the CLI too: `gpunit ssh` without `ssh` exits `1`.
+- The unguarded-opener control is the baseline of the redirect test, so no test under
+  `spec:secrets:redirect-not-followed` asserts the key is carried away.
 - README: the design link points at the archive, the pins move to `v0.1.1`, a spend rule says gpunit's ssh is
   its own, and the `128+n` row covers a command killed by a signal.
 - `make live` passed on a rebuilt `live` image carrying this `boot.sh`: the host key verified and `nvidia-smi`
