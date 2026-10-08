@@ -1,30 +1,4 @@
-## Purpose
-
-One command run against a session that exists only as long as the command does: the ports forwarded, the session
-handed over in the environment, and the pod torn down on every way out.
-
-## Requirements
-
-### Requirement: Run hands the session over
-
-The system SHALL, on `run -- <command>`, open the session, forward each spec'd port over one `ssh -N -L` child,
-then run the command as a child with `GPUNIT_HOST`, `GPUNIT_PORT_<remote>=<local>` for each port, and
-`GPUNIT_SSH` (a command line that opens a shell on the pod) in its environment.
-
-#### Scenario: the environment names the session
-- **Key:** `run:handover:env`
-- **WHEN** `gpunit run -- env` runs with `ports = [8188]`
-- **THEN** the command's environment holds `GPUNIT_HOST`, `GPUNIT_PORT_8188=8188` and `GPUNIT_SSH`
-
-### Requirement: A port already answering refuses before anything is rented
-
-The system SHALL, before any request, refuse when a spec'd local port already accepts a connection on loopback,
-naming the port.
-
-#### Scenario: a busy port refuses
-- **Key:** `run:ports:busy-refuses`
-- **WHEN** local `8188` is listening when `gpunit run` starts
-- **THEN** it refuses naming `8188`, exits `1`, and makes no request
+## MODIFIED Requirements
 
 ### Requirement: Run tears down on every exit
 
@@ -75,19 +49,3 @@ not even one an earlier `gpunit up` recorded, and `run` SHALL exit `128 + n`.
 - **Key:** `run:teardown:failure-is-1`
 - **WHEN** the command exits `0` and the delete answers 404
 - **THEN** `run` exits `1` and the record remains
-
-### Requirement: A dead tunnel is reopened
-
-The system SHALL, while the command runs, reopen the tunnel when its `ssh` child exits, and SHALL log each
-reopening; SHALL wait before each reopening, 1 second at first and doubling to 30; and SHALL wait 1 second again
-once a tunnel has lived 30 seconds before it exits.
-
-#### Scenario: the tunnel comes back
-- **Key:** `run:tunnel:reopened`
-- **WHEN** the tunnel child exits while the command runs
-- **THEN** a new tunnel child is started and stderr says so
-
-#### Scenario: a tunnel that keeps dying backs off
-- **Key:** `run:tunnel:backoff`
-- **WHEN** each tunnel exits at once after it opens
-- **THEN** the waits before the reopenings are 1, 2, 4, 8, 16, 30 and 30 seconds; and after a tunnel that lived 30 seconds, the wait is 1 second again

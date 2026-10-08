@@ -162,8 +162,8 @@ def boot(env: dict[str, str], *command: str) -> Boot:
 
 def refuses_without(tool: str, named: str, pod: dict[str, str], bin_dir: Path) -> None:
     """Boot without `tool`; assert it refuses naming `named` and runs nothing."""
-    # A PATH of the stubs and the few tools step 1 needs: the machine's own sshd or
-    # curl must not stand in for the missing one.
+    # A PATH of the stubs and the few tools step 1 needs: the machine's own sshd, curl
+    # or env must not stand in for the missing one.
     without = {name: script for name, script in STUBS.items() if name != tool}
     install_stubs(bin_dir, without)
     for name in ("bash", "date", "touch"):
@@ -186,6 +186,11 @@ def test_no_sshd_refuses(pod: dict[str, str], tmp_path: Path) -> None:
 @pytest.mark.spec("boot:refuse:no-curl")
 def test_no_curl_refuses(pod: dict[str, str], tmp_path: Path) -> None:
     refuses_without("curl", "install curl", pod, tmp_path / "bin")
+
+
+@pytest.mark.spec("boot:refuse:no-env")
+def test_no_env_refuses(pod: dict[str, str], tmp_path: Path) -> None:
+    refuses_without("env", "install coreutils", pod, tmp_path / "bin")
 
 
 @pytest.mark.spec("boot:refuse:no-ceiling")
@@ -248,6 +253,23 @@ def test_a_failed_stop_retries_with_backoff(pod: dict[str, str]) -> None:
     assert "the pod is stopping" in result.err
 
 
+@pytest.mark.spec("boot:stop:refused-key-named")
+def test_a_refused_key_is_named(pod: dict[str, str]) -> None:
+    Path(pod["CURL_CODES"]).write_text("401\n403\n200\n", encoding="utf-8")
+
+    result = boot(pod, "true")
+
+    assert result.code == 0
+    assert len(result.curl) == 3
+    for code in ("401", "403"):
+        assert (
+            f"the stop answered HTTP {code}: the key cannot stop this pod; "
+            "delete it by hand" in result.err
+        )
+    assert [wait for wait in result.sleeps if wait != "7"] == ["30", "60"]
+    assert "the pod is stopping" in result.err
+
+
 @pytest.mark.spec("boot:sshd:fingerprint-printed")
 @pytest.mark.spec("boot:sshd:pam-on")
 @pytest.mark.spec("boot:sshd:root-only")
@@ -292,3 +314,15 @@ def test_the_childs_code(pod: dict[str, str]) -> None:
     assert result.err.index("the command exited 3") < result.err.index(
         "the pod is stopping"
     )
+
+
+@pytest.mark.spec("boot:child:no-key")
+def test_the_child_holds_no_key(pod: dict[str, str]) -> None:
+    result = boot(pod, "env")
+
+    assert result.code == 0
+    names = [line.split("=", 1)[0] for line in result.out.splitlines()]
+    assert "RUNPOD_POD_ID" in names
+    assert "RUNPOD_API_KEY" not in names
+    [stop] = result.curl
+    assert stop.startswith("header-ok ")

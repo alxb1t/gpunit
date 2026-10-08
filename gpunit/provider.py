@@ -92,8 +92,11 @@ class Provider(Protocol):
         """Return the pod, or None on any failed read."""
         ...
 
-    def log(self, pod_id: str, *, tail: int) -> list[str]:
-        """Return the container log's last `tail` lines; empty on a failed read."""
+    def log(self, pod_id: str, *, tail: int, since: str | None = None) -> list[str]:
+        """Return the container log's last `tail` lines; empty on a failed read.
+
+        With `since`, an RFC 3339 time, return the lines from then on instead.
+        """
         ...
 
     def list(self, project: str, image: str) -> list[tuple[str, str]]:

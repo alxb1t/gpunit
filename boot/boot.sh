@@ -27,7 +27,10 @@ stop() {
       say "the pod is stopping"
       return 0
     fi
-    say "the stop answered HTTP ${code:-000}; trying again in ${wait_s}s"
+    case "$code" in
+      401 | 403) say "the stop answered HTTP $code: the key cannot stop this pod; delete it by hand" ;;
+      *) say "the stop answered HTTP ${code:-000}; trying again in ${wait_s}s" ;;
+    esac
     sleep "$wait_s"
     wait_s=$((wait_s * 2 < MAX_RETRY_S ? wait_s * 2 : MAX_RETRY_S))
   done
@@ -38,6 +41,7 @@ stop() {
 command -v sshd >/dev/null || refuse "sshd is not on PATH; install openssh-server in the image"
 # Without curl every stop fails, and the ceiling would retry while the pod bills.
 command -v curl >/dev/null || refuse "curl is not on PATH; install curl in the image"
+command -v env >/dev/null || refuse "env is not on PATH; install coreutils in the image"
 for name in RUNPOD_API_KEY RUNPOD_POD_ID PUBLIC_KEY GPUNIT_CEILING; do
   [ -n "${!name:-}" ] || refuse "$name is unset or empty"
 done
@@ -85,8 +89,9 @@ EOF
 echo "gpunit host key: $(ssh-keygen -lf "$HOST_KEY.pub" | awk '{print $2}')"
 
 # 5. Run: the command as a child, so a SIGTERM reaches it and its code is ours.
+#    The stop key is boot's: the command never sees it. env execs, so $! is the command.
 say "step: the command"
-"$@" &
+env -u RUNPOD_API_KEY "$@" &
 child=$!
 trap 'kill -TERM "$child" 2>/dev/null' TERM
 wait "$child"

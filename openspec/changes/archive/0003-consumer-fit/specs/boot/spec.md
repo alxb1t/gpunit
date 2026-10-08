@@ -1,9 +1,4 @@
-## Purpose
-
-The pod's half of the session: one shell file a consumer's image runs as its entrypoint, so the pod stops itself
-at its ceiling whatever happens to the machine that made it, and proves its host key before anything connects.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Boot refuses what it cannot run on
 
@@ -57,32 +52,6 @@ and still retried; and the command's exit, however it ends, SHALL stop the pod.
 - **Key:** `boot:stop:refused-key-named`
 - **WHEN** the stop answers 401, then 403, then succeeds
 - **THEN** stderr says the key cannot stop this pod after each refusal, and the stop was retried until the success
-
-### Requirement: Sshd on a fresh host key, and the fingerprint printed
-
-Boot SHALL install `PUBLIC_KEY` as the only authorized key, generate a fresh Ed25519 host key on every boot, never
-serving one the image supplied, start `sshd` on a config of its own, not the image's, serving that key alone, to root alone,
-with PAM's account check on, and print one line `gpunit host key: SHA256:<fingerprint>` to stdout.
-
-#### Scenario: the fingerprint line
-- **Key:** `boot:sshd:fingerprint-printed`
-- **WHEN** boot starts
-- **THEN** stdout holds exactly one line matching `^gpunit host key: SHA256:[A-Za-z0-9+/]+$`, equal to the served key's fingerprint
-
-#### Scenario: the authorized key
-- **Key:** `boot:sshd:authorized-key`
-- **WHEN** boot starts with `PUBLIC_KEY` set
-- **THEN** `/root/.ssh/authorized_keys` holds that key alone, at mode `0600`
-
-#### Scenario: PAM is on
-- **Key:** `boot:sshd:pam-on`
-- **WHEN** boot starts sshd
-- **THEN** sshd's config holds `UsePAM yes`, so a root whose password is locked with `!` still logs in by key
-
-#### Scenario: root alone is admitted
-- **Key:** `boot:sshd:root-only`
-- **WHEN** boot starts sshd
-- **THEN** sshd's config holds `AllowUsers root`, so a key the image baked in for another account logs no one in
 
 ### Requirement: The command runs as a child
 

@@ -36,11 +36,11 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    MODE = "render"
    ```
 
-2. **Make `boot.sh` the image's entrypoint.** It needs `openssh-server` and `curl` in the image, and BuildKit for
-   the checksum; on an older Docker, copy the file in.
+2. **Make `boot.sh` the image's entrypoint.** It needs `openssh-server`, `curl` and coreutils' `env` in the
+   image, and BuildKit for the checksum; on an older Docker, copy the file in.
 
    ```dockerfile
-   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.1.1/boot/boot.sh /opt/gpunit/boot.sh
+   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.1.2/boot/boot.sh /opt/gpunit/boot.sh
    RUN chmod +x /opt/gpunit/boot.sh
    ENTRYPOINT ["/opt/gpunit/boot.sh", "--"]
    CMD ["python3", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
@@ -48,10 +48,13 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
 
    `<digest>` is the file's sha256 at the tag: `curl -sL <the URL above> | shasum -a 256`.
 
-3. **Install and run.** The key comes from the environment alone; gpunit reads no `.env`.
+3. **Install and run.** The key comes from the environment alone; gpunit reads no `.env`. The command's
+   environment on the pod does not carry `RUNPOD_API_KEY`: boot keeps it to stop the pod. The command runs as
+   root beside boot, though, so it can still read the key from boot's own environment in `/proc`; run nothing
+   on the pod you would not trust with the key.
 
    ```sh
-   uv add --dev git+https://github.com/alxb1t/gpunit@v0.1.1
+   uv add --dev git+https://github.com/alxb1t/gpunit@v0.1.2
    echo .gpunit/ >> .gitignore
    export RUNPOD_API_KEY=...
    uv run gpunit run -- python3 render.py

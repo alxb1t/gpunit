@@ -55,6 +55,7 @@ class FakeProvider:
         creates: Sequence[str | Exception] = ("pod-1",),
         gets: Sequence[PodInfo | None] = (RUNNING,),
         logs: Sequence[list[str]] = ([KEY_LINE],),
+        since_logs: Sequence[list[str]] = ([],),
         listings: Sequence[list[tuple[str, str]] | Exception] = ([],),
         deletes: Mapping[str, int] | None = None,
     ) -> None:
@@ -64,6 +65,7 @@ class FakeProvider:
         self.creates = list(creates)
         self.gets = list(gets)
         self.logs = [list(lines) for lines in logs]
+        self.since_logs = [list(lines) for lines in since_logs]
         self.listings = list(listings)
         self.deletes = dict(deletes or {})
         self.calls: list[tuple[str, tuple[object, ...]]] = []
@@ -92,10 +94,10 @@ class FakeProvider:
         self.calls.append(("get", (pod_id,)))
         return _next(self.gets)
 
-    def log(self, pod_id: str, *, tail: int) -> list[str]:
-        """Answer the next log read in the script."""
-        self.calls.append(("log", (pod_id, tail)))
-        return list(_next(self.logs))
+    def log(self, pod_id: str, *, tail: int, since: str | None = None) -> list[str]:
+        """Answer the next log read in its script: `since_logs` for a `since` read."""
+        self.calls.append(("log", (pod_id, tail, since)))
+        return list(_next(self.logs if since is None else self.since_logs))
 
     def list(self, project: str, image: str) -> list[tuple[str, str]]:
         """Answer the next listing in the script."""

@@ -31,6 +31,9 @@ class State:
         self.known_hosts = self.dir / "known_hosts"
         self.key = self.dir / "key"
         self.key_pub = self.dir / "key.pub"
+        # Set by this process's own `mark_pending`: a create began here, whatever
+        # files an earlier session left.
+        self.began = False
 
     def read(self) -> Record | None:
         """Return the recorded pod, or None when no record exists."""
@@ -49,6 +52,7 @@ class State:
         """Create `pending`: a create may have made a pod no record names."""
         self._mkdir()
         self.pending.touch()
+        self.began = True
 
     def clear_pending(self) -> None:
         """Remove `pending`."""

@@ -1,4 +1,5 @@
 import os
+import shutil
 import signal
 import socket
 import subprocess
@@ -8,8 +9,9 @@ from pathlib import Path
 import pytest
 
 from gpunit import run
-from gpunit.provider import Lost
-from tests.fakes import FakeProvider
+from gpunit.provider import GpuInfo, Lost
+from gpunit.state import State
+from tests.fakes import RECORD, FakeProvider
 from tests.helpers import NO_REQUESTS, VALID, gpunit, write_spec
 
 
@@ -125,6 +127,76 @@ def test_an_interrupt_tears_down_once(
     assert provider.named("delete") == [("pod-1",)]
     assert not (cwd / ".gpunit" / "pod").exists()
     assert signal.getsignal(number) == before
+
+
+class CatalogueInterrupt(FakeProvider):
+    """Send this process `SIGINT` from inside the catalogue's read."""
+
+    def gpu(self, name: str) -> GpuInfo:
+        os.kill(os.getpid(), signal.SIGINT)
+        return super().gpu(name)
+
+
+@pytest.mark.spec("run:teardown:interrupt-before-create")
+def test_an_interrupt_before_the_create_sweeps_nothing(
+    cwd: Path, capfd: pytest.CaptureFixture[str]
+) -> None:
+    provider = CatalogueInterrupt()
+
+    assert gpunit(["run", "--", "true"], provider=provider) == 130
+    assert len(provider.named("list")) == 1
+    assert provider.named("create") == []
+    assert provider.named("delete") == []
+    assert "no create began; nothing to tear down" in capfd.readouterr().err
+
+
+@pytest.mark.spec("run:teardown:interrupt-beside-record")
+def test_an_interrupt_beside_an_earlier_record_deletes_nothing(
+    cwd: Path, monkeypatch: pytest.MonkeyPatch, capfd: pytest.CaptureFixture[str]
+) -> None:
+    # The record is an earlier `gpunit up`'s live session, not this run's create.
+    State(cwd).write(RECORD)
+    provider = FakeProvider(listings=([("pod-1", "RUNNING"), ("pod-2", "RUNNING")],))
+    which = shutil.which
+    signalled: list[str] = []
+
+    def interrupting(tool: str) -> str | None:
+        if not signalled:
+            signalled.append(tool)
+            os.kill(os.getpid(), signal.SIGINT)
+        return which(tool)
+
+    monkeypatch.setattr(shutil, "which", interrupting)
+
+    assert gpunit(["run", "--", "true"], provider=provider) == 130
+    assert signalled == ["ssh"]
+    assert provider.named("delete") == []
+    assert provider.named("list") == []
+    assert State(cwd).read() == RECORD
+    assert "no create began; nothing to tear down" in capfd.readouterr().err
+
+
+@pytest.mark.spec("run:teardown:record-gone-before-up")
+def test_a_record_gone_before_up_still_tears_down_this_runs_pod(
+    cwd: Path, monkeypatch: pytest.MonkeyPatch, capfd: pytest.CaptureFixture[str]
+) -> None:
+    # An earlier session's record, removed (by a `gpunit down` elsewhere) before `up`
+    # checks it: `up` then creates, and that pod is this run's.
+    State(cwd).write(RECORD)
+    provider = FakeProvider()
+    which = shutil.which
+
+    def removing(tool: str) -> str | None:
+        State(cwd).pod.unlink(missing_ok=True)
+        return which(tool)
+
+    monkeypatch.setattr(shutil, "which", removing)
+
+    assert gpunit(["run", "--", "true"], provider=provider) == 0
+    assert provider.named("create")
+    assert provider.named("delete") == [("pod-1",)]
+    assert State(cwd).read() is None
+    assert "no create began" not in capfd.readouterr().err
 
 
 @pytest.mark.spec("run:teardown:failure-is-1")

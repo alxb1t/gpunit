@@ -158,9 +158,13 @@ class RunPod:
         except (AttributeError, TypeError, KeyError, ValueError):
             return None
 
-    def log(self, pod_id: str, *, tail: int) -> list[str]:
-        """Return the container log's last `tail` lines; empty on a failed read."""
-        query = urllib.parse.urlencode({"tail": tail, "source": "container"})
+    def log(self, pod_id: str, *, tail: int, since: str | None = None) -> list[str]:
+        """Return the container log's last `tail` lines; empty on a failed read.
+
+        With `since`, an RFC 3339 time, return the lines from then on instead.
+        """
+        start = {"tail": tail} if since is None else {"since": since}
+        query = urllib.parse.urlencode(start | {"source": "container"})
         request = self._request("GET", f"/pods/{_quote(pod_id)}/logs?{query}")
         lines: list[str] = []
         deadline = time.monotonic() + LOG_READ_S

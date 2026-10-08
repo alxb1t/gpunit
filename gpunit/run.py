@@ -100,7 +100,7 @@ def _run(
     command: list[str],
     children: _Children,
 ) -> int:
-    code, teardown, torn_down = 1, True, False
+    code, teardown, failed, lost = 1, True, False, False
     # One handler for the whole run: a signal raised while opening, even just after
     # `up` returned, still reaches the teardown below.
     try:
@@ -113,17 +113,21 @@ def _run(
         teardown = False
         raise
     except Lost:
-        code = LOST_EXIT
+        code, lost = LOST_EXIT, True
     except _Interrupted:
         pass
     finally:
         children.opening = False
-        if teardown:
+        # The sweep deletes every listed pod: before this run's create, those are not
+        # ours, and a record or marker an earlier session left does not make them so.
+        if teardown and (lost or state.began):
             if children.tunnel is not None:
                 _kill(children.tunnel)
-            torn_down = session.down(spec, provider, state) == 0
+            failed = session.down(spec, provider, state) != 0
+        elif teardown:
+            log.say("no create began; nothing to tear down")
     # A failed teardown outranks the signal: 128 + n says the pod is gone.
-    if not torn_down:
+    if failed:
         return LOST_EXIT if code == LOST_EXIT else 1
     if children.signal is not None:
         return 128 + children.signal

@@ -66,3 +66,37 @@ Thu Oct  8 08:13:47 2026
 2026-10-08T08:13:48Z pod kusaglscha7v32 deleted
 no session is recorded
 The account's pod listing was empty after the run: no pod is left.
+
+2026-10-08 — make live, 0003-consumer-fit, on image sha256:29b07f3b…946e
+
+2026-10-08T11:09:48Z creating on NVIDIA RTX A4500
+2026-10-08T11:09:49Z create on 'NVIDIA RTX A4500' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-08T11:09:49Z creating on NVIDIA RTX A5000
+2026-10-08T11:09:49Z create on 'NVIDIA RTX A5000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-08T11:09:49Z creating on NVIDIA A40
+2026-10-08T11:09:51Z pod kp8d462ly92z8h created; waiting for SSH
+2026-10-08T11:10:31Z host key verified: SHA256:3gR0ZP+zn9hK59CqhAu3tcX18RVU7AivgHoEcR3US4A
+2026-10-08T11:10:31Z session up: pod kp8d462ly92z8h, root@194.68.245.2 -p 22199
+Thu Oct  8 11:10:32 2026
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 595.91.07              Driver Version: 595.91.07      CUDA Version: 13.2     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A40                     On  |   00000000:52:00.0 Off |                    0 |
+|  0%   34C    P8             30W /  300W |       0MiB /  46068MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+2026-10-08T11:10:34Z pod kp8d462ly92z8h deleted
+no session is recorded
+The RunPod console's Pods page opened on "Deploy a Pod" after the run: no pod is left.
