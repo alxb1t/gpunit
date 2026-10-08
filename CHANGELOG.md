@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-08
+
+### Security
+
+- Every ssh line is gpunit's own: `-F none -o IdentitiesOnly=yes`, so a user's ssh_config cannot forward their
+  agent, proxy or multiplex to the pod.
+- The API client follows no redirect: a 3xx is read as a failed answer, so the key never reaches another host;
+  the redirect test also shows an unguarded opener leaking the key.
+- `boot.sh`'s sshd admits root alone (`AllowUsers root`), so a key the image baked in for another account, even a
+  `!`-locked one, opens no login on the pod.
+
+### Fixed
+
+- `up` checks `ssh`, `ssh-keygen` and `ssh-keyscan` before any request, so a missing tool no longer leaks a pod;
+  `gpunit ssh` without `ssh` refuses instead of a traceback.
+- `gpunit.toml` refuses a port outside 1–65535 before anything is rented.
+- A delete answering `200` is a success for `down` and the sweep, as it already was for `RunPod.delete`.
+- The pod's log read ends once the stream is quiet for 3 s, not after a fixed 10 s; a stream that never goes
+  quiet still ends at 10 s.
+- `run` exits `128 + n` when signal `n` killed the command, as a shell does, not a negative code.
+- A tunnel that keeps dying is reopened with backoff, 1 s doubling to 30 s, so it no longer floods stderr.
+- `boot.sh` starts sshd with `UsePAM yes`, so a root whose password is locked with `!` still logs in by key.
+- The curl refusal is its own test under `boot:refuse:no-curl`, apart from the sshd one.
+- `session:ssh:no-ssh-refuses` is checked through the CLI too: `gpunit ssh` without `ssh` exits `1`.
+- README: the design link points at the archive, the pins move to `v0.1.1`, a spend rule says gpunit's ssh is
+  its own, and the `128+n` row covers a command killed by a signal.
+- `make live` passed on a rebuilt `live` image carrying this `boot.sh` before `AllowUsers root`: the host key
+  verified and `nvidia-smi` ran over `GPUNIT_SSH` under `-F none`, with sshd on `UsePAM yes`; the run's tail is in
+  `live/last_run.txt`.
+
 ## [0.1.0] - 2026-10-07
 
 ### Added

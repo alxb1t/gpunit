@@ -1,30 +1,4 @@
-## Purpose
-
-One command run against a session that exists only as long as the command does: the ports forwarded, the session
-handed over in the environment, and the pod torn down on every way out.
-
-## Requirements
-
-### Requirement: Run hands the session over
-
-The system SHALL, on `run -- <command>`, open the session, forward each spec'd port over one `ssh -N -L` child,
-then run the command as a child with `GPUNIT_HOST`, `GPUNIT_PORT_<remote>=<local>` for each port, and
-`GPUNIT_SSH` (a command line that opens a shell on the pod) in its environment.
-
-#### Scenario: the environment names the session
-- **Key:** `run:handover:env`
-- **WHEN** `gpunit run -- env` runs with `ports = [8188]`
-- **THEN** the command's environment holds `GPUNIT_HOST`, `GPUNIT_PORT_8188=8188` and `GPUNIT_SSH`
-
-### Requirement: A port already answering refuses before anything is rented
-
-The system SHALL, before any request, refuse when a spec'd local port already accepts a connection on loopback,
-naming the port.
-
-#### Scenario: a busy port refuses
-- **Key:** `run:ports:busy-refuses`
-- **WHEN** local `8188` is listening when `gpunit run` starts
-- **THEN** it refuses naming `8188`, exits `1`, and makes no request
+## MODIFIED Requirements
 
 ### Requirement: Run tears down on every exit
 

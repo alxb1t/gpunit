@@ -1,9 +1,4 @@
-## Purpose
-
-What a consumer declares about its GPU session, in one file it commits; what is refused before a pod exists; and
-where secrets come from — so a session cannot be opened without an end, a pin, or an owner for its key.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: The spec is one TOML file
 
@@ -36,31 +31,6 @@ type, a key is unknown, or a port, remote or local, lies outside 1–65535.
 - **Key:** `spec:file:port-out-of-range`
 - **WHEN** `ports = [70000]`, or `ports = [{ remote = 8188, local = 0 }]`
 - **THEN** `up` refuses naming `ports`, exits `1`, and makes no request
-
-### Requirement: An image without a digest is refused
-
-The system SHALL refuse an `image` that does not end in `@sha256:` and sixty-four hex characters, before any
-network call.
-
-#### Scenario: a tag is refused
-- **Key:** `spec:image:tag-refused`
-- **WHEN** `image = "ghcr.io/alxb1t/isekai:latest"`
-- **THEN** `up` refuses naming the digest form and exits `1`, and no request is made
-
-### Requirement: The ceiling is required
-
-The system SHALL require `ceiling`, a duration in seconds, minutes or hours (`600s`, `45m`, `4h`), with no default;
-and SHALL pass it to the pod as `GPUNIT_CEILING` in seconds.
-
-#### Scenario: no ceiling, no pod
-- **Key:** `spec:ceiling:required`
-- **WHEN** `gpunit.toml` has no `ceiling`
-- **THEN** `up` refuses naming `ceiling` and makes no request
-
-#### Scenario: the ceiling reaches the pod in seconds
-- **Key:** `spec:ceiling:reaches-the-pod`
-- **WHEN** `ceiling = "45m"` and a pod is created
-- **THEN** the create carries `GPUNIT_CEILING=2700` in the pod's environment
 
 ### Requirement: Secrets come from the environment only
 

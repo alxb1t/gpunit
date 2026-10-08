@@ -54,7 +54,7 @@ def test_the_environment_names_the_session(
     env = dict(line.split("=", 1) for line in capfd.readouterr().out.splitlines())
     assert env["GPUNIT_HOST"] == "203.0.113.7"
     assert env["GPUNIT_PORT_8188"] == str(free_port)
-    assert env["GPUNIT_SSH"].startswith("ssh -i ")
+    assert env["GPUNIT_SSH"].startswith("ssh -F none -o IdentitiesOnly=yes -i ")
     assert env["GPUNIT_SSH"].endswith(" root@203.0.113.7 -p 40022")
 
 
@@ -93,6 +93,14 @@ def test_the_commands_failure_is_passed_through(cwd: Path) -> None:
     provider = FakeProvider()
 
     assert gpunit(["run", "--", "sh", "-c", "exit 7"], provider=provider) == 7
+    assert provider.named("delete") == [("pod-1",)]
+
+
+@pytest.mark.spec("run:teardown:signalled-command")
+def test_a_command_killed_by_a_signal_exits_128_plus_n(cwd: Path) -> None:
+    provider = FakeProvider()
+
+    assert gpunit(["run", "--", "bash", "-c", "kill -9 $$"], provider=provider) == 137
     assert provider.named("delete") == [("pod-1",)]
 
 
@@ -139,6 +147,7 @@ def test_an_interrupt_with_a_failed_teardown_is_exit_1(cwd: Path) -> None:
 
 
 @pytest.mark.spec("run:tunnel:reopened")
+@pytest.mark.spec("session:ssh:own-config-only")
 def test_a_dead_tunnel_is_reopened(
     cwd: Path,
     free_port: int,
@@ -150,6 +159,7 @@ def test_a_dead_tunnel_is_reopened(
     monkeypatch.setenv("GPUNIT_TEST_SSH_LOG", str(tunnels))
     monkeypatch.setenv("GPUNIT_TEST_SSH_EXIT", "1")
     monkeypatch.setattr(run, "TUNNEL_POLL_S", 0.1)
+    monkeypatch.setattr(run, "REOPEN_FIRST_S", 0.1)
 
     # Runs until the tunnel has been opened twice.
     reopened = f'until [ "$(wc -l < "{tunnels}")" -ge 2 ]; do sleep 0.05; done'
@@ -160,7 +170,26 @@ def test_a_dead_tunnel_is_reopened(
     assert len(opened) >= 2
     assert f"-L{free_port}:localhost:8188" in opened[0]
     assert "ExitOnForwardFailure=yes" in opened[0]
-    assert "reopening it" in capfd.readouterr().err
+    assert "-F none" in opened[0]
+    assert "IdentitiesOnly=yes" in opened[0]
+    assert "reopening it in 0.1s" in capfd.readouterr().err
+
+
+@pytest.mark.spec("run:tunnel:backoff")
+def test_a_tunnel_that_keeps_dying_backs_off() -> None:
+    backoff = run._Backoff(now=0.0)
+    now, waits = 0.0, []
+    for _ in range(7):
+        wait = backoff.exited(now)
+        assert wait is not None and backoff.exited(now) is None
+        waits.append(wait)
+        assert not backoff.due(now + waits[-1] - 0.01)
+        now += waits[-1]
+        assert backoff.due(now)
+        backoff.opened(now)
+
+    assert waits == [1, 2, 4, 8, 16, 30, 30]
+    assert backoff.exited(now + 30) == 1
 
 
 @pytest.mark.spec("run:ports:busy-refuses")

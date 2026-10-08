@@ -134,13 +134,26 @@ def page(pods: list[dict[str, str]], cursor: str | None) -> bytes:
     return json.dumps({"pods": pods, "pagination": more}).encode()
 
 
-Answer = tuple[int, bytes] | Exception
-
-
 class _Response(io.BytesIO):
     def __init__(self, status: int, body: bytes) -> None:
         super().__init__(body)
         self.status = status
+
+
+class _Quiet(_Response):
+    def readline(self, size: int | None = -1) -> bytes:
+        line = super().readline(size)
+        if not line:
+            raise TimeoutError("the stream went quiet")
+        return line
+
+
+def quiet(body: bytes) -> _Response:
+    """Return a 200 stream that sends `body`, then times out as a quiet socket does."""
+    return _Quiet(200, body)
+
+
+Answer = tuple[int, bytes] | Exception | _Response
 
 
 class FakeOpener(urllib.request.OpenerDirector):
@@ -150,6 +163,7 @@ class FakeOpener(urllib.request.OpenerDirector):
         super().__init__()
         self.answers = list(answers)
         self.requests: list[urllib.request.Request] = []
+        self.timeouts: list[float] = []
 
     def open(
         self,
@@ -160,9 +174,12 @@ class FakeOpener(urllib.request.OpenerDirector):
         assert isinstance(fullurl, urllib.request.Request)
         assert timeout is not None
         self.requests.append(fullurl)
+        self.timeouts.append(timeout)
         answer = self.answers.pop(0)
         if isinstance(answer, Exception):
             raise answer
+        if isinstance(answer, _Response):
+            return answer
         status, body = answer
         if status >= 400:
             raise urllib.error.HTTPError(

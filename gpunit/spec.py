@@ -130,15 +130,23 @@ def _gpus(path: Path, items: list[object]) -> tuple[str, ...]:
 
 
 def _port(path: Path, item: object) -> Port:
-    if isinstance(item, int) and not isinstance(item, bool):
-        return Port(remote=item, local=item)
+    remote = local = item
     if isinstance(item, dict) and set(item) <= {"remote", "local"} and "remote" in item:
         remote, local = item["remote"], item.get("local", item["remote"])
-        if all(isinstance(n, int) and not isinstance(n, bool) for n in (remote, local)):
-            return Port(remote=remote, local=local)
-    log.refuse(
-        f"{path}: 'ports' holds an int or {{ remote, local }} table, not {item!r}"
-    )
+    # bool is an int subclass: `true` is not a port.
+    if (
+        isinstance(remote, bool)
+        or isinstance(local, bool)
+        or not isinstance(remote, int)
+        or not isinstance(local, int)
+    ):
+        log.refuse(
+            f"{path}: 'ports' holds an int or {{ remote, local }} table, not {item!r}"
+        )
+    for side in (remote, local):
+        if not 1 <= side <= 65535:
+            log.refuse(f"{path}: 'ports' holds {side}, outside 1-65535")
+    return Port(remote=remote, local=local)
 
 
 def _env(path: Path, table: dict[str, object]) -> dict[str, str]:

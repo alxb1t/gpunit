@@ -92,7 +92,8 @@ def _run(argv: list[str], provider: Provider | None) -> int:
                 return session.down(spec, lazy(), state)
             case "ssh":
                 session.ssh(state)
-                return FAILED  # reached only when the exec failed
+                # unreachable: the exec replaces this process, or ssh() refuses
+                return FAILED
             case _:
                 return run.run(spec, lazy(), state, command)
     except log.Refusal:

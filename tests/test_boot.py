@@ -160,18 +160,12 @@ def boot(env: dict[str, str], *command: str) -> Boot:
     )
 
 
-@pytest.mark.spec("boot:refuse:no-sshd")
-@pytest.mark.parametrize(
-    ("tool", "named"),
-    [("sshd", "install openssh-server"), ("curl", "install curl")],
-)
-def test_a_missing_tool_refuses(
-    tool: str, named: str, pod: dict[str, str], tmp_path: Path
-) -> None:
+def refuses_without(tool: str, named: str, pod: dict[str, str], bin_dir: Path) -> None:
+    """Boot without `tool`; assert it refuses naming `named` and runs nothing."""
     # A PATH of the stubs and the few tools step 1 needs: the machine's own sshd or
     # curl must not stand in for the missing one.
     without = {name: script for name, script in STUBS.items() if name != tool}
-    bin_dir = install_stubs(tmp_path / "bin", without)
+    install_stubs(bin_dir, without)
     for name in ("bash", "date", "touch"):
         (bin_dir / name).symlink_to(str(shutil.which(name)))
     pod["PATH"] = str(bin_dir)
@@ -182,6 +176,16 @@ def test_a_missing_tool_refuses(
     assert named in result.err
     assert not (Path(pod["HOME"]) / "ran").exists()
     assert result.curl == []
+
+
+@pytest.mark.spec("boot:refuse:no-sshd")
+def test_no_sshd_refuses(pod: dict[str, str], tmp_path: Path) -> None:
+    refuses_without("sshd", "install openssh-server", pod, tmp_path / "bin")
+
+
+@pytest.mark.spec("boot:refuse:no-curl")
+def test_no_curl_refuses(pod: dict[str, str], tmp_path: Path) -> None:
+    refuses_without("curl", "install curl", pod, tmp_path / "bin")
 
 
 @pytest.mark.spec("boot:refuse:no-ceiling")
@@ -245,6 +249,8 @@ def test_a_failed_stop_retries_with_backoff(pod: dict[str, str]) -> None:
 
 
 @pytest.mark.spec("boot:sshd:fingerprint-printed")
+@pytest.mark.spec("boot:sshd:pam-on")
+@pytest.mark.spec("boot:sshd:root-only")
 def test_the_fingerprint_line(pod: dict[str, str]) -> None:
     result = boot(pod, "true")
 
@@ -263,6 +269,8 @@ def test_the_fingerprint_line(pod: dict[str, str]) -> None:
     [started] = result.sshd
     config = Path(started.removeprefix("-f ")).read_text(encoding="utf-8")
     assert "include" not in config.lower()
+    assert "UsePAM yes" in config.splitlines()
+    assert "AllowUsers root" in config.splitlines()
     assert f"-lf {host_key}.pub" in result.keygen
 
 
