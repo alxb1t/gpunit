@@ -14,6 +14,9 @@ See [proposal](proposal.md) — *Why*. What holds at the cut, `main` at `0841e07
   exit codes (`:129-134`). `TUNNEL_POLL_S`, `REOPEN_FIRST_S`, `REOPEN_CAP_S` sit at `:17-21`.
 - **`session.up` and `session.down`** (`gpunit/session.py:49`, `:147`) are already plain functions on a `Spec`, a
   `Provider` and a `State`.
+- **`gpunit/session.py`** is a module named `session`. `gpunit/cli.py`, `gpunit/run.py`, `tests/conftest.py` and
+  `tests/test_ssh.py` reach it by `from gpunit import session`, which reads the package's attribute of that name
+  ([D10](#d10)).
 - **`log`** (`gpunit/log.py`): `say` prints `<UTC> <text>` to stderr (`:17-19`); `refuse` says and raises `Refusal`
   (`:22-25`). `provider.Refused` (`gpunit/provider.py:64`) is a different thing: a create's 400.
 - **`RunPod(environ=…)`** reads the key from the mapping it is given (`gpunit/runpod.py:66`); the create's pod
@@ -43,6 +46,7 @@ gpunit's words.
 | [D7](#d7) | `RunPod.create` adds `GPUNIT_VOLUME_ID`, `GPUNIT_VOLUME_PATH` when `volume` is set; `_env` refuses a `GPUNIT_` key | the path is the provider's; `boot.sh` passes the environment on | `boot.sh` exporting them |
 | [D8](#d8) | README gains *Use it from Python*; `CLAUDE.md`'s layout names `library.py` | the README is the promise | — |
 | [D9](#d9) | `make live` by hand on the existing live image | `run` is rebuilt; the gate fakes the pod | a rebuilt image: `boot.sh` is unchanged |
+| [D10](#d10) | `gpunit/session.py` becomes `gpunit/lifecycle.py` | the package exports the function `session` ([D2](#d2)), which hides a submodule of the same name | a public name other than `session`; internal imports through `sys.modules` |
 
 ### D1
 
@@ -60,10 +64,11 @@ def session(
         yield s
 ```
 
-`Session` is a frozen dataclass: `host`, `pod_id`, `image`, `ssh` (the argv of `session.ssh_command`), and
+`Session` is a frozen dataclass: `host`, `pod_id`, `image`, `ssh` (the argv of `lifecycle.ssh_command`), and
 `port(remote) → local`, refusing a remote port the spec does not forward. `_open` refuses busy ports, installs the
-handlers ([D3](#d3)), runs `session.up`, starts the tunnel ([D4](#d4)), yields, and in its `finally` tears down when
-`state.began` or a create was lost, exactly as `run`'s guard does today.
+handlers ([D3](#d3)), runs `lifecycle.up`, starts the tunnel ([D4](#d4)), yields, and in its `finally` tears down when
+`state.began` or a create was lost, exactly as `run`'s guard does today. `_refuse_busy_ports` moves from `run.py` to
+`library.py`.
 
 ```
 open ─▶ busy ports ─▶ handlers ─▶ up ─▶ tunnel thread ─▶ yield s
@@ -123,6 +128,19 @@ README *Use it from Python*: the `with` block, the attributes, the exceptions, t
 
 A **HUMAN · METERED** phase: `make live` with `RUNPOD_API_KEY` set, on the image `live/gpunit.toml` pins today;
 confirm no pod is left; append the tail to `live/last_run.txt`.
+
+### D10
+
+`gpunit/session.py` moves to `gpunit/lifecycle.py`, unchanged inside. Once `gpunit/__init__.py` binds the function
+`session`, `from gpunit import session` and `import gpunit.session as s` both return the function, not the module;
+only `from gpunit.session import …` still reaches the module. So the module takes another name, and every importer
+moves to `from gpunit import lifecycle`. `CLAUDE.md`'s *Layout* names `lifecycle.py` for `up · status · down · ssh`.
+The `session:*` scenario keys name a capability, not the module, and stay.
+
+```
+before:  from gpunit import session   →  the function, once __init__ exports it
+after:   from gpunit import lifecycle →  the module, always
+```
 
 ## Dependencies
 

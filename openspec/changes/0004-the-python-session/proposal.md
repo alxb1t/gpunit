@@ -35,6 +35,8 @@ learns which volume to expect from a variable it sets itself. A consumer then ne
 - **The tunnel in a thread**, reopened with the backoff `run` already has ([D4](design.md#d4)).
 - **A `say` sink** for gpunit's lines; the default sink survives a closed stderr ([D5](design.md#d5)).
 - **`gpunit run` on `session()`**, its exit codes from the failures ([D6](design.md#d6)).
+- **`gpunit/session.py` → `gpunit/lifecycle.py`**, so `gpunit.session` names the function alone
+  ([D10](design.md#d10)).
 - **`GPUNIT_VOLUME_ID` and `GPUNIT_VOLUME_PATH`** in the pod's environment; `[env]` may name no `GPUNIT_*`
   variable ([D7](design.md#d7)).
 - **README:** the Python API ([D8](design.md#d8)).
@@ -57,9 +59,10 @@ learns which volume to expect from a variable it sets itself. A consumer then ne
 
 ## Impact
 
-- **Files:** `gpunit/__init__.py`, `gpunit/library.py` (new), `gpunit/log.py`, `gpunit/run.py`, `gpunit/spec.py`,
-  `gpunit/runpod.py`, `tests/test_library.py` (new), `tests/test_run.py`, `tests/test_spec.py`,
-  `tests/test_runpod.py`, `tests/test_cli.py`, `README.md`, `CLAUDE.md`, `live/last_run.txt`.
+- **Files:** `gpunit/__init__.py`, `gpunit/library.py` (new), `gpunit/lifecycle.py` (was `gpunit/session.py`),
+  `gpunit/cli.py`, `gpunit/log.py`, `gpunit/run.py`, `gpunit/spec.py`, `gpunit/runpod.py`, `tests/test_library.py`
+  (new), `tests/conftest.py`, `tests/test_ssh.py`, `tests/test_run.py`, `tests/test_spec.py`, `tests/test_runpod.py`,
+  `tests/test_cli.py`, `README.md`, `CLAUDE.md`, `live/last_run.txt`.
 - **Behaviour:** the CLI's specs hold unchanged; a spec whose `[env]` names `GPUNIT_*` is now refused.
 - **`boot.sh`:** unchanged, so no image needs a rebuild.
 - **Dependencies:** none ([Dependencies](design.md#dependencies)).
