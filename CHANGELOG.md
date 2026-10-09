@@ -12,7 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A pod with a `volume` is told `GPUNIT_VOLUME_ID` and `GPUNIT_VOLUME_PATH`, so a command reads its volume in
   gpunit's words. `[env]` naming a `GPUNIT_*` variable is refused.
 - gpunit's lines go through a swappable sink; the default one survives a closed stderr, so a dead pipe ends no
-  teardown, and the process still exits with the code the teardown earned, not `120`.
+  teardown, and the process still exits with the code the teardown earned, not `120`. A stderr with no
+  descriptor, or no null device to open, is swallowed too.
 - `gpunit.session(spec, environ=…, cwd=…, say=…)` opens a session from Python as a `with` block, yielding a
   `Session` (`host`, `port()`, `ssh`, `image`, `pod_id`), and tears it down on every way out. It raises
   `Refused`, `Lost`, `TeardownFailed` and `Interrupted`, and owns the signals and the tunnel thread while open.
@@ -23,7 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README: *Use it from Python* documents `gpunit.session`, its attributes, exceptions, signals, `environ` and
   `say`; the volume's `GPUNIT_VOLUME_PATH` and the refused `GPUNIT_*` env names are in the spec example.
 - `gpunit run` runs on `gpunit.session`: one implementation of the session, its exit codes read from the
-  library's exceptions.
+  library's exceptions. A signal that lands while it starts the command is held until it has the command's
+  handle, so the command is terminated, never left running.
 - `gpunit/session.py` is `gpunit/lifecycle.py`: the package's `session` names the library's function, which
   would hide a submodule of that name.
 - `make live` passed on the existing `live` image with `gpunit run` on the library: the host key verified,

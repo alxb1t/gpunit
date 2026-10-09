@@ -104,14 +104,16 @@ outer `finally` restores the saved ones.
 `log.py` gains `_sink`, `redirect(sink)` (a context manager restoring the previous one) and a default sink that
 prints to stderr and swallows `BrokenPipeError` and `ValueError` (a closed stream). On `BrokenPipeError` it points
 stderr's descriptor at `os.devnull`, so the interpreter's last flush of the line left in the buffer cannot fail
-and turn the exit code into `120`. `say` writes `<UTC> <text>`
+and turn the exit code into `120`; a stream with no descriptor, or a null device it cannot open, is only
+swallowed. `say` writes `<UTC> <text>`
 through `_sink`; `refuse` is unchanged.
 
 ### D6
 
 `run.run(spec, provider, state, command)` keeps its signature for the CLI. It opens `_open(...)`, starts the
-command with `GPUNIT_HOST`, `GPUNIT_PORT_<remote>`, `GPUNIT_SSH` from the `Session`, and waits. On `Interrupted`
-it terminates the command, waits for it, and re-raises. It maps the outcome: the command's code (`128 + n` for a
+command with `GPUNIT_HOST`, `GPUNIT_PORT_<remote>`, `GPUNIT_SSH` from the `Session`, and waits. It holds the
+signals while `Popen` starts the command and delivers the first after, so none lands before it has the handle. On
+`Interrupted` it terminates the command, waits for it, and re-raises. It maps the outcome: the command's code (`128 + n` for a
 signal-killed command), `Refused` → `1`, `Lost` → `3`, `TeardownFailed` → `1` (`3` after a lost create),
 `Interrupted(n)` → `128 + n`.
 

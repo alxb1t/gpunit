@@ -2,7 +2,10 @@
 
 import os
 import shlex
+import signal
 import subprocess
+from collections.abc import Generator
+from contextlib import contextmanager
 
 from gpunit import library, log
 from gpunit.provider import Lost, Provider
@@ -42,16 +45,40 @@ def _command(spec: Spec, opened: library.Session, command: list[str]) -> int:
         f"GPUNIT_PORT_{port.remote}": str(opened.port(port.remote))
         for port in spec.ports
     }
+    child: subprocess.Popen[bytes] | None = None
     try:
-        child = subprocess.Popen(command, env=env)
-    except OSError as fault:
-        log.say(f"the command could not start: {fault}")
-        return 127
-    try:
+        with _held(library.SIGNALS):
+            try:
+                child = subprocess.Popen(command, env=env)
+            except OSError as fault:
+                log.say(f"the command could not start: {fault}")
+                return 127
         code = child.wait()
     except library.Interrupted:
-        child.terminate()
-        child.wait()
+        if child is not None:
+            child.terminate()
+            child.wait()
         raise
     # Popen reads a death by signal n as -n; a shell says 128 + n.
     return 128 - code if code < 0 else code
+
+
+@contextmanager
+def _held(numbers: tuple[int, ...]) -> Generator[None, None, None]:
+    """Hold the signals while the command starts, then deliver the first that came.
+
+    A signal raising inside `Popen`, after the fork, would lose the command's handle
+    and leave it running.
+    """
+    held: list[int] = []
+    saved = {
+        number: signal.signal(number, lambda number, _: held.append(number))
+        for number in numbers
+    }
+    try:
+        yield
+    finally:
+        for number, handler in saved.items():
+            signal.signal(number, handler)
+        if held:
+            signal.raise_signal(held[0])

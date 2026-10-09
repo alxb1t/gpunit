@@ -5,10 +5,11 @@ import socket
 import subprocess
 from collections.abc import Iterator
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
-from gpunit import library
+from gpunit import library, run
 from gpunit.provider import GpuInfo, Lost
 from gpunit.state import State
 from tests.fakes import RECORD, FakeProvider
@@ -116,6 +117,35 @@ def test_an_interrupt_tears_down_once(
     assert provider.named("delete") == [("pod-1",)]
     assert not (cwd / ".gpunit" / "pod").exists()
     assert signal.getsignal(number) == before
+
+
+@pytest.mark.spec("run:teardown:interrupt")
+def test_an_interrupt_while_the_command_starts_ends_the_command(
+    cwd: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    provider = InterruptingProvider(signal.SIGTERM)
+    started: list[subprocess.Popen[bytes]] = []
+
+    def signalled_after_the_fork(
+        command: list[str], env: dict[str, str]
+    ) -> subprocess.Popen[bytes]:
+        # The signal lands inside `Popen`, once the command exists.
+        started.append(subprocess.Popen(command, env=env))
+        os.kill(os.getpid(), signal.SIGTERM)
+        return started[-1]
+
+    # `run`'s own `Popen` only: `up` runs its tools through `subprocess` too.
+    monkeypatch.setattr(
+        run, "subprocess", SimpleNamespace(Popen=signalled_after_the_fork)
+    )
+    try:
+        assert gpunit(["run", "--", "sleep", "30"], provider=provider) == 143
+        assert provider.named("delete") == [("pod-1",)]
+        assert started[0].poll() is not None
+    finally:
+        for child in started:
+            child.kill()
+            child.wait()
 
 
 class CatalogueInterrupt(FakeProvider):

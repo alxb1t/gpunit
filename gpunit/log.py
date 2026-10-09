@@ -24,9 +24,15 @@ def _stderr(line: str) -> None:
     except BrokenPipeError:
         # The line stays buffered, and the interpreter's last flush would fail on it
         # and exit 120: point the stream's descriptor at the null device instead.
-        null = os.open(os.devnull, os.O_WRONLY)
-        os.dup2(null, sys.stderr.fileno())
-        os.close(null)
+        # A stream with no descriptor, or no null device to open, is only swallowed.
+        try:
+            null = os.open(os.devnull, os.O_WRONLY)
+            try:
+                os.dup2(null, sys.stderr.fileno())
+            finally:
+                os.close(null)
+        except (OSError, ValueError, AttributeError):
+            pass
     except ValueError:
         pass
 

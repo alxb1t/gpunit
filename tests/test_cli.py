@@ -1,3 +1,5 @@
+import errno
+import io
 import os
 import subprocess
 import sys
@@ -74,6 +76,44 @@ def test_a_dead_pipe_on_stderr_ends_no_teardown(
         monkeypatch.setattr(log, "_sink", _unguarded)
         with pytest.raises(BrokenPipeError):
             gpunit(["run", "--", "true"], provider=provider)
+
+
+class DeadAndFileless(io.TextIOBase):
+    """Stand for a host's stderr wrapper: its pipe is dead, and it has no descriptor."""
+
+    def write(self, text: str) -> int:
+        raise BrokenPipeError
+
+    def flush(self) -> None:
+        raise BrokenPipeError
+
+
+@pytest.mark.spec("cli:exits:closed-stderr")
+@pytest.mark.parametrize("fault", ["no-descriptor", "no-null-device"])
+def test_a_dead_pipe_the_null_device_cannot_replace_is_swallowed(
+    fault: str,
+    cwd: Path,
+    dead_pipe: TextIO,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    provider = FakeProvider()
+    if fault == "no-descriptor":
+        monkeypatch.setattr(sys, "stderr", DeadAndFileless())
+    else:
+        monkeypatch.setattr(sys, "stderr", dead_pipe)
+        opener = os.open
+
+        def exhausted(path: str, flags: int, mode: int = 0o777) -> int:
+            # The sink's write-only open fails; `subprocess`'s own DEVNULL still opens.
+            if path == os.devnull and flags == os.O_WRONLY:
+                raise OSError(errno.EMFILE, "Too many open files")
+            return opener(path, flags, mode)
+
+        monkeypatch.setattr(os, "open", exhausted)
+
+    assert gpunit(["run", "--", "true"], provider=provider) == 0
+    assert provider.named("delete") == [("pod-1",)]
+    assert not (cwd / ".gpunit" / "pod").exists()
 
 
 # The CLI on the fakes, in a process of its own: no key, no network.
