@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A pod with a `volume` is told `GPUNIT_VOLUME_ID` and `GPUNIT_VOLUME_PATH`, so a command reads its volume in
+  gpunit's words. `[env]` naming a `GPUNIT_*` variable is refused.
+- gpunit's lines go through a swappable sink; the default one survives a closed stderr, so a dead pipe ends no
+  teardown.
+
 ## [0.1.2] - 2026-10-08
 
 ### Security

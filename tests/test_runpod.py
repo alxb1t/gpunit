@@ -78,6 +78,24 @@ def test_the_create_carries_the_volumes_datacenter() -> None:
     assert body["mounts"] == {"network": [{"volumeId": "v1", "path": "/runpod-volume"}]}
 
 
+@pytest.mark.spec("session:volume:the-pod-is-told")
+def test_the_pod_is_told_its_volume() -> None:
+    provider, opener = runpod(
+        (200, fixture("volume.json")), (201, fixture("pod_created.json"))
+    )
+    spec = dataclasses.replace(SPEC, volume="v1")
+
+    provider.create(spec, "RTX 4090", "ssh-ed25519 AAAA gpunit-isekai", 2700)
+
+    assert opener.sent()["env"] == {
+        "MODE": "render",
+        "GPUNIT_CEILING": "2700",
+        "PUBLIC_KEY": "ssh-ed25519 AAAA gpunit-isekai",
+        "GPUNIT_VOLUME_ID": "v1",
+        "GPUNIT_VOLUME_PATH": "/runpod-volume",
+    }
+
+
 @pytest.mark.spec("session:create:secure-and-22")
 def test_the_create_is_secure_and_exposes_22_only() -> None:
     provider, opener = runpod((201, fixture("pod_created.json")))

@@ -5,7 +5,7 @@ The log's sink and the volume's names, then the library, `run` on top, the READM
 
 ## Progress
 
-- [ ] 1 — The log and the volume's names
+- [x] 1 — The log and the volume's names
 - [ ] 2 — The library
 - [ ] 3 — Run on the library
 - [ ] 4 — The handover
@@ -13,11 +13,11 @@ The log's sink and the volume's names, then the library, `run` on top, the READM
 
 ## 1 — The log and the volume's names
 
-- [ ] 1.1 **HALT CHECK** — no library exists yet, and the log writes straight to stderr.
+- [x] 1.1 **HALT CHECK** — no library exists yet, and the log writes straight to stderr.
   Verify: `ls gpunit/library.py 2>&1 | grep -c 'No such file'` prints `1`, and `grep -c '_sink' gpunit/log.py` prints `0`.
-- [ ] 1.2 In `gpunit/log.py`, add the sink, `redirect` and the default sink that swallows a closed stderr, per [D5](design.md#d5); in `tests/test_cli.py` bind `cli:exits:closed-stderr`.
+- [x] 1.2 In `gpunit/log.py`, add the sink, `redirect` and the default sink that swallows a closed stderr, per [D5](design.md#d5); in `tests/test_cli.py` bind `cli:exits:closed-stderr`.
   Verify: `grep -c 'def redirect' gpunit/log.py` prints `1`, and `grep -c 'cli:exits:closed-stderr' tests/test_cli.py` prints `1`.
-- [ ] 1.3 In `gpunit/runpod.py`, add `GPUNIT_VOLUME_ID` and `GPUNIT_VOLUME_PATH` to the create's environment; in `gpunit/spec.py`, refuse a `GPUNIT_` key in `[env]`; per [D7](design.md#d7). Bind `session:volume:the-pod-is-told` in `tests/test_runpod.py` and `spec:file:env-gpunit-refused` in `tests/test_spec.py`.
+- [x] 1.3 In `gpunit/runpod.py`, add `GPUNIT_VOLUME_ID` and `GPUNIT_VOLUME_PATH` to the create's environment; in `gpunit/spec.py`, refuse a `GPUNIT_` key in `[env]`; per [D7](design.md#d7). Bind `session:volume:the-pod-is-told` in `tests/test_runpod.py` and `spec:file:env-gpunit-refused` in `tests/test_spec.py`.
   Verify: `grep -c 'GPUNIT_VOLUME_PATH' gpunit/runpod.py` prints `1`, and `grep -c 'spec:file:env-gpunit-refused' tests/test_spec.py` prints `1`.
 
 ## 2 — The library
