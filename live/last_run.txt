@@ -100,3 +100,34 @@ Thu Oct  8 11:10:32 2026
 2026-10-08T11:10:34Z pod kp8d462ly92z8h deleted
 no session is recorded
 The RunPod console's Pods page opened on "Deploy a Pod" after the run: no pod is left.
+
+2026-10-09 — make live, 0004-the-python-session, on image sha256:29b07f3b…946e
+
+2026-10-09T16:57:53Z creating on NVIDIA A40
+2026-10-09T16:57:55Z pod upkrpgmaickc4v created; waiting for SSH
+2026-10-09T16:58:34Z host key verified: SHA256:if2TjfeRxPkQ+T0CbteOOtQ04SL+sR5FpJwku6s/IF0
+2026-10-09T16:58:34Z session up: pod upkrpgmaickc4v, root@69.30.85.116 -p 22197
+Fri Oct  9 16:58:36 2026
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.159.04             Driver Version: 580.159.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A40                     On  |   00000000:D1:00.0 Off |                    0 |
+|  0%   33C    P8             34W /  300W |       0MiB /  46068MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+2026-10-09T16:58:38Z pod upkrpgmaickc4v deleted
+no session is recorded
+The account's pod listing (RunPod's REST v2, read after the run) was empty: no pod is left.
+

@@ -10,7 +10,7 @@ metered proof, per [design](design.md). Every new test carries `@pytest.mark.spe
 - [x] 3 — The library
 - [x] 4 — Run on the library
 - [x] 5 — The handover
-- [ ] 6 — ⚠️ **HUMAN · METERED** — make live
+- [x] 6 — ⚠️ **HUMAN · METERED** — make live
 
 ## 1 — The log and the volume's names
 
@@ -47,5 +47,5 @@ metered proof, per [design](design.md). Every new test carries `@pytest.mark.spe
 
 ## 6 — ⚠️ **HUMAN · METERED** — make live
 
-- [ ] 6.1 **HUMAN · METERED** — run `make live` with `RUNPOD_API_KEY` set on the image `live/gpunit.toml` pins, confirm with `gpunit status --spec live/gpunit.toml` and the RunPod console that no pod is left, and append the run's tail to `live/last_run.txt` under a header `<date> — make live, 0004-the-python-session`, per [D9](design.md#d9).
+- [x] 6.1 **HUMAN · METERED** — run `make live` with `RUNPOD_API_KEY` set on the image `live/gpunit.toml` pins, confirm with `gpunit status --spec live/gpunit.toml` and the RunPod console that no pod is left, and append the run's tail to `live/last_run.txt` under a header `<date> — make live, 0004-the-python-session`, per [D9](design.md#d9).
   Verify: `grep -c '^2026-.*0004-the-python-session' live/last_run.txt` prints a number of at least `1`.

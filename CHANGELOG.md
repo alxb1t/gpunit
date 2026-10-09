@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   library's exceptions.
 - `gpunit/session.py` is `gpunit/lifecycle.py`: the package's `session` names the library's function, which
   would hide a submodule of that name.
+- `make live` passed on the existing `live` image with `gpunit run` on the library: the host key verified,
+  `nvidia-smi` ran, and the pod was deleted. The tail is in `live/last_run.txt`.
 
 ## [0.1.2] - 2026-10-08
 
