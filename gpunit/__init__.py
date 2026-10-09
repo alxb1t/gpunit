@@ -1,7 +1,7 @@
 """Open, use and close a RunPod GPU session from any project."""
 
 # Before the imports: `gpunit.runpod` reads it while this package is still loading.
-__version__ = "0.1.2"
+__version__ = "0.2.0"
 
 from gpunit.library import Interrupted, Refused, Session, TeardownFailed, session
 from gpunit.provider import Lost
