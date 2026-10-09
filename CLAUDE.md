@@ -20,7 +20,8 @@ CLI is recorded, not pinned: `@fission-ai/openspec@1.11.0`, resolved on `PATH`.
 
 - **`gpunit/`** — the package: `cli.py` (verbs, exit codes), `spec.py` (`gpunit.toml`), `state.py` (`.gpunit/`),
   `provider.py` (the `Provider` seam), `runpod.py` (RunPod's REST v2), `lifecycle.py` (`up · status · down · ssh`),
-  `run.py` (`run`), `log.py` (stderr lines).
+  `library.py` (the public session: signals, tunnel, teardown), `run.py` (`run`, on the library), `log.py`
+  (gpunit's lines, to stderr or a sink).
 - **`boot/boot.sh`** — the pod's entrypoint: the ceiling, sshd, the fingerprint, the command.
 - **`tests/`** — `fakes.py` (`FakeProvider`, `FakeOpener`), `fixtures/` (v2 bodies), one `test_*.py` per module;
   every test carries `@pytest.mark.spec("<scenario key>")`.

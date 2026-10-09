@@ -9,7 +9,7 @@ metered proof, per [design](design.md). Every new test carries `@pytest.mark.spe
 - [x] 2 — The lifecycle's name
 - [x] 3 — The library
 - [x] 4 — Run on the library
-- [ ] 5 — The handover
+- [x] 5 — The handover
 - [ ] 6 — ⚠️ **HUMAN · METERED** — make live
 
 ## 1 — The log and the volume's names
@@ -42,7 +42,7 @@ metered proof, per [design](design.md). Every new test carries `@pytest.mark.spe
 
 ## 5 — The handover
 
-- [ ] 5.1 In `README.md`, add *Use it from Python* and say in *The verbs* that `run` is the same session; in `CLAUDE.md`'s *Layout*, name `library.py`; per [D8](design.md#d8).
+- [x] 5.1 In `README.md`, add *Use it from Python* and say in *The verbs* that `run` is the same session; in `CLAUDE.md`'s *Layout*, name `library.py`; per [D8](design.md#d8).
   Verify: `grep -c 'Use it from Python' README.md` prints `1`, and `grep -c 'library.py' CLAUDE.md` prints `1`.
 
 ## 6 — ⚠️ **HUMAN · METERED** — make live

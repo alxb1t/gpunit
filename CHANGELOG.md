@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- README: *Use it from Python* documents `gpunit.session`, its attributes, exceptions, signals, `environ` and
+  `say`; the volume's `GPUNIT_VOLUME_PATH` and the refused `GPUNIT_*` env names are in the spec example.
 - `gpunit run` runs on `gpunit.session`: one implementation of the session, its exit codes read from the
   library's exceptions.
 - `gpunit/session.py` is `gpunit/lifecycle.py`: the package's `session` names the library's function, which
