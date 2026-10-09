@@ -1,5 +1,6 @@
 """Write gpunit's own lines, each opening with the UTC time, to stderr or a sink."""
 
+import os
 import sys
 import time
 from collections.abc import Callable, Generator
@@ -20,7 +21,13 @@ def _stderr(line: str) -> None:
     # A dead pipe or a closed stream ends no teardown (0004 design D5).
     try:
         print(line, file=sys.stderr, flush=True)
-    except (BrokenPipeError, ValueError):
+    except BrokenPipeError:
+        # The line stays buffered, and the interpreter's last flush would fail on it
+        # and exit 120: point the stream's descriptor at the null device instead.
+        null = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(null, sys.stderr.fileno())
+        os.close(null)
+    except ValueError:
         pass
 
 

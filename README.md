@@ -90,7 +90,7 @@ with gpunit.session("gpunit.toml", environ={"RUNPOD_API_KEY": key}, say=my_log) 
 |---|---|---|
 | `gpunit.Refused` | it refused; nothing it rented is left | `1` |
 | `gpunit.Lost` | a create's answer was lost; the sweep was attempted | `3` |
-| `gpunit.TeardownFailed` | the teardown failed; `.gpunit/pod` is kept, so run `gpunit down`. Its `__cause__` is the exception that ended the block, if one did | `1` |
+| `gpunit.TeardownFailed` | the teardown failed; `.gpunit/pod` is kept, so run `gpunit down`. Its `__cause__` is the exception that ended the block, if one did, or the `Refused` whose own teardown failed while the session opened | `1` |
 | `gpunit.Interrupted` | `SIGINT`, `SIGTERM` or `SIGHUP` ended the block; a `KeyboardInterrupt` whose `.signal` names it | `128+n` |
 
 - **The spec** is a path, or a `Spec` from `gpunit.load_spec`. `cwd` is where `.gpunit/` lives; it defaults to

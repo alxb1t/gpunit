@@ -81,7 +81,8 @@ open ─▶ busy ports ─▶ handlers ─▶ up ─▶ tunnel thread ─▶ yie
 
 `gpunit/__init__.py` exports `session`, `Session`, `Refused`, `Lost`, `TeardownFailed`, `Interrupted` and
 `load_spec`. `TeardownFailed(Exception)` is raised from `_open`'s `finally` when `down` returns non-zero, `raise …
-from` the exception that ended the block. `Interrupted(KeyboardInterrupt)` carries `signal: int`.
+from` the exception that ended the block; and from `up`'s refusal when `up`'s own teardown failed, which `up`
+raises as `lifecycle.Stranded`, a `Refusal`, so `gpunit up` still exits `1`. `Interrupted(KeyboardInterrupt)` carries `signal: int`.
 `provider.Refused` stays private.
 
 ### D3
@@ -101,7 +102,9 @@ outer `finally` restores the saved ones.
 ### D5
 
 `log.py` gains `_sink`, `redirect(sink)` (a context manager restoring the previous one) and a default sink that
-prints to stderr and swallows `BrokenPipeError` and `ValueError` (a closed stream). `say` writes `<UTC> <text>`
+prints to stderr and swallows `BrokenPipeError` and `ValueError` (a closed stream). On `BrokenPipeError` it points
+stderr's descriptor at `os.devnull`, so the interpreter's last flush of the line left in the buffer cannot fail
+and turn the exit code into `120`. `say` writes `<UTC> <text>`
 through `_sink`; `refuse` is unchanged.
 
 ### D6

@@ -31,7 +31,8 @@ command line, the booted image and the pod's id. The block's end, however it end
 
 The session SHALL raise `gpunit.Refused` when it refused, with nothing rented or what it rented torn down;
 `gpunit.Lost` when a create's answer was lost, after a teardown was attempted; and `gpunit.TeardownFailed` when
-the teardown failed, chained to whatever ended the block.
+the teardown failed, chained to whatever ended the block, or to the refusal whose own teardown failed while the
+session opened.
 
 #### Scenario: a refusal raises Refused
 - **Key:** `library:errors:refused`
@@ -47,6 +48,11 @@ the teardown failed, chained to whatever ended the block.
 - **Key:** `library:errors:teardown-failed`
 - **WHEN** the block ends and the delete answers 404
 - **THEN** `TeardownFailed` is raised and `.gpunit/pod` remains
+
+#### Scenario: a refusal whose teardown failed raises TeardownFailed
+- **Key:** `library:errors:refusal-teardown-failed`
+- **WHEN** the pod gets no host within the timeout and the teardown's delete answers 500
+- **THEN** `TeardownFailed` is raised from the `Refused`, and `.gpunit/pod` remains
 
 ### Requirement: Signals end the block, never the teardown
 

@@ -95,8 +95,15 @@ def _open(
         try:
             try:
                 record = lifecycle.up(spec, provider, state)
+            except lifecycle.Stranded as stranded:
+                # `up` refused after its create and its teardown failed: the pod
+                # may still bill, and `.gpunit/` keeps what it knows of it.
+                teardown = False
+                raise TeardownFailed(
+                    "the teardown failed; run gpunit down"
+                ) from stranded
             except log.Refusal:
-                # `up` tore down what it made; a refusal before the create made none.
+                # `up` tore down what it made, or a refusal before the create made none.
                 teardown = False
                 raise
             except Lost:

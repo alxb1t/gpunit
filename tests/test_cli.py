@@ -1,4 +1,5 @@
 import os
+import subprocess
 import sys
 from collections.abc import Iterator
 from pathlib import Path
@@ -73,3 +74,37 @@ def test_a_dead_pipe_on_stderr_ends_no_teardown(
         monkeypatch.setattr(log, "_sink", _unguarded)
         with pytest.raises(BrokenPipeError):
             gpunit(["run", "--", "true"], provider=provider)
+
+
+# The CLI on the fakes, in a process of its own: no key, no network.
+ON_THE_FAKES = """
+from gpunit import cli
+from tests.fakes import FakeProvider
+cli.main(["run", "--", "true"], provider=FakeProvider())
+"""
+
+
+@pytest.mark.spec("cli:exits:closed-stderr")
+def test_a_dead_pipe_on_stderr_leaves_the_process_exit_code(cwd: Path) -> None:
+    # Only a real process meets the interpreter's last flush of stderr.
+    root = Path(__file__).resolve().parent.parent
+    env = {key: value for key, value in os.environ.items() if key != "RUNPOD_API_KEY"}
+    env["PYTHONPATH"] = str(root)
+    read, write = os.pipe()
+    os.close(read)
+    try:
+        done = subprocess.run(
+            [sys.executable, "-c", ON_THE_FAKES],
+            cwd=cwd,
+            env=env,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=write,
+            timeout=60,
+            check=False,
+        )
+    finally:
+        os.close(write)
+
+    assert done.returncode == 0
+    assert not (cwd / ".gpunit" / "pod").exists()

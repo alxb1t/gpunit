@@ -155,6 +155,18 @@ def test_a_failed_teardown_raises_teardown_failed(
     assert (cwd / ".gpunit" / "pod").exists()
 
 
+@pytest.mark.spec("library:errors:refusal-teardown-failed")
+def test_a_refusal_whose_teardown_failed_raises_teardown_failed(cwd: Path) -> None:
+    provider = FakeProvider(gets=[None], deletes={"pod-1": 500})
+
+    with pytest.raises(TeardownFailed) as failed, opened(cwd, provider):
+        pass
+
+    assert isinstance(failed.value.__cause__, Refused)
+    assert provider.named("delete") == [("pod-1",)]
+    assert (cwd / ".gpunit" / "pod").exists()
+
+
 @pytest.mark.spec("library:signals:term-raises")
 def test_sigterm_ends_the_block_and_tears_down(cwd: Path, saved_handlers: None) -> None:
     provider = FakeProvider()
