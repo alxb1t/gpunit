@@ -18,7 +18,7 @@ from gpunit.runpod import RunPod
 from gpunit.spec import load_spec
 from gpunit.state import State
 from tests.fakes import KEY_LINE, RECORD, FakeOpener, FakeProvider, fixture, page, quiet
-from tests.helpers import IMAGE, NO_REQUESTS, VALID, install_stubs, write_spec
+from tests.helpers import IMAGE, NO_REQUESTS, install_stubs, with_port
 
 KEY = "rpa_mapping_key"
 
@@ -37,10 +37,6 @@ def opened(
     return library._open(load_spec(cwd / "gpunit.toml"), provider, State(cwd), say)
 
 
-def with_port(cwd: Path, local: int) -> None:
-    write_spec(cwd, VALID + f"ports = [{{ remote = 8188, local = {local} }}]\n")
-
-
 def until(done: Callable[[], bool], seconds: float = 10.0) -> bool:
     deadline = time.monotonic() + seconds
     while not done():
@@ -56,13 +52,6 @@ def accepts(port: int) -> bool:
             return True
     except OSError:
         return False
-
-
-@pytest.fixture
-def free_port() -> int:
-    with socket.socket() as probe:
-        probe.bind(("127.0.0.1", 0))
-        return probe.getsockname()[1]
 
 
 @pytest.fixture
@@ -237,14 +226,10 @@ def test_another_thread_is_refused(cwd: Path) -> None:
 
 @pytest.mark.spec("library:tunnel:reopened")
 def test_a_dead_tunnel_is_reopened(
-    cwd: Path, free_port: int, monkeypatch: pytest.MonkeyPatch
+    cwd: Path, free_port: int, dying_tunnel: Path
 ) -> None:
     with_port(cwd, free_port)
-    tunnels = cwd / "tunnels.log"
-    monkeypatch.setenv("GPUNIT_TEST_SSH_LOG", str(tunnels))
-    monkeypatch.setenv("GPUNIT_TEST_SSH_EXIT", "1")
-    monkeypatch.setattr(library, "TUNNEL_POLL_S", 0.1)
-    monkeypatch.setattr(library, "REOPEN_FIRST_S", 0.1)
+    tunnels = dying_tunnel
     lines: list[str] = []
 
     def opened_twice() -> bool:

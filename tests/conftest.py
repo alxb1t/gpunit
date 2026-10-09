@@ -1,11 +1,12 @@
 """Run each session test in its own directory, with OpenSSH stubbed and time faked."""
 
 import os
+import socket
 from pathlib import Path
 
 import pytest
 
-from gpunit import lifecycle
+from gpunit import library, lifecycle
 from tests.fakes import SERVED, FakeClock
 from tests.helpers import install_stubs, write_spec
 
@@ -72,3 +73,21 @@ def cwd(
     monkeypatch.chdir(tmp_path)
     write_spec(tmp_path)
     return tmp_path
+
+
+@pytest.fixture
+def free_port() -> int:
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]
+
+
+@pytest.fixture
+def dying_tunnel(cwd: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    # Every tunnel logs its argv and exits at once; reopening waits 0.1s.
+    tunnels = cwd / "tunnels.log"
+    monkeypatch.setenv("GPUNIT_TEST_SSH_LOG", str(tunnels))
+    monkeypatch.setenv("GPUNIT_TEST_SSH_EXIT", "1")
+    monkeypatch.setattr(library, "TUNNEL_POLL_S", 0.1)
+    monkeypatch.setattr(library, "REOPEN_FIRST_S", 0.1)
+    return tunnels

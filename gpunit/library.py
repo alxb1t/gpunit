@@ -6,7 +6,7 @@ import socket
 import subprocess
 import threading
 import time
-from collections.abc import Callable, Generator, Mapping
+from collections.abc import Callable, Generator, Mapping, Sequence
 from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -89,48 +89,44 @@ def _open(
             log.refuse("a session opens on the main thread, which owns the signals")
         _refuse_busy_ports(spec)
         signals = _Signals()
+        teardown, lost = True, False
+        tunnel: _Tunnel | None = None
+        ended: BaseException | None = None
         try:
-            yield from _lifecycle(spec, provider, state, signals)
+            try:
+                record = lifecycle.up(spec, provider, state)
+            except log.Refusal:
+                # `up` tore down what it made; a refusal before the create made none.
+                teardown = False
+                raise
+            except Lost:
+                lost = True
+                raise
+            opened = _session(spec, state, record)
+            if spec.ports:
+                tunnel = _Tunnel(_tunnel_argv(spec, opened.ssh))
+            yield opened
+        except BaseException as fault:
+            ended = fault
+            raise
         finally:
-            signals.restore()
-
-
-def _lifecycle(
-    spec: Spec, provider: Provider, state: State, signals: "_Signals"
-) -> Generator[Session, None, None]:
-    teardown, lost = True, False
-    tunnel: _Tunnel | None = None
-    ended: BaseException | None = None
-    try:
-        try:
-            record = lifecycle.up(spec, provider, state)
-        except log.Refusal:
-            # `up` tore down whatever it made; a refusal before the create made nothing.
-            teardown = False
-            raise
-        except Lost:
-            lost = True
-            raise
-        if spec.ports:
-            tunnel = _Tunnel(spec, state, record)
-        yield _session(spec, state, record)
-    except BaseException as fault:
-        ended = fault
-        raise
-    finally:
-        # First, so no signal lands between the block's end and the delete.
-        signals.shield()
-        if tunnel is not None:
-            tunnel.stop()
-        failed = False
-        # The sweep deletes every listed pod: before this session's create, those are
-        # not ours, and an earlier session's record or marker does not make them so.
-        if teardown and (lost or state.began):
-            failed = lifecycle.down(spec, provider, state) != 0
-        elif teardown:
-            log.say("no create began; nothing to tear down")
-        if failed:
-            raise TeardownFailed("the teardown failed; run gpunit down") from ended
+            # First, so no signal lands between the block's end and the delete.
+            signals.shield()
+            try:
+                if tunnel is not None:
+                    tunnel.stop()
+                # The sweep deletes every listed pod: before this session's create,
+                # those are not ours, and an earlier session's record or marker does
+                # not make them so.
+                if teardown and (lost or state.began):
+                    if lifecycle.down(spec, provider, state) != 0:
+                        raise TeardownFailed(
+                            "the teardown failed; run gpunit down"
+                        ) from ended
+                elif teardown:
+                    log.say("no create began; nothing to tear down")
+            finally:
+                signals.restore()
 
 
 def _session(spec: Spec, state: State, record: Record) -> Session:
@@ -154,15 +150,15 @@ class _Signals:
 
     def __init__(self) -> None:
         """Save the caller's handlers and set ours."""
-        self.signal: int | None = None
+        self._fired = False
         self._saved = {
             number: signal.signal(number, self._handle) for number in SIGNALS
         }
 
     def _handle(self, number: int, frame: FrameType | None) -> None:
-        if self.signal is not None:
+        if self._fired:
             return
-        self.signal = number
+        self._fired = True
         raise Interrupted(number)
 
     def shield(self) -> None:
@@ -179,10 +175,10 @@ class _Signals:
 class _Tunnel:
     """The `ssh -N -L` child, watched by a thread that reopens it when it exits."""
 
-    def __init__(self, spec: Spec, state: State, record: Record) -> None:
+    def __init__(self, argv: list[str]) -> None:
         """Open the tunnel and start watching it."""
-        self._reopen = lambda: _tunnel(spec, state, record)
-        self._child = self._reopen()
+        self._argv = argv
+        self._child = self._open()
         self._stopped = threading.Event()
         self._thread = threading.Thread(target=self._watch, daemon=True)
         self._thread.start()
@@ -198,8 +194,14 @@ class _Tunnel:
                 returncode = self._child.returncode
                 log.say(f"the tunnel exited ({returncode}); reopening it in {wait:g}s")
             if backoff.due(now):
-                self._child = self._reopen()
+                self._child = self._open()
                 backoff.opened(now)
+
+    def _open(self) -> subprocess.Popen[bytes]:
+        # stdout belongs to the command alone.
+        return subprocess.Popen(
+            self._argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL
+        )
 
     def stop(self) -> None:
         """Stop watching, then end the child the watcher left."""
@@ -238,16 +240,10 @@ class _Backoff:
         self.reopen_at = None
 
 
-def _tunnel(spec: Spec, state: State, record: Record) -> subprocess.Popen[bytes]:
-    ssh = lifecycle.ssh_command(state, record)
+def _tunnel_argv(spec: Spec, ssh: Sequence[str]) -> list[str]:
     forwards = [f"-L{port.local}:localhost:{port.remote}" for port in spec.ports]
     options = ["-N", "-o", "ExitOnForwardFailure=yes", "-o", "BatchMode=yes"]
-    # stdout belongs to the command alone.
-    return subprocess.Popen(
-        [ssh[0], *options, *forwards, *ssh[1:]],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-    )
+    return [ssh[0], *options, *forwards, *ssh[1:]]
 
 
 def _kill(child: subprocess.Popen[bytes]) -> None:

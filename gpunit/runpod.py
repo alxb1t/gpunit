@@ -114,7 +114,17 @@ class RunPod:
         if spec.cuda is not None:
             card["minCudaVersion"] = spec.cuda
         env = {**spec.env, "PUBLIC_KEY": pubkey, "GPUNIT_CEILING": str(ceiling_s)}
+        placement: dict[str, object] = {}
         if spec.volume is not None:
+            # The protocol's create names no data centre: the volume read sets it.
+            datacenter = (
+                self._datacenters.get(spec.volume)
+                or self.volume(spec.volume).datacenter
+            )
+            placement = {
+                "mounts": {"network": [{"volumeId": spec.volume, "path": VOLUME_PATH}]},
+                "dataCenterIds": [datacenter],
+            }
             # The pod reads its volume in gpunit's words, not the provider's (0004 D7).
             env |= {"GPUNIT_VOLUME_ID": spec.volume, "GPUNIT_VOLUME_PATH": VOLUME_PATH}
         body: dict[str, object] = {
@@ -125,17 +135,8 @@ class RunPod:
             "disk": spec.disk_gb,
             "cloud": "SECURE",
             "env": env,
+            **placement,
         }
-        if spec.volume is not None:
-            # The protocol's create names no data centre: the volume read sets it.
-            datacenter = (
-                self._datacenters.get(spec.volume)
-                or self.volume(spec.volume).datacenter
-            )
-            body["mounts"] = {
-                "network": [{"volumeId": spec.volume, "path": VOLUME_PATH}]
-            }
-            body["dataCenterIds"] = [datacenter]
         answer = self._call("POST", "/pods", body)
         if answer.status == 400:
             raise Refused(_report(f"create on {gpu!r}", answer))
