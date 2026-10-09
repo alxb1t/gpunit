@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import NoReturn
 
-from gpunit import log, run, session
+from gpunit import lifecycle, log, run
 from gpunit.provider import Lost, Provider
 from gpunit.runpod import RunPod
 from gpunit.spec import load_spec
@@ -84,14 +84,14 @@ def _run(argv: list[str], provider: Provider | None) -> int:
         spec = load_spec(args.spec)
         match args.verb:
             case "up":
-                session.up(spec, lazy(), state)
+                lifecycle.up(spec, lazy(), state)
                 return 0
             case "status":
-                return session.status(lazy, state, as_json=args.json)
+                return lifecycle.status(lazy, state, as_json=args.json)
             case "down":
-                return session.down(spec, lazy(), state)
+                return lifecycle.down(spec, lazy(), state)
             case "ssh":
-                session.ssh(state)
+                lifecycle.ssh(state)
                 # unreachable: the exec replaces this process, or ssh() refuses
                 return FAILED
             case _:

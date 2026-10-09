@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from gpunit import session
+from gpunit import lifecycle
 from tests.fakes import SERVED, FakeClock
 from tests.helpers import install_stubs, write_spec
 
@@ -47,7 +47,7 @@ exec sleep 30
 @pytest.fixture
 def clock(monkeypatch: pytest.MonkeyPatch) -> FakeClock:
     fake = FakeClock()
-    monkeypatch.setattr(session, "CLOCK", session.Clock(fake.monotonic, fake.sleep))
+    monkeypatch.setattr(lifecycle, "CLOCK", lifecycle.Clock(fake.monotonic, fake.sleep))
     return fake
 
 

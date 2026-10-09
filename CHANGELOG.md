@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - gpunit's lines go through a swappable sink; the default one survives a closed stderr, so a dead pipe ends no
   teardown.
 
+### Changed
+
+- `gpunit/session.py` is `gpunit/lifecycle.py`: the package's `session` names the library's function, which
+  would hide a submodule of that name.
+
 ## [0.1.2] - 2026-10-08
 
 ### Security

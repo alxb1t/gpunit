@@ -8,7 +8,7 @@ import subprocess
 import time
 from types import FrameType
 
-from gpunit import log, session
+from gpunit import lifecycle, log
 from gpunit.provider import Lost, Provider
 from gpunit.spec import Spec
 from gpunit.state import Record, State
@@ -104,7 +104,7 @@ def _run(
     # One handler for the whole run: a signal raised while opening, even just after
     # `up` returned, still reaches the teardown below.
     try:
-        record = session.up(spec, provider, state)
+        record = lifecycle.up(spec, provider, state)
         children.opening = False
         if children.signal is None:
             code = _supervise(spec, state, record, command, children)
@@ -123,7 +123,7 @@ def _run(
         if teardown and (lost or state.began):
             if children.tunnel is not None:
                 _kill(children.tunnel)
-            failed = session.down(spec, provider, state) != 0
+            failed = lifecycle.down(spec, provider, state) != 0
         elif teardown:
             log.say("no create began; nothing to tear down")
     # A failed teardown outranks the signal: 128 + n says the pod is gone.
@@ -142,7 +142,7 @@ def _supervise(
     backoff = _Backoff(time.monotonic())
     env = os.environ | {
         "GPUNIT_HOST": str(record.host),
-        "GPUNIT_SSH": shlex.join(session.ssh_command(state, record)),
+        "GPUNIT_SSH": shlex.join(lifecycle.ssh_command(state, record)),
     }
     env |= {f"GPUNIT_PORT_{port.remote}": str(port.local) for port in spec.ports}
     try:
@@ -172,7 +172,7 @@ def _supervise(
 
 
 def _tunnel(spec: Spec, state: State, record: Record) -> subprocess.Popen[bytes]:
-    ssh = session.ssh_command(state, record)
+    ssh = lifecycle.ssh_command(state, record)
     forwards = [f"-L{port.local}:localhost:{port.remote}" for port in spec.ports]
     options = ["-N", "-o", "ExitOnForwardFailure=yes", "-o", "BatchMode=yes"]
     # stdout belongs to the command alone.

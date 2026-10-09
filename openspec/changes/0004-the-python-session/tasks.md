@@ -6,7 +6,7 @@ metered proof, per [design](design.md). Every new test carries `@pytest.mark.spe
 ## Progress
 
 - [x] 1 — The log and the volume's names
-- [ ] 2 — The lifecycle's name
+- [x] 2 — The lifecycle's name
 - [ ] 3 — The library
 - [ ] 4 — Run on the library
 - [ ] 5 — The handover
@@ -23,7 +23,7 @@ metered proof, per [design](design.md). Every new test carries `@pytest.mark.spe
 
 ## 2 — The lifecycle's name
 
-- [ ] 2.1 `git mv gpunit/session.py gpunit/lifecycle.py`; import it as `lifecycle` in `gpunit/cli.py`, `gpunit/run.py`, `tests/conftest.py` and `tests/test_ssh.py`; in `CLAUDE.md`'s *Layout*, name `lifecycle.py` for `up · status · down · ssh`; per [D10](design.md#d10).
+- [x] 2.1 `git mv gpunit/session.py gpunit/lifecycle.py`; import it as `lifecycle` in `gpunit/cli.py`, `gpunit/run.py`, `tests/conftest.py` and `tests/test_ssh.py`; in `CLAUDE.md`'s *Layout*, name `lifecycle.py` for `up · status · down · ssh`; per [D10](design.md#d10).
   Verify: `ls gpunit/session.py 2>&1 | grep -c 'No such file'` prints `1`, `grep -rlE 'from gpunit import .*\bsession\b' gpunit tests | wc -l | tr -d ' '` prints `0`, and `grep -c 'lifecycle.py' CLAUDE.md` prints `1`.
 
 ## 3 — The library
