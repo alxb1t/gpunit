@@ -8,7 +8,7 @@ metered proof, per [design](design.md). Every new test carries `@pytest.mark.spe
 - [x] 1 — The log and the volume's names
 - [x] 2 — The lifecycle's name
 - [x] 3 — The library
-- [ ] 4 — Run on the library
+- [x] 4 — Run on the library
 - [ ] 5 — The handover
 - [ ] 6 — ⚠️ **HUMAN · METERED** — make live
 
@@ -37,7 +37,7 @@ metered proof, per [design](design.md). Every new test carries `@pytest.mark.spe
 
 ## 4 — Run on the library
 
-- [ ] 4.1 Rewrite `run.run` in `gpunit/run.py` on `library._open`, per [D6](design.md#d6), deleting `_Children`, `_Interrupted` and `_supervise`'s tunnel loop.
+- [x] 4.1 Rewrite `run.run` in `gpunit/run.py` on `library._open`, per [D6](design.md#d6), deleting `_Children`, `_Interrupted` and `_supervise`'s tunnel loop.
   Verify: `grep -c -E 'class _Children|class _Interrupted' gpunit/run.py` prints `0`, and `uv run pytest -q tests/test_run.py` exits 0.
 
 ## 5 — The handover
