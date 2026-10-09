@@ -5,21 +5,15 @@ import socket
 import subprocess
 from collections.abc import Iterator
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
-from gpunit import run
+from gpunit import library, run
 from gpunit.provider import GpuInfo, Lost
 from gpunit.state import State
 from tests.fakes import RECORD, FakeProvider
-from tests.helpers import NO_REQUESTS, VALID, gpunit, write_spec
-
-
-@pytest.fixture
-def free_port() -> int:
-    with socket.socket() as probe:
-        probe.bind(("127.0.0.1", 0))
-        return probe.getsockname()[1]
+from tests.helpers import NO_REQUESTS, gpunit, with_port
 
 
 @pytest.fixture
@@ -28,10 +22,6 @@ def listening() -> Iterator[int]:
         server.bind(("127.0.0.1", 0))
         server.listen()
         yield server.getsockname()[1]
-
-
-def with_port(cwd: Path, local: int) -> None:
-    write_spec(cwd, VALID + f"ports = [{{ remote = 8188, local = {local} }}]\n")
 
 
 class InterruptingProvider(FakeProvider):
@@ -129,6 +119,35 @@ def test_an_interrupt_tears_down_once(
     assert signal.getsignal(number) == before
 
 
+@pytest.mark.spec("run:teardown:interrupt")
+def test_an_interrupt_while_the_command_starts_ends_the_command(
+    cwd: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    provider = InterruptingProvider(signal.SIGTERM)
+    started: list[subprocess.Popen[bytes]] = []
+
+    def signalled_after_the_fork(
+        command: list[str], env: dict[str, str]
+    ) -> subprocess.Popen[bytes]:
+        # The signal lands inside `Popen`, once the command exists.
+        started.append(subprocess.Popen(command, env=env))
+        os.kill(os.getpid(), signal.SIGTERM)
+        return started[-1]
+
+    # `run`'s own `Popen` only: `up` runs its tools through `subprocess` too.
+    monkeypatch.setattr(
+        run, "subprocess", SimpleNamespace(Popen=signalled_after_the_fork)
+    )
+    try:
+        assert gpunit(["run", "--", "sleep", "30"], provider=provider) == 143
+        assert provider.named("delete") == [("pod-1",)]
+        assert started[0].poll() is not None
+    finally:
+        for child in started:
+            child.kill()
+            child.wait()
+
+
 class CatalogueInterrupt(FakeProvider):
     """Send this process `SIGINT` from inside the catalogue's read."""
 
@@ -221,17 +240,10 @@ def test_an_interrupt_with_a_failed_teardown_is_exit_1(cwd: Path) -> None:
 @pytest.mark.spec("run:tunnel:reopened")
 @pytest.mark.spec("session:ssh:own-config-only")
 def test_a_dead_tunnel_is_reopened(
-    cwd: Path,
-    free_port: int,
-    monkeypatch: pytest.MonkeyPatch,
-    capfd: pytest.CaptureFixture[str],
+    cwd: Path, free_port: int, dying_tunnel: Path, capfd: pytest.CaptureFixture[str]
 ) -> None:
     with_port(cwd, free_port)
-    tunnels = cwd / "tunnels.log"
-    monkeypatch.setenv("GPUNIT_TEST_SSH_LOG", str(tunnels))
-    monkeypatch.setenv("GPUNIT_TEST_SSH_EXIT", "1")
-    monkeypatch.setattr(run, "TUNNEL_POLL_S", 0.1)
-    monkeypatch.setattr(run, "REOPEN_FIRST_S", 0.1)
+    tunnels = dying_tunnel
 
     # Runs until the tunnel has been opened twice.
     reopened = f'until [ "$(wc -l < "{tunnels}")" -ge 2 ]; do sleep 0.05; done'
@@ -249,7 +261,7 @@ def test_a_dead_tunnel_is_reopened(
 
 @pytest.mark.spec("run:tunnel:backoff")
 def test_a_tunnel_that_keeps_dying_backs_off() -> None:
-    backoff = run._Backoff(now=0.0)
+    backoff = library._Backoff(now=0.0)
     now, waits = 0.0, []
     for _ in range(7):
         wait = backoff.exited(now)

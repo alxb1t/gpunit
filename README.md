@@ -26,21 +26,21 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    ceiling = "45m"                             # required: the pod stops itself after this
    disk_gb = 50
    # optional
-   volume = "<network volume id>"              # pins the data centre, mounted at /runpod-volume
+   volume = "<network volume id>"              # pins the data centre; the pod sees GPUNIT_VOLUME_PATH
    ports = [8188, { remote = 8080, local = 18080 }]
    ram_gb = 32
    cuda = "12.8"
    max_hourly = 0.80
    timeout = 420                               # seconds to wait for SSH
    [env]
-   MODE = "render"
+   MODE = "render"                             # GPUNIT_* names are gpunit's, and refused here
    ```
 
 2. **Make `boot.sh` the image's entrypoint.** It needs `openssh-server`, `curl` and coreutils' `env` in the
    image, and BuildKit for the checksum; on an older Docker, copy the file in.
 
    ```dockerfile
-   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.1.2/boot/boot.sh /opt/gpunit/boot.sh
+   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.2.0/boot/boot.sh /opt/gpunit/boot.sh
    RUN chmod +x /opt/gpunit/boot.sh
    ENTRYPOINT ["/opt/gpunit/boot.sh", "--"]
    CMD ["python3", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
@@ -54,7 +54,7 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    on the pod you would not trust with the key.
 
    ```sh
-   uv add --dev git+https://github.com/alxb1t/gpunit@v0.1.2
+   uv add --dev git+https://github.com/alxb1t/gpunit@v0.2.0
    echo .gpunit/ >> .gitignore
    export RUNPOD_API_KEY=...
    uv run gpunit run -- python3 render.py
@@ -62,6 +62,46 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
 
    The command sees `GPUNIT_HOST`, `GPUNIT_PORT_<remote>=<local>` for each port, and `GPUNIT_SSH`, a command
    line that opens a shell on the pod. gpunit does not wait for the app: the command polls its own port.
+
+## Use it from Python
+
+`gpunit.session()` is the session `gpunit run` opens, as a `with` block: the pod is torn down when the block
+ends, however it ends.
+
+```python
+import subprocess
+
+import gpunit
+
+with gpunit.session("gpunit.toml", environ={"RUNPOD_API_KEY": key}, say=my_log) as s:
+    url = f"http://127.0.0.1:{s.port(8188)}"
+    subprocess.run([*s.ssh, "nvidia-smi"], check=True)
+```
+
+| attribute | is |
+|---|---|
+| `s.host` | the pod's public SSH host |
+| `s.port(remote)` | the local port `remote` is forwarded to; `Refused` for a port not in `ports` |
+| `s.ssh` | the `ssh` argv that opens a shell on the pod |
+| `s.image` | the booted image |
+| `s.pod_id` | the pod's id |
+
+| raises | when | `gpunit run` exits |
+|---|---|---|
+| `gpunit.Refused` | it refused; nothing it rented is left | `1` |
+| `gpunit.Lost` | a create's answer was lost; the sweep was attempted | `3` |
+| `gpunit.TeardownFailed` | the teardown failed; `.gpunit/pod` is kept, so run `gpunit down`. Its `__cause__` is the exception that ended the block, if one did, or the `Refused` whose own teardown failed while the session opened | `1` |
+| `gpunit.Interrupted` | `SIGINT`, `SIGTERM` or `SIGHUP` ended the block; a `KeyboardInterrupt` whose `.signal` names it | `128+n` |
+
+- **The spec** is a path, or a `Spec` from `gpunit.load_spec`. `cwd` is where `.gpunit/` lives; it defaults to
+  the working directory.
+- **The key** is read from `environ` when given, else from the process's environment.
+- **The lines** go to `say(line)` when given, else to stderr. The tunnel's thread calls `say` too, so it must be
+  safe to call from another thread.
+- **Signals:** while the block runs, `SIGINT`, `SIGTERM` and `SIGHUP` raise `Interrupted`; during the teardown
+  they are ignored. Your own handlers are replaced for the block's life and set back when it closes.
+- **The main thread:** open the session there; another thread gets `Refused`.
+- **The tunnel** is reopened when it dies, as in `gpunit run`.
 
 ## The verbs
 
@@ -73,7 +113,7 @@ Each verb reads `gpunit.toml` from the working directory, or the file `--spec <p
 | `gpunit status [--json]` | prints the recorded session to stdout |
 | `gpunit ssh` | opens a shell on the recorded pod |
 | `gpunit down` | deletes the recorded pod, then every other live pod of the project |
-| `gpunit run -- <cmd>` | `up`, the tunnel, `<cmd>`, then `down`, however `<cmd>` ends |
+| `gpunit run -- <cmd>` | the Python session around `<cmd>`: `up`, the tunnel, `<cmd>`, then `down`, however `<cmd>` ends |
 
 | exit | means |
 |---|---|

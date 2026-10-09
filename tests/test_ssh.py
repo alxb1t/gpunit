@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from gpunit import session
+from gpunit import lifecycle
 from gpunit.log import Refusal
 from gpunit.state import State
 from tests.fakes import RECORD
@@ -20,7 +20,7 @@ def state(tmp_path: Path) -> State:
 def test_ssh_uses_the_record(state: State) -> None:
     execs: list[tuple[str, list[str]]] = []
 
-    session.ssh(state, execvp=lambda file, argv: execs.append((file, argv)))
+    lifecycle.ssh(state, execvp=lambda file, argv: execs.append((file, argv)))
 
     [(file, argv)] = execs
     assert file == "ssh"
@@ -31,14 +31,14 @@ def test_ssh_uses_the_record(state: State) -> None:
 
     state.clear_session()
     with pytest.raises(Refusal, match="no session is recorded"):
-        session.ssh(state, execvp=lambda file, argv: execs.append((file, argv)))
+        lifecycle.ssh(state, execvp=lambda file, argv: execs.append((file, argv)))
 
 
 @pytest.mark.spec("session:ssh:own-config-only")
 def test_ssh_reads_no_config_and_offers_the_session_key_alone(state: State) -> None:
     execs: list[list[str]] = []
 
-    session.ssh(state, execvp=lambda file, argv: execs.append(argv))
+    lifecycle.ssh(state, execvp=lambda file, argv: execs.append(argv))
 
     [argv] = execs
     assert argv[1:5] == ["-F", "none", "-o", "IdentitiesOnly=yes"]
@@ -50,7 +50,7 @@ def test_no_ssh_refuses(state: State, capsys: pytest.CaptureFixture[str]) -> Non
         raise FileNotFoundError(2, "No such file or directory", file)
 
     with pytest.raises(Refusal, match="ssh could not be run"):
-        session.ssh(state, execvp=missing)
+        lifecycle.ssh(state, execvp=missing)
     [line] = capsys.readouterr().err.splitlines()
     assert "'ssh'" in line
 

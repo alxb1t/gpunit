@@ -52,7 +52,7 @@ def test_gpu_reads_the_memory_and_the_secure_price() -> None:
     url = opener.requests[0].full_url
     assert url.endswith("/catalog/gpus/NVIDIA%20GeForce%20RTX%204090")
     assert opener.requests[0].get_header("Authorization") == f"Bearer {KEY}"
-    assert opener.requests[0].get_header("User-agent") == "gpunit/0.1.2"
+    assert opener.requests[0].get_header("User-agent") == "gpunit/0.2.0"
 
 
 @pytest.mark.spec("session:place:unknown-card-refuses")
@@ -76,6 +76,24 @@ def test_the_create_carries_the_volumes_datacenter() -> None:
     body = opener.sent()
     assert body["dataCenterIds"] == ["EU-RO-1"]
     assert body["mounts"] == {"network": [{"volumeId": "v1", "path": "/runpod-volume"}]}
+
+
+@pytest.mark.spec("session:volume:the-pod-is-told")
+def test_the_pod_is_told_its_volume() -> None:
+    provider, opener = runpod(
+        (200, fixture("volume.json")), (201, fixture("pod_created.json"))
+    )
+    spec = dataclasses.replace(SPEC, volume="v1")
+
+    provider.create(spec, "RTX 4090", "ssh-ed25519 AAAA gpunit-isekai", 2700)
+
+    assert opener.sent()["env"] == {
+        "MODE": "render",
+        "GPUNIT_CEILING": "2700",
+        "PUBLIC_KEY": "ssh-ed25519 AAAA gpunit-isekai",
+        "GPUNIT_VOLUME_ID": "v1",
+        "GPUNIT_VOLUME_PATH": "/runpod-volume",
+    }
 
 
 @pytest.mark.spec("session:create:secure-and-22")

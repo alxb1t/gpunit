@@ -35,6 +35,10 @@ SSH_TOOLS = ("ssh", "ssh-keygen", "ssh-keyscan")
 T = TypeVar("T")
 
 
+class Stranded(log.Refusal):
+    """`up` refused after its create, and its own teardown failed: the pod may bill."""
+
+
 @dataclass(frozen=True)
 class Clock:
     """The time source the waits read; the tests replace it."""
@@ -342,5 +346,7 @@ def _fingerprint_of(known_hosts_line: str) -> str | None:
 
 def _tear_down(spec: Spec, provider: Provider, state: State, reason: str) -> NoReturn:
     log.say(f"{reason}; tearing the pod down")
-    down(spec, provider, state)
+    if down(spec, provider, state) != 0:
+        log.say(f"refused: {reason}")
+        raise Stranded(reason)
     log.refuse(reason)

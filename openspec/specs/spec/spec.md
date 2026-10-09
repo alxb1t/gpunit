@@ -10,7 +10,8 @@ where secrets come from — so a session cannot be opened without an end, a pin,
 The system SHALL read the session's spec from `gpunit.toml`: `project`, `image`, `gpus` (a preference list),
 `vram_gb`, `ceiling`, `disk_gb`, and optionally `volume`, `ports`, `ram_gb`, `cuda`, `max_hourly`, `timeout` and
 an `[env]` table; and SHALL refuse, naming the field, when a required field is missing, a value has the wrong
-type, a key is unknown, or a port, remote or local, lies outside 1–65535.
+type, a key is unknown, a port, remote or local, lies outside 1–65535, or `[env]` names a variable beginning
+`GPUNIT_`.
 
 #### Scenario: a missing required field is named
 - **Key:** `spec:file:missing-field-named`
@@ -36,6 +37,11 @@ type, a key is unknown, or a port, remote or local, lies outside 1–65535.
 - **Key:** `spec:file:port-out-of-range`
 - **WHEN** `ports = [70000]`, or `ports = [{ remote = 8188, local = 0 }]`
 - **THEN** `up` refuses naming `ports`, exits `1`, and makes no request
+
+#### Scenario: a GPUNIT_ variable in env is refused
+- **Key:** `spec:file:env-gpunit-refused`
+- **WHEN** `[env]` holds `GPUNIT_VOLUME_PATH = "/data"`
+- **THEN** `up` refuses naming `GPUNIT_VOLUME_PATH`, exits `1`, and makes no request
 
 ### Requirement: An image without a digest is refused
 

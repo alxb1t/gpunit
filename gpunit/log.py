@@ -1,7 +1,10 @@
-"""Write gpunit's own lines to stderr, each opening with the UTC time."""
+"""Write gpunit's own lines, each opening with the UTC time, to stderr or a sink."""
 
+import os
 import sys
 import time
+from collections.abc import Callable, Generator
+from contextlib import contextmanager
 from typing import NoReturn
 
 
@@ -14,12 +17,46 @@ def utc() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
+def _stderr(line: str) -> None:
+    # A dead pipe or a closed stream ends no teardown (0004 design D5).
+    try:
+        print(line, file=sys.stderr, flush=True)
+    except BrokenPipeError:
+        # The line stays buffered, and the interpreter's last flush would fail on it
+        # and exit 120: point the stream's descriptor at the null device instead.
+        # A stream with no descriptor, or no null device to open, is only swallowed.
+        try:
+            null = os.open(os.devnull, os.O_WRONLY)
+            try:
+                os.dup2(null, sys.stderr.fileno())
+            finally:
+                os.close(null)
+        except (OSError, ValueError, AttributeError):
+            pass
+    except ValueError:
+        pass
+
+
+_sink: Callable[[str], None] = _stderr
+
+
+@contextmanager
+def redirect(sink: Callable[[str], None]) -> Generator[None, None, None]:
+    """Send every line to `sink` for the block's life, then restore the previous."""
+    global _sink
+    previous, _sink = _sink, sink
+    try:
+        yield
+    finally:
+        _sink = previous
+
+
 def say(text: str) -> None:
-    """Write one line, `<UTC> <text>`, to stderr."""
-    print(f"{utc()} {text}", file=sys.stderr, flush=True)
+    """Write one line, `<UTC> <text>`, to the sink."""
+    _sink(f"{utc()} {text}")
 
 
 def refuse(text: str) -> NoReturn:
-    """Write `<UTC> refused: <text>` to stderr and raise `Refusal`."""
+    """Write `<UTC> refused: <text>` to the sink and raise `Refusal`."""
     say(f"refused: {text}")
     raise Refusal(text)

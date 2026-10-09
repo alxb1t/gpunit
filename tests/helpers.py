@@ -39,6 +39,11 @@ def write_spec(cwd: Path, text: str = VALID) -> Path:
     return path
 
 
+def with_port(cwd: Path, local: int) -> None:
+    """Write the valid spec into `cwd`, forwarding remote 8188 to `local`."""
+    write_spec(cwd, VALID + f"ports = [{{ remote = 8188, local = {local} }}]\n")
+
+
 def install_stubs(bin_dir: Path, scripts: Mapping[str, str]) -> Path:
     """Write each script into `bin_dir` as an executable of its name; return the dir."""
     bin_dir.mkdir(exist_ok=True)

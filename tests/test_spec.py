@@ -110,3 +110,26 @@ def test_the_range_ends_are_ports(tmp_path: Path) -> None:
     )
 
     assert spec.ports == (Port(remote=65535, local=1),)
+
+
+@pytest.mark.spec("spec:file:env-gpunit-refused")
+@pytest.mark.parametrize(
+    ("key", "refused"),
+    [("GPUNIT_VOLUME_PATH", True), ("VOLUME_PATH", False)],
+    ids=["gpunit", "twin-other"],
+)
+def test_a_gpunit_variable_in_env_is_refused(
+    key: str,
+    refused: bool,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    path = write_spec(tmp_path, VALID + f'[env]\n{key} = "/data"\n')
+
+    if refused:
+        assert gpunit(["up"], provider=NO_REQUESTS) == 1
+        assert f"env {key!r}" in capsys.readouterr().err
+    else:
+        assert load_spec(path).env == {key: "/data"}
