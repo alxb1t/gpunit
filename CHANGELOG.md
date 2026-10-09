@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   gpunit's words. `[env]` naming a `GPUNIT_*` variable is refused.
 - gpunit's lines go through a swappable sink; the default one survives a closed stderr, so a dead pipe ends no
   teardown.
+- `gpunit.session(spec, environ=…, cwd=…, say=…)` opens a session from Python as a `with` block, yielding a
+  `Session` (`host`, `port()`, `ssh`, `image`, `pod_id`), and tears it down on every way out. It raises
+  `Refused`, `Lost`, `TeardownFailed` and `Interrupted`, and owns the signals and the tunnel thread while open.
 
 ### Changed
 

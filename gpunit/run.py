@@ -3,22 +3,18 @@
 import os
 import shlex
 import signal
-import socket
 import subprocess
 import time
 from types import FrameType
 
-from gpunit import lifecycle, log
+from gpunit import library, lifecycle, log
+from gpunit.library import _Backoff, _kill, _refuse_busy_ports, _tunnel
 from gpunit.provider import Lost, Provider
 from gpunit.spec import Spec
 from gpunit.state import Record, State
 
 LOST_EXIT = 3
 SIGNALS = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
-TUNNEL_POLL_S = 1.0
-# A tunnel that cannot bind dies at once; each reopening waits longer (0002 design D8).
-REOPEN_FIRST_S = 1.0
-REOPEN_CAP_S = 30.0
 
 
 class _Interrupted(Exception):
@@ -44,36 +40,6 @@ class _Children:
             self.command.terminate()
         elif self.opening:
             raise _Interrupted
-
-
-class _Backoff:
-    """When a dead tunnel may reopen: the wait doubles, and resets after one lived."""
-
-    def __init__(self, now: float) -> None:
-        """Start with the first wait, the tunnel opened at `now`."""
-        self.wait = REOPEN_FIRST_S
-        self.opened_at = now
-        self.reopen_at: float | None = None
-
-    def exited(self, now: float) -> float | None:
-        """Schedule a dead tunnel's reopening once; return its wait, else None."""
-        if self.reopen_at is not None:
-            return None
-        if now - self.opened_at >= REOPEN_CAP_S:
-            self.wait = REOPEN_FIRST_S
-        wait = self.wait
-        self.reopen_at = now + wait
-        self.wait = min(wait * 2, REOPEN_CAP_S)
-        return wait
-
-    def due(self, now: float) -> bool:
-        """Return whether the scheduled reopening is due at `now`."""
-        return self.reopen_at is not None and now >= self.reopen_at
-
-    def opened(self, now: float) -> None:
-        """Record a tunnel reopened at `now`."""
-        self.opened_at = now
-        self.reopen_at = None
 
 
 def run(spec: Spec, provider: Provider, state: State, command: list[str]) -> int:
@@ -154,7 +120,7 @@ def _supervise(
         children.command.terminate()
     while True:
         try:
-            code = children.command.wait(timeout=TUNNEL_POLL_S)
+            code = children.command.wait(timeout=library.TUNNEL_POLL_S)
             # Popen reads a death by signal n as -n; a shell says 128 + n.
             return 128 - code if code < 0 else code
         except subprocess.TimeoutExpired:
@@ -169,36 +135,3 @@ def _supervise(
         if backoff.due(now):
             children.tunnel = _tunnel(spec, state, record)
             backoff.opened(now)
-
-
-def _tunnel(spec: Spec, state: State, record: Record) -> subprocess.Popen[bytes]:
-    ssh = lifecycle.ssh_command(state, record)
-    forwards = [f"-L{port.local}:localhost:{port.remote}" for port in spec.ports]
-    options = ["-N", "-o", "ExitOnForwardFailure=yes", "-o", "BatchMode=yes"]
-    # stdout belongs to the command alone.
-    return subprocess.Popen(
-        [ssh[0], *options, *forwards, *ssh[1:]],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-    )
-
-
-def _kill(child: subprocess.Popen[bytes]) -> None:
-    child.terminate()
-    try:
-        child.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        child.kill()
-        child.wait()
-
-
-def _refuse_busy_ports(spec: Spec) -> None:
-    for port in spec.ports:
-        try:
-            with socket.create_connection(("127.0.0.1", port.local), timeout=0.5):
-                pass
-        except OSError:
-            continue
-        log.refuse(
-            f"local port {port.local} already answers; free it, or set its local side"
-        )

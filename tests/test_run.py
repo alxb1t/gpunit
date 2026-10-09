@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from gpunit import run
+from gpunit import library
 from gpunit.provider import GpuInfo, Lost
 from gpunit.state import State
 from tests.fakes import RECORD, FakeProvider
@@ -230,8 +230,8 @@ def test_a_dead_tunnel_is_reopened(
     tunnels = cwd / "tunnels.log"
     monkeypatch.setenv("GPUNIT_TEST_SSH_LOG", str(tunnels))
     monkeypatch.setenv("GPUNIT_TEST_SSH_EXIT", "1")
-    monkeypatch.setattr(run, "TUNNEL_POLL_S", 0.1)
-    monkeypatch.setattr(run, "REOPEN_FIRST_S", 0.1)
+    monkeypatch.setattr(library, "TUNNEL_POLL_S", 0.1)
+    monkeypatch.setattr(library, "REOPEN_FIRST_S", 0.1)
 
     # Runs until the tunnel has been opened twice.
     reopened = f'until [ "$(wc -l < "{tunnels}")" -ge 2 ]; do sleep 0.05; done'
@@ -249,7 +249,7 @@ def test_a_dead_tunnel_is_reopened(
 
 @pytest.mark.spec("run:tunnel:backoff")
 def test_a_tunnel_that_keeps_dying_backs_off() -> None:
-    backoff = run._Backoff(now=0.0)
+    backoff = library._Backoff(now=0.0)
     now, waits = 0.0, []
     for _ in range(7):
         wait = backoff.exited(now)

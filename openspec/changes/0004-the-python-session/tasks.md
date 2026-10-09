@@ -7,7 +7,7 @@ metered proof, per [design](design.md). Every new test carries `@pytest.mark.spe
 
 - [x] 1 — The log and the volume's names
 - [x] 2 — The lifecycle's name
-- [ ] 3 — The library
+- [x] 3 — The library
 - [ ] 4 — Run on the library
 - [ ] 5 — The handover
 - [ ] 6 — ⚠️ **HUMAN · METERED** — make live
@@ -28,11 +28,11 @@ metered proof, per [design](design.md). Every new test carries `@pytest.mark.spe
 
 ## 3 — The library
 
-- [ ] 3.1 Write `gpunit/library.py` per [D1](design.md#d1), [D2](design.md#d2), [D3](design.md#d3) and [D4](design.md#d4), moving `_tunnel`, `_kill`, `_Backoff`, `_refuse_busy_ports`, `TUNNEL_POLL_S`, `REOPEN_FIRST_S` and `REOPEN_CAP_S` from `gpunit/run.py`, which imports them back; repoint the patches and `_Backoff` call in `tests/test_run.py` to `library`.
+- [x] 3.1 Write `gpunit/library.py` per [D1](design.md#d1), [D2](design.md#d2), [D3](design.md#d3) and [D4](design.md#d4), moving `_tunnel`, `_kill`, `_Backoff`, `_refuse_busy_ports`, `TUNNEL_POLL_S`, `REOPEN_FIRST_S` and `REOPEN_CAP_S` from `gpunit/run.py`, which imports them back; repoint the patches and `_Backoff` call in `tests/test_run.py` to `library`.
   Verify: `grep -c 'class _Backoff' gpunit/library.py` prints `1`, and `grep -c 'class _Backoff' gpunit/run.py` prints `0`.
-- [ ] 3.2 Export `session`, `Session`, `Refused`, `Lost`, `TeardownFailed`, `Interrupted` and `load_spec` from `gpunit/__init__.py`, per [D2](design.md#d2).
+- [x] 3.2 Export `session`, `Session`, `Refused`, `Lost`, `TeardownFailed`, `Interrupted` and `load_spec` from `gpunit/__init__.py`, per [D2](design.md#d2).
   Verify: `uv run python -c 'import gpunit; print(sorted(n for n in ("session","Session","Refused","Lost","TeardownFailed","Interrupted","load_spec") if hasattr(gpunit, n)))'` prints `['Interrupted', 'Lost', 'Refused', 'Session', 'TeardownFailed', 'load_spec', 'session']`.
-- [ ] 3.3 Write `tests/test_library.py` binding every `library:*` scenario of the change's `library` spec, through `_open` with a `FakeProvider` and the OpenSSH stubs.
+- [x] 3.3 Write `tests/test_library.py` binding every `library:*` scenario of the change's `library` spec, through `_open` with a `FakeProvider` and the OpenSSH stubs.
   Verify: `grep -o 'library:[a-z-]*:[a-z-]*' tests/test_library.py | sort -u | wc -l | tr -d ' '` prints `13`.
 
 ## 4 — Run on the library
