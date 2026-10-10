@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The model table `gpunit/serve/models.toml`: `qwen3-4b` at a pinned revision, and the serve image by digest.
+  `gpunit.serve.table` refuses a moving revision, a tagged image or a missing field, and builds a row's `Spec`.
+
 ## [0.2.0] - 2026-10-09
 
 ### Added

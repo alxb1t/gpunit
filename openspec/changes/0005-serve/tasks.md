@@ -5,7 +5,7 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 ## Progress
 
-- [ ] 1 — The table
+- [x] 1 — The table
 - [ ] 2 — The served session
 - [ ] 3 — The chat and the endpoint
 - [ ] 4 — The image and the documents
@@ -13,9 +13,9 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 ## 1 — The table
 
-- [ ] 1.1 **HALT CHECK** — no serve code exists, and the pinned revision is still on the Hub.
+- [x] 1.1 **HALT CHECK** — no serve code exists, and the pinned revision is still on the Hub.
   Verify: `ls gpunit/serve 2>&1 | grep -c 'No such file'` prints `1`, and `curl -s -m 20 https://huggingface.co/api/models/Qwen/Qwen3-4B/revision/1cfa9a7208912126459214e8b04321603b3df60c | grep -c '"sha":"1cfa9a7208912126459214e8b04321603b3df60c"'` prints `1`.
-- [ ] 1.2 Write `gpunit/serve/__init__.py`, `gpunit/serve/models.toml` and `gpunit/serve/table.py` per [D1](design.md#d1); in `tests/test_serve_table.py` bind `serve:table:loads`, `serve:table:revision-pinned` and `serve:table:row-makes-the-spec`.
+- [x] 1.2 Write `gpunit/serve/__init__.py`, `gpunit/serve/models.toml` and `gpunit/serve/table.py` per [D1](design.md#d1); in `tests/test_serve_table.py` bind `serve:table:loads`, `serve:table:revision-pinned` and `serve:table:row-makes-the-spec`.
   Verify: `uv run python -c 'from gpunit.serve import table; print(sorted(table.load().models))'` prints `['qwen3-4b']`, and `grep -o 'serve:table:[a-z-]*' tests/test_serve_table.py | sort -u | wc -l | tr -d ' '` prints `3`.
 
 ## 2 — The served session
