@@ -103,9 +103,73 @@ with gpunit.session("gpunit.toml", environ={"RUNPOD_API_KEY": key}, say=my_log) 
 - **The main thread:** open the session there; another thread gets `Refused`.
 - **The tunnel** is reopened when it dies, as in `gpunit run`.
 
+## Serve a model
+
+`gpunit serve <model> --ceiling 2h` boots vLLM on a rented card and opens a chat in the terminal; `--api` gives an
+OpenAI-compatible endpoint on loopback instead. The models it knows are rows of
+[gpunit/serve/models.toml](gpunit/serve/models.toml), which holds `qwen3-4b`: each at a pinned revision, all on one
+image pinned by digest.
+
+```
+laptop                                         pod (gpunit-vllm)
+gpunit serve qwen3-4b --ceiling 2h             boot.sh -- vllm serve, key required
+ ├─ the price · [y/N]: nothing rented without y
+ ├─ up · ssh -L 8000 ◀───────────────────────▶ vLLM on 127.0.0.1:8000
+ ├─ wait for /v1/models, at most 1200s
+ ├─ the chat, or --api's two lines and a hold
+ └─ down: /exit, end of input, Ctrl-C, or the ceiling
+```
+
+```console
+$ export RUNPOD_API_KEY=...
+$ uv run gpunit serve qwen3-4b --ceiling 2h
+<UTC> price: NVIDIA RTX A5000 $<hourly>/h
+<UTC> at most $<max> for 7200s
+rent serve-qwen3-4b for at most $<max>? [y/N] y
+...
+> What is a warp?
+A warp is ...
+> /exit
+```
+
+- **The price comes first.** Each card's hourly price and the most the session can cost — the highest price times
+  the ceiling — are printed, and nothing is rented without `y`. `--yes` skips the question; `--max-hourly` drops
+  the dearer cards.
+- **The wait is minutes.** The first boot pulls vLLM's image and downloads the weights; a `loading:` line from the
+  pod's log comes every 30s, and at 1200s the session is torn down. `--volume <id>` keeps the weights on a network
+  volume across sessions.
+- **The chat** streams each answer and keeps the conversation in memory. Thinking is off unless `--think`.
+  `/exit` or the end of input ends the session.
+- **`--api`** prints two lines to stdout, then holds the session until Ctrl-C, or until the server has not
+  answered for 60s, as when the ceiling has stopped the pod:
+
+  ```sh
+  OPENAI_BASE_URL=http://127.0.0.1:8000/v1
+  OPENAI_API_KEY=<a fresh key per session>
+  ```
+
+  ```sh
+  curl -s "$OPENAI_BASE_URL/chat/completions" -H "Authorization: Bearer $OPENAI_API_KEY" \
+    -H 'Content-Type: application/json' \
+    -d '{"model": "qwen3-4b", "messages": [{"role": "user", "content": "Hi"}]}'
+  ```
+
+  The key rides the pod's environment, so RunPod can read it; it lives one session.
+- **The session's files** are under `~/.local/state/gpunit/serve/<model>/`, wherever the command runs: one session
+  per model. After a failed teardown, `gpunit down --serve <model>` deletes what is left.
+
+### From a container
+
+A client in a container, such as an agent's box, needs two checks before it can use `--api`. gpunit makes neither.
+
+1. **Its reach to the host's loopback.** The endpoint listens on the host's `127.0.0.1`; inside a container,
+   `127.0.0.1` is the container itself.
+2. **Its SSRF block.** A client that refuses loopback and private addresses refuses `OPENAI_BASE_URL` too.
+
 ## The verbs
 
-Each verb reads `gpunit.toml` from the working directory, or the file `--spec <path>` names.
+Each verb reads `gpunit.toml` from the working directory, or the file `--spec <path>` names; `serve` and
+`down --serve` read the bundled model table instead.
 
 | verb | does |
 |---|---|
@@ -114,16 +178,19 @@ Each verb reads `gpunit.toml` from the working directory, or the file `--spec <p
 | `gpunit ssh` | opens a shell on the recorded pod |
 | `gpunit down` | deletes the recorded pod, then every other live pod of the project |
 | `gpunit run -- <cmd>` | the Python session around `<cmd>`: `up`, the tunnel, `<cmd>`, then `down`, however `<cmd>` ends |
+| `gpunit serve <model> --ceiling <d>` | the price and `[y/N]`, then the session around a chat; `--api` for the endpoint ([how](#serve-a-model)) |
+| `gpunit down --serve <model>` | `down` for the session `serve` left for `<model>` |
 
 | exit | means |
 |---|---|
 | `0` | done; for `run`, the command's own code passes through |
 | `1` | refused or failed; the teardown failed |
-| `2` | usage: an unknown verb, a missing command, an unreadable spec path |
+| `2` | usage: an unknown verb, a missing command, an unreadable spec path, `serve` without `--ceiling`, an unknown model |
 | `3` | a create's answer was lost; a pod may exist and bill — run `gpunit down` |
-| `128+n` | signal `n` stopped `run` or killed its command, and the teardown succeeded; a failed teardown is still `1` |
+| `128+n` | signal `n` stopped `run` or `serve`, or killed `run`'s command, and the teardown succeeded; a failed teardown is still `1` |
 
-gpunit's own lines go to stderr, each opening with the UTC time; stdout belongs to the command.
+gpunit's own lines go to stderr, each opening with the UTC time; stdout belongs to the command, or to `serve`'s
+chat and `--api`'s two lines.
 
 ## The spend rules
 
@@ -141,3 +208,6 @@ gpunit's own lines go to stderr, each opening with the UTC time; stdout belongs 
 
 `make live` rents one real pod for at most ten minutes, run by hand: it prints the card's price and the
 maximum first, then runs `nvidia-smi` through `gpunit run`. The gate, `make gate`, fakes every provider answer.
+
+`make live-serve` proves the serve image and the model on one 24 GB card, for at most 30 minutes a session:
+`gpunit serve qwen3-4b --api` for one `curl`, then a chat of one prompt.

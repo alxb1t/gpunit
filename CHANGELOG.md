@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unless `--think`. `/exit` or the end of input ends the session.
 - `--api` prints `OPENAI_BASE_URL` on loopback and a per-session `OPENAI_API_KEY` the model server requires, and
   holds the session until Ctrl-C, or until the server has not answered for 60s.
+- `serve/Dockerfile`, vLLM `v0.31.0` by digest with sshd and `boot.sh`, built only by a manual run of
+  `build-serve-image.yml`, which refuses `latest` and writes the digest to its summary. `make live-serve` is the
+  metered proof.
+
+### Changed
+
+- README: *Serve a model*, with *From a container*; the verbs and exits name `serve` and `down --serve`.
+  `CLAUDE.md`'s layout names `gpunit/serve/` and `serve/`.
 
 ## [0.2.0] - 2026-10-09
 

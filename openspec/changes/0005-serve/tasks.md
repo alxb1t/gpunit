@@ -8,7 +8,7 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 - [x] 1 — The table
 - [x] 2 — The served session
 - [x] 3 — The chat and the endpoint
-- [ ] 4 — The image and the documents
+- [x] 4 — The image and the documents
 - [ ] 5 — ⚠️ **HUMAN · METERED** — build, pin, make live-serve
 
 ## 1 — The table
@@ -34,9 +34,9 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 ## 4 — The image and the documents
 
-- [ ] 4.1 Write `serve/Dockerfile` and `.github/workflows/build-serve-image.yml` per [D7](design.md#d7); in `tests/test_serve_image.py` bind `serve:image:pinned-inputs` and `serve:image:only-a-request-builds`.
+- [x] 4.1 Write `serve/Dockerfile` and `.github/workflows/build-serve-image.yml` per [D7](design.md#d7); in `tests/test_serve_image.py` bind `serve:image:pinned-inputs` and `serve:image:only-a-request-builds`.
   Verify: `grep -c '^FROM vllm/vllm-openai:v0.31.0@sha256:c1c9f6fd5c109ba7f0546a59f5b2f15fb87f64c77782e90a27b648b42a8e67c3$' serve/Dockerfile` prints `1`, and `grep -c 'workflow_dispatch' .github/workflows/build-serve-image.yml` prints `1`.
-- [ ] 4.2 Add README's *Serve a model* with *From a container*, `gpunit/serve/` to `CLAUDE.md`'s layout, and the `live-serve` target to the `Makefile`, per [D8](design.md#d8) and [D9](design.md#d9).
+- [x] 4.2 Add README's *Serve a model* with *From a container*, `gpunit/serve/` to `CLAUDE.md`'s layout, and the `live-serve` target to the `Makefile`, per [D8](design.md#d8) and [D9](design.md#d9).
   Verify: `grep -c 'Serve a model' README.md` prints `1`, `grep -c 'From a container' README.md` prints `1`, and `make -n live-serve | grep -c 'gpunit serve qwen3-4b'` prints a number of at least `1`.
 
 ## 5 — ⚠️ **HUMAN · METERED** — build, pin, make live-serve
