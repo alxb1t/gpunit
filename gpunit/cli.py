@@ -9,11 +9,13 @@ from typing import NoReturn
 from gpunit import lifecycle, log, run
 from gpunit.provider import Lost, Provider
 from gpunit.runpod import RunPod
-from gpunit.spec import load_spec
+from gpunit.serve import session, table
+from gpunit.spec import load_spec, parse_ceiling
 from gpunit.state import State
 
 USAGE = (
     "gpunit {up,status,down,ssh} [--spec PATH] | gpunit run [--spec PATH] -- <command>"
+    " | gpunit serve <model> --ceiling 2h [--api] | gpunit down --serve <model>"
 )
 
 FAILED, USAGE_FAULT = 1, 2
@@ -36,7 +38,26 @@ def _parser() -> _Parser:
         sub.add_argument("--spec", type=Path, default=Path("gpunit.toml"))
         if verb == "status":
             sub.add_argument("--json", action="store_true")
+        if verb == "down":
+            sub.add_argument("--serve", metavar="MODEL")
+    serve = verbs.add_parser("serve")
+    serve.add_argument("model")
+    serve.add_argument("--ceiling", type=_ceiling, required=True)
+    serve.add_argument("--api", action="store_true")
+    serve.add_argument("--volume")
+    serve.add_argument("--max-hourly", type=float)
+    serve.add_argument("--yes", action="store_true")
+    serve.add_argument("--think", action="store_true")
     return parser
+
+
+def _ceiling(text: str) -> int:
+    try:
+        return parse_ceiling(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"{text!r} is not a duration with a unit, as 600s, 45m or 4h"
+        ) from None
 
 
 def parse(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
@@ -55,6 +76,9 @@ def parse(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
         raise Usage("gpunit run -- <command> needs a command")
     if args.verb != "run" and command is not None:
         raise Usage(f"gpunit {args.verb} takes no command after --")
+    # A served model's spec is its table row, never a file.
+    if args.verb == "serve" or getattr(args, "serve", None) is not None:
+        return args, []
     if not args.spec.is_file() or not os.access(args.spec, os.R_OK):
         raise Usage(f"cannot read the spec {args.spec}")
     return args, command or []
@@ -70,14 +94,38 @@ def main(
 def _run(argv: list[str], provider: Provider | None) -> int:
     try:
         args, command = parse(argv)
+        model = args.model if args.verb == "serve" else getattr(args, "serve", None)
+        if model is not None:
+            _known(model)
     except Usage as fault:
         log.say(f"usage: {fault}")
         log.say(f"usage: {USAGE}")
         return USAGE_FAULT
+    except log.Refusal:
+        return FAILED
 
     # Built only when a verb asks: no key is needed to read a spec or no record.
     def lazy() -> Provider:
         return provider or RunPod()
+
+    if model is not None:
+        try:
+            if args.verb == "down":
+                return session.down(model, lazy())
+            return session.serve(
+                model,
+                args.ceiling,
+                api=args.api,
+                volume=args.volume,
+                max_hourly=args.max_hourly,
+                yes=args.yes,
+                think=args.think,
+                provider=lazy(),
+            )
+        except log.Refusal:
+            return FAILED
+        except Lost:
+            return run.LOST_EXIT
 
     state = State(Path.cwd())
     try:
@@ -100,3 +148,9 @@ def _run(argv: list[str], provider: Provider | None) -> int:
         return FAILED
     except Lost:
         return run.LOST_EXIT
+
+
+def _known(model: str) -> None:
+    models = sorted(table.load().models)
+    if model not in models:
+        raise Usage(f"no model {model!r} in the table; it holds {', '.join(models)}")

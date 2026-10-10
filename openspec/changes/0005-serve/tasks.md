@@ -6,7 +6,7 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 ## Progress
 
 - [x] 1 — The table
-- [ ] 2 — The served session
+- [x] 2 — The served session
 - [ ] 3 — The chat and the endpoint
 - [ ] 4 — The image and the documents
 - [ ] 5 — ⚠️ **HUMAN · METERED** — build, pin, make live-serve
@@ -20,9 +20,9 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 ## 2 — The served session
 
-- [ ] 2.1 Write `gpunit/serve/session.py` per [D2](design.md#d2), [D3](design.md#d3) and [D4](design.md#d4); in `tests/test_serve_session.py` bind `serve:price:no-by-default`, `serve:price:yes-skips`, `serve:wait:awaited`, `serve:wait:bound-tears-down` and `serve:wait:state-per-model` on a `FakeProvider` and a fake model server.
+- [x] 2.1 Write `gpunit/serve/session.py` per [D2](design.md#d2), [D3](design.md#d3) and [D4](design.md#d4); in `tests/test_serve_session.py` bind `serve:price:no-by-default`, `serve:price:yes-skips`, `serve:wait:awaited`, `serve:wait:bound-tears-down` and `serve:wait:state-per-model` on a `FakeProvider` and a fake model server.
   Verify: `grep -o -E 'serve:(price|wait):[a-z-]+' tests/test_serve_session.py | sort -u | wc -l | tr -d ' '` prints `5`.
-- [ ] 2.2 Add `serve <model>` and `down --serve <model>` to `gpunit/cli.py` per [D2](design.md#d2); in `tests/test_cli.py` bind `cli:verbs:serve-without-ceiling-exits-2` and `cli:verbs:serve-unknown-model-exits-2`.
+- [x] 2.2 Add `serve <model>` and `down --serve <model>` to `gpunit/cli.py` per [D2](design.md#d2); in `tests/test_cli.py` bind `cli:verbs:serve-without-ceiling-exits-2` and `cli:verbs:serve-unknown-model-exits-2`.
   Verify: `uv run gpunit serve qwen3-4b; echo $?` prints a last line `2`, and `grep -c -E 'cli:verbs:serve-' tests/test_cli.py` prints `2`.
 
 ## 3 — The chat and the endpoint

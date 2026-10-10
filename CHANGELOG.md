@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The model table `gpunit/serve/models.toml`: `qwen3-4b` at a pinned revision, and the serve image by digest.
   `gpunit.serve.table` refuses a moving revision, a tagged image or a missing field, and builds a row's `Spec`.
+- `gpunit serve <model> --ceiling …` prints each card's price and the most the session can cost, and rents nothing
+  without a `y` (`--yes` skips the question); it waits up to 1200s for the model, with its files under
+  `~/.local/state/gpunit/serve/<model>/`. `gpunit down --serve <model>` tears that session down.
 
 ## [0.2.0] - 2026-10-09
 

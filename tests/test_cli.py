@@ -41,6 +41,42 @@ def test_run_without_a_command_exits_2_naming_the_form(
     assert "gpunit run -- <command>" in capsys.readouterr().err
 
 
+@pytest.mark.spec("cli:verbs:serve-without-ceiling-exits-2")
+@pytest.mark.parametrize(
+    "argv",
+    [["serve", "qwen3-4b"], ["serve", "qwen3-4b", "--ceiling", "2"]],
+    ids=["missing", "no-unit"],
+)
+def test_serve_without_a_ceiling_exits_2_naming_it(
+    argv: list[str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    assert gpunit(argv, provider=NO_REQUESTS) == 2
+    assert "--ceiling" in capsys.readouterr().err
+
+
+@pytest.mark.spec("cli:verbs:serve-unknown-model-exits-2")
+@pytest.mark.parametrize(
+    "argv",
+    [["serve", "no-such-model", "--ceiling", "1h"], ["down", "--serve", "no-such"]],
+    ids=["serve", "down"],
+)
+def test_an_unknown_model_exits_2_naming_the_tables_models(
+    argv: list[str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    assert gpunit(argv, provider=NO_REQUESTS) == 2
+    assert "it holds qwen3-4b" in capsys.readouterr().err
+
+
 @pytest.fixture
 def dead_pipe() -> Iterator[TextIO]:
     read, write = os.pipe()
