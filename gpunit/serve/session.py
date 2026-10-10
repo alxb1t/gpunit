@@ -10,7 +10,7 @@ from pathlib import Path
 from gpunit import library, lifecycle, log
 from gpunit.provider import Lost, Provider, Unknown
 from gpunit.run import LOST_EXIT
-from gpunit.serve import table
+from gpunit.serve import chat, table
 from gpunit.spec import Spec
 from gpunit.state import State
 
@@ -19,6 +19,9 @@ POLL_S = 5
 PROGRESS_S = 30
 REQUEST_S = 5
 LOG_TAIL = 50
+HOLD_S = 30
+# Two missed polls: a pod the ceiling stopped answers nothing again.
+QUIET_S = 60
 
 
 def home(name: str) -> Path:
@@ -40,6 +43,7 @@ def serve(
     think: bool,
     provider: Provider,
     ask: Callable[[str], str] = input,
+    read: Callable[[str], str] | None = None,
     opener: urllib.request.OpenerDirector | None = None,
 ) -> int:
     """Serve `name` until the session ends; return the exit code `gpunit run` would."""
@@ -56,6 +60,10 @@ def serve(
             base = f"http://127.0.0.1:{opened.port(table.PORT)}/v1"
             _wait(base, key, opened.pod_id, provider, opener)
             log.say(f"{row.served} answers on {base}")
+            if api:
+                _hold(base, key, opener)
+            else:
+                chat.run(base, key, row.served, think, read)
         return 0
     except log.Refusal:
         return 1
@@ -125,6 +133,21 @@ def _wait(
                 log.say(f"loading: {lines[-1]}")
             progress = now + PROGRESS_S
         clock.sleep(POLL_S)
+
+
+def _hold(base: str, key: str, opener: urllib.request.OpenerDirector) -> None:
+    print(f"OPENAI_BASE_URL={base}", flush=True)
+    print(f"OPENAI_API_KEY={key}", flush=True)
+    log.say("serving until interrupted or the ceiling; Ctrl-C ends the session")
+    clock = lifecycle.CLOCK
+    answered = clock.monotonic()
+    while True:
+        clock.sleep(HOLD_S)
+        now = clock.monotonic()
+        if _answers(base, key, opener):
+            answered = now
+        elif now - answered >= QUIET_S:
+            log.refuse(f"the model has not answered for {QUIET_S}s")
 
 
 def _answers(base: str, key: str, opener: urllib.request.OpenerDirector) -> bool:

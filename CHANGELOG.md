@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `gpunit serve <model> --ceiling …` prints each card's price and the most the session can cost, and rents nothing
   without a `y` (`--yes` skips the question); it waits up to 1200s for the model, with its files under
   `~/.local/state/gpunit/serve/<model>/`. `gpunit down --serve <model>` tears that session down.
+- The chat: each answer streams as it is written, the conversation is kept in memory, and thinking is off
+  unless `--think`. `/exit` or the end of input ends the session.
+- `--api` prints `OPENAI_BASE_URL` on loopback and a per-session `OPENAI_API_KEY` the model server requires, and
+  holds the session until Ctrl-C, or until the server has not answered for 60s.
 
 ## [0.2.0] - 2026-10-09
 

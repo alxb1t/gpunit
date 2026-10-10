@@ -7,7 +7,7 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 - [x] 1 — The table
 - [x] 2 — The served session
-- [ ] 3 — The chat and the endpoint
+- [x] 3 — The chat and the endpoint
 - [ ] 4 — The image and the documents
 - [ ] 5 — ⚠️ **HUMAN · METERED** — build, pin, make live-serve
 
@@ -27,9 +27,9 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 ## 3 — The chat and the endpoint
 
-- [ ] 3.1 Write `gpunit/serve/chat.py` per [D5](design.md#d5) and wire it into `serve`; in `tests/test_serve_chat.py` bind `serve:chat:streams`, `serve:chat:thinking-off` and `serve:chat:eof-ends` against a local `http.server` that streams SSE.
+- [x] 3.1 Write `gpunit/serve/chat.py` per [D5](design.md#d5) and wire it into `serve`; in `tests/test_serve_chat.py` bind `serve:chat:streams`, `serve:chat:thinking-off` and `serve:chat:eof-ends` against a local `http.server` that streams SSE.
   Verify: `grep -o 'serve:chat:[a-z-]*' tests/test_serve_chat.py | sort -u | wc -l | tr -d ' '` prints `3`.
-- [ ] 3.2 Add `--api`'s key, its printout and its hold per [D6](design.md#d6); in `tests/test_serve_session.py` bind `serve:api:prints-the-endpoint` and `serve:api:key-required`.
+- [x] 3.2 Add `--api`'s key, its printout and its hold per [D6](design.md#d6); in `tests/test_serve_session.py` bind `serve:api:prints-the-endpoint` and `serve:api:key-required`.
   Verify: `grep -o 'serve:api:[a-z-]*' tests/test_serve_session.py | sort -u | wc -l | tr -d ' '` prints `2`.
 
 ## 4 — The image and the documents

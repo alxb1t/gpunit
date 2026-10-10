@@ -1,4 +1,7 @@
+import os
+import signal
 import urllib.error
+import urllib.request
 from collections.abc import Callable
 from pathlib import Path
 from typing import NoReturn
@@ -8,7 +11,7 @@ import pytest
 from gpunit.provider import Provider
 from gpunit.serve import session, table
 from gpunit.spec import Spec
-from tests.fakes import FakeOpener, FakeProvider
+from tests.fakes import FakeOpener, FakeProvider, _Response
 
 MODELS = (200, b'{"object": "list", "data": [{"id": "qwen3-4b"}]}')
 NOT_YET = urllib.error.URLError(ConnectionRefusedError(61, "Connection refused"))
@@ -29,23 +32,30 @@ def no_question(prompt: str) -> NoReturn:
     raise AssertionError(f"asked: {prompt}")
 
 
+def leaves(prompt: str) -> str:
+    return "/exit"
+
+
 def served(
     provider: Provider,
     opener: FakeOpener,
     *,
     yes: bool = True,
     ask: Callable[[str], str] = no_question,
+    api: bool = False,
+    read: Callable[[str], str] = leaves,
 ) -> int:
     return session.serve(
         "qwen3-4b",
         7200,
-        api=False,
+        api=api,
         volume=None,
         max_hourly=None,
         yes=yes,
         think=False,
         provider=provider,
         ask=ask,
+        read=read,
         opener=opener,
     )
 
@@ -167,3 +177,80 @@ def test_down_serve_reads_the_models_record(home: Path, cwd: Path) -> None:
     assert session.down("qwen3-4b", provider) == 0
     assert provider.named("delete") == [("pod-1",)]
     assert provider.named("list") == [("serve-qwen3-4b", created_spec(left).image)]
+
+
+class InterruptingOpener(FakeOpener):
+    """Answer the wait, then send this process `SIGINT` from the hold's first poll."""
+
+    def open(
+        self,
+        fullurl: str | urllib.request.Request,
+        data: object = None,
+        timeout: float | None = None,
+    ) -> _Response:
+        if len(self.requests) == 1:
+            os.kill(os.getpid(), signal.SIGINT)
+        return super().open(fullurl, data, timeout)
+
+
+@pytest.mark.spec("serve:api:prints-the-endpoint")
+@pytest.mark.parametrize("end", ["quiet", "interrupt"])
+def test_api_prints_the_endpoint_and_holds_until_the_end(
+    end: str,
+    home: Path,
+    free_port: int,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    provider = FakeProvider()
+    if end == "quiet":
+        # The wait's answer, one in the hold, then silence as a stopped pod gives.
+        opener = FakeOpener(MODELS, MODELS, NOT_YET, NOT_YET)
+    else:
+        opener = InterruptingOpener(MODELS, MODELS)
+
+    code = served(provider, opener, api=True)
+
+    out, err = capsys.readouterr()
+    key = created_spec(provider).env["VLLM_API_KEY"]
+    assert out.splitlines() == [
+        f"OPENAI_BASE_URL=http://127.0.0.1:{free_port}/v1",
+        f"OPENAI_API_KEY={key}",
+    ]
+    assert len(key) >= 32
+    assert provider.named("delete") == [("pod-1",)]
+    if end == "quiet":
+        assert code == 1
+        assert len(opener.requests) == 4
+        assert "refused: the model has not answered for 60s" in err
+    else:
+        assert code == 128 + signal.SIGINT
+
+
+@pytest.mark.spec("serve:api:key-required")
+def test_the_pod_requires_a_key_of_its_own_each_session(home: Path) -> None:
+    keys = []
+    for _ in range(2):
+        provider = FakeProvider()
+        opener = FakeOpener(MODELS, NOT_YET, NOT_YET)
+        assert served(provider, opener, api=True) == 1
+        keys.append(created_spec(provider).env["VLLM_API_KEY"])
+        assert {request.get_header("Authorization") for request in opener.requests} == {
+            f"Bearer {keys[-1]}"
+        }
+
+    assert all(len(key) >= 32 for key in keys)
+    assert keys[0] != keys[1]
+
+
+@pytest.mark.spec("serve:chat:eof-ends")
+@pytest.mark.parametrize("said", ["/exit", "eof"])
+def test_the_end_of_the_chat_closes_the_session(said: str, home: Path) -> None:
+    provider = FakeProvider()
+
+    def read(prompt: str) -> str:
+        if said == "eof":
+            raise EOFError
+        return said
+
+    assert served(provider, FakeOpener(MODELS), read=read) == 0
+    assert provider.named("delete") == [("pod-1",)]
