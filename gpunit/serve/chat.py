@@ -20,6 +20,8 @@ def run(
     think: bool,
     read: Callable[[str], str] | None = None,
     write: Callable[[str], None] | None = None,
+    *,
+    opener: urllib.request.OpenerDirector,
 ) -> None:
     """Chat until `/exit` or the end of input, the conversation kept in memory."""
     if read is None:
@@ -30,8 +32,6 @@ def run(
             pass
         read = input
     write = write or _stdout
-    # No proxy: the endpoint is the tunnel's loopback side.
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     messages: list[dict[str, str]] = []
     while True:
         try:
@@ -59,7 +59,7 @@ def run(
             },
         )
         try:
-            answer = "".join(_stream(opener, request, write))
+            answer = _stream(opener, request, write)
         except (OSError, http.client.HTTPException, ValueError) as fault:
             # The turn is dropped, so the next one is sent as if it never was.
             write("\n")
@@ -73,8 +73,8 @@ def _stream(
     opener: urllib.request.OpenerDirector,
     request: urllib.request.Request,
     write: Callable[[str], None],
-) -> list[str]:
-    """Write each streamed part as it arrives; return the parts.
+) -> str:
+    """Write each streamed part as it arrives; return the whole answer.
 
     e.g. b'data: {"choices": [{"delta": {"content": "Hi"}}]}' → "Hi"
     """
@@ -92,7 +92,7 @@ def _stream(
             if part:
                 write(part)
                 parts.append(part)
-    return parts
+    return "".join(parts)
 
 
 def _stdout(text: str) -> None:

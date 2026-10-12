@@ -3,13 +3,14 @@
 import argparse
 import os
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import NoReturn
 
 from gpunit import lifecycle, log, run
 from gpunit.provider import Lost, Provider
 from gpunit.runpod import RunPod
-from gpunit.serve import session, table
+from gpunit.serve import table
 from gpunit.spec import load_spec, parse_ceiling
 from gpunit.state import State
 
@@ -39,7 +40,7 @@ def _parser() -> _Parser:
         if verb == "status":
             sub.add_argument("--json", action="store_true")
         if verb == "down":
-            sub.add_argument("--serve", metavar="MODEL")
+            sub.add_argument("--serve", dest="model", metavar="MODEL")
     serve = verbs.add_parser("serve")
     serve.add_argument("model")
     serve.add_argument("--ceiling", type=_ceiling, required=True)
@@ -76,8 +77,9 @@ def parse(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
         raise Usage("gpunit run -- <command> needs a command")
     if args.verb != "run" and command is not None:
         raise Usage(f"gpunit {args.verb} takes no command after --")
-    # A served model's spec is its table row, never a file.
-    if args.verb == "serve" or getattr(args, "serve", None) is not None:
+    # `serve` and `down --serve` name a model, whose spec is its table row.
+    args.model = getattr(args, "model", None)
+    if args.model is not None:
         return args, []
     if not args.spec.is_file() or not os.access(args.spec, os.R_OK):
         raise Usage(f"cannot read the spec {args.spec}")
@@ -94,9 +96,8 @@ def main(
 def _run(argv: list[str], provider: Provider | None) -> int:
     try:
         args, command = parse(argv)
-        model = args.model if args.verb == "serve" else getattr(args, "serve", None)
-        if model is not None:
-            _known(model)
+        if args.model is not None:
+            _known(args.model)
     except Usage as fault:
         log.say(f"usage: {fault}")
         log.say(f"usage: {USAGE}")
@@ -108,27 +109,10 @@ def _run(argv: list[str], provider: Provider | None) -> int:
     def lazy() -> Provider:
         return provider or RunPod()
 
-    if model is not None:
-        try:
-            if args.verb == "down":
-                return session.down(model, lazy())
-            return session.serve(
-                model,
-                args.ceiling,
-                api=args.api,
-                volume=args.volume,
-                max_hourly=args.max_hourly,
-                yes=args.yes,
-                think=args.think,
-                provider=lazy(),
-            )
-        except log.Refusal:
-            return FAILED
-        except Lost:
-            return run.LOST_EXIT
-
     state = State(Path.cwd())
     try:
+        if args.model is not None:
+            return _serve(args, lazy)
         spec = load_spec(args.spec)
         match args.verb:
             case "up":
@@ -148,6 +132,24 @@ def _run(argv: list[str], provider: Provider | None) -> int:
         return FAILED
     except Lost:
         return run.LOST_EXIT
+
+
+def _serve(args: argparse.Namespace, provider: Callable[[], Provider]) -> int:
+    # Here, not at the top: its imports would slow every other verb's start.
+    from gpunit.serve import session
+
+    if args.verb == "down":
+        return session.down(args.model, provider())
+    return session.serve(
+        args.model,
+        args.ceiling,
+        api=args.api,
+        volume=args.volume,
+        max_hourly=args.max_hourly,
+        yes=args.yes,
+        think=args.think,
+        provider=provider(),
+    )
 
 
 def _known(model: str) -> None:

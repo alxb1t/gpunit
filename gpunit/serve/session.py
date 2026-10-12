@@ -9,7 +9,7 @@ from pathlib import Path
 
 from gpunit import library, lifecycle, log
 from gpunit.provider import Lost, Provider, Unknown
-from gpunit.run import LOST_EXIT
+from gpunit.run import outcome
 from gpunit.serve import chat, table
 from gpunit.spec import Spec
 from gpunit.state import State
@@ -52,7 +52,8 @@ def serve(
     spec = row.spec(ceiling_s, volume, max_hourly, key)
     # No proxy: the endpoint is the tunnel's loopback side.
     opener = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}))
-    try:
+
+    def body() -> int:
         _agree(spec, provider, yes, ask)
         place = home(name)
         place.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -63,16 +64,10 @@ def serve(
             if api:
                 _hold(base, key, opener)
             else:
-                chat.run(base, key, row.served, think, read)
+                chat.run(base, key, row.served, think, read, opener=opener)
         return 0
-    except log.Refusal:
-        return 1
-    except Lost:
-        return LOST_EXIT
-    except library.TeardownFailed as failed:
-        return LOST_EXIT if isinstance(failed.__cause__, Lost) else 1
-    except library.Interrupted as interrupted:
-        return 128 + interrupted.signal
+
+    return outcome(body)
 
 
 def down(name: str, provider: Provider) -> int:

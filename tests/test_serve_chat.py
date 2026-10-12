@@ -1,5 +1,6 @@
 import json
 import threading
+import urllib.request
 from collections.abc import Callable, Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -8,6 +9,7 @@ import pytest
 from gpunit.serve import chat
 
 KEY = "k" * 43
+OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 
 class ModelServer(ThreadingHTTPServer):
@@ -85,7 +87,15 @@ def test_each_part_is_written_as_it_arrives_and_the_answer_is_kept(
     if not streamed:
         # The twin: a client that never writes a part until the end is caught.
         model.patience = 0.1
-    chat.run(model.base_url, KEY, "qwen3-4b", False, reader("hi", "again"), write)
+    chat.run(
+        model.base_url,
+        KEY,
+        "qwen3-4b",
+        False,
+        reader("hi", "again"),
+        write,
+        opener=OPENER,
+    )
 
     assert model.buffered is not streamed
     assert written == ["Hel", "lo", "\n", "Hel", "lo", "\n", "\n"]
@@ -107,7 +117,7 @@ def test_thinking_is_off_unless_asked_for(think: bool, model: ModelServer) -> No
         if text in model.parts:
             model.written.release()
 
-    chat.run(model.base_url, KEY, "qwen3-4b", think, reader("hi"), write)
+    chat.run(model.base_url, KEY, "qwen3-4b", think, reader("hi"), write, opener=OPENER)
 
     [(_, _, body)] = model.requests
     assert body["model"] == "qwen3-4b"
@@ -127,7 +137,15 @@ def test_exit_or_the_end_of_input_ends_the_chat(
         asked.append(prompt)
         return read(prompt)
 
-    chat.run(model.base_url, KEY, "qwen3-4b", False, counted, lambda text: None)
+    chat.run(
+        model.base_url,
+        KEY,
+        "qwen3-4b",
+        False,
+        counted,
+        lambda text: None,
+        opener=OPENER,
+    )
 
     assert asked == ["> "]
     assert model.requests == []

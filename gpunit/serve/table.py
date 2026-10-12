@@ -112,19 +112,22 @@ def _row(path: Path, name: str, image: str, raw: object) -> Row:
         repo=raw["repo"],
         revision=raw["revision"],
         served=raw["served"],
-        args=_strings(where, "args", raw["args"], spaced=False),
+        args=_args(where, raw["args"]),
         vram_gb=raw["vram_gb"],
-        gpus=_strings(where, "gpus", raw["gpus"], spaced=True),
+        gpus=_strings(where, "gpus", raw["gpus"]),
         disk_gb=raw["disk_gb"],
     )
 
 
-def _strings(
-    where: str, key: str, items: list[object], *, spaced: bool
-) -> tuple[str, ...]:
+def _strings(where: str, key: str, items: list[object]) -> tuple[str, ...]:
     names = tuple(item for item in items if isinstance(item, str))
     if not names or len(names) != len(items):
         log.refuse(f"{where}: {key!r} must be a non-empty list of strings")
-    if not spaced and any(" " in name for name in names):
-        log.refuse(f"{where}: {key!r} holds an argument with a space, which sh splits")
     return names
+
+
+def _args(where: str, items: list[object]) -> tuple[str, ...]:
+    args = _strings(where, "args", items)
+    if any(" " in arg for arg in args):
+        log.refuse(f"{where}: 'args' holds an argument with a space, which sh splits")
+    return args
