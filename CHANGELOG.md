@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the `qwen3_coder` tool-call parser and the language model alone, so `serve` offers a model large enough for an agent.
 - `live/tool_call.py` sends one chat request with a function and passes only on a parseable call to it, the key read
   from `OPENAI_API_KEY`; `make live-serve MODEL=<row>` runs it after the `curl`, so a live run proves a row's tools.
+- README's *Serve a model* names both rows and their cards; its proof paragraph says `make live-serve MODEL=<row>`.
 
 ## [0.4.0] - 2026-10-12
 

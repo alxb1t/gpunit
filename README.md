@@ -107,8 +107,11 @@ with gpunit.session("gpunit.toml", environ={"RUNPOD_API_KEY": key}, say=my_log) 
 
 `gpunit serve <model> --ceiling 2h` boots vLLM on a rented card and opens a chat in the terminal; `--api` gives an
 OpenAI-compatible endpoint on loopback instead. The models it knows are rows of
-[gpunit/serve/models.toml](gpunit/serve/models.toml), which holds `qwen3-4b`: each at a pinned revision, all on one
-image pinned by digest.
+[gpunit/serve/models.toml](gpunit/serve/models.toml), each at a pinned revision, all on one image pinned by digest:
+
+- **`qwen3-4b`** — Qwen3-4B on a 24 GB card, for cents an hour: the row that proves `serve`.
+- **`qwen3.8-27b`** — Qwen3.8-27B at FP8 on a 48 GB card, tool calls through the `qwen3_coder` parser; its dearest
+  card, `NVIDIA L40S`, was $1.09/h at the cut.
 
 ```
 laptop                                         pod (gpunit-vllm)
@@ -242,7 +245,8 @@ chat and `--api`'s two lines, or to `spend`'s report.
 card's price and the maximum first, then runs `nvidia-smi` through `gpunit run`. The gate, `make gate`, fakes every
 provider answer.
 
-`make live-serve` proves the serve image and the model on one 24 GB card, for at most 30 minutes plus the 1200s wait
-for SSH a session: `gpunit serve qwen3-4b --api` for one `curl`, then a chat of one prompt.
+`make live-serve MODEL=<row>` proves the serve image and a row on one of its cards, for at most 30 minutes plus the
+1200s wait for SSH a session: `gpunit serve <row> --api` for one `curl` and one tool call through
+[live/tool_call.py](live/tool_call.py), then a chat of one prompt. `MODEL` defaults to `qwen3-4b`.
 
 `make live-dead` boots an image whose container exits at once, and shows `up` tearing it down within seconds.

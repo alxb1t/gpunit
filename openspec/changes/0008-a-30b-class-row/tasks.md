@@ -7,7 +7,7 @@ The row, the check, the handover, then the one metered proof, per [design](desig
 
 - [x] 1 — The row
 - [x] 2 — The check
-- [ ] 3 — The handover
+- [x] 3 — The handover
 - [ ] 4 — ⚠️ **HUMAN · METERED** — make live-serve MODEL=qwen3.8-27b
 
 ## 1 — The row
@@ -26,7 +26,7 @@ The row, the check, the handover, then the one metered proof, per [design](desig
 
 ## 3 — The handover
 
-- [ ] 3.1 Name both rows and `make live-serve MODEL=<row>` in `README.md`'s *Serve a model* and its proof paragraph, per [D5](design.md#d5).
+- [x] 3.1 Name both rows and `make live-serve MODEL=<row>` in `README.md`'s *Serve a model* and its proof paragraph, per [D5](design.md#d5).
   Verify: `grep -c 'qwen3.8-27b' README.md` prints a number of at least `1`, and `grep -c 'MODEL=' README.md` prints a number of at least `1`.
 
 ## 4 — ⚠️ **HUMAN · METERED** — make live-serve MODEL=qwen3.8-27b
