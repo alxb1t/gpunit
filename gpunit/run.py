@@ -4,7 +4,7 @@ import os
 import shlex
 import signal
 import subprocess
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 
 from gpunit import library, log
@@ -22,9 +22,18 @@ def run(spec: Spec, provider: Provider, state: State, command: list[str]) -> int
     failed, even after a signal; 3 after a lost create; 128 + the signal's number
     after a signal and a teardown.
     """
-    try:
+
+    def body() -> int:
         with library._open(spec, provider, state, None) as opened:
             return _command(spec, opened, command)
+
+    return outcome(body)
+
+
+def outcome(body: Callable[[], int]) -> int:
+    """Return `body`'s exit code, or the one the exception that ended it earned."""
+    try:
+        return body()
     except log.Refusal:
         return 1
     except Lost:

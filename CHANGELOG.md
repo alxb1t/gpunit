@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-12
+
+### Added
+
+- The model table `gpunit/serve/models.toml`: `qwen3-4b` at a pinned revision, and the serve image by digest.
+  `gpunit.serve.table` refuses a moving revision, a tagged image or a missing field, and builds a row's `Spec`.
+- `gpunit serve <model> --ceiling …` prints each card's price and the most the session can cost, and rents nothing
+  without a `y` (`--yes` skips the question); it waits up to 1200s for the model, with its files under
+  `~/.local/state/gpunit/serve/<model>/`. `gpunit down --serve <model>` tears that session down.
+- The chat: each answer streams as it is written, the conversation is kept in memory, and thinking is off
+  unless `--think`. `/exit` or the end of input ends the session.
+- `--api` prints `OPENAI_BASE_URL` on loopback and a per-session `OPENAI_API_KEY` the model server requires, and
+  holds the session until Ctrl-C, or until the server has not answered for 60s.
+- `serve/Dockerfile`, vLLM `v0.31.0` by digest with sshd and `boot.sh`, built only by a manual run of
+  `build-serve-image.yml`, which refuses `latest` and writes the digest to its summary. `make live-serve` is the
+  metered proof.
+- The serve image `gpunit-vllm:v0.3-rc1` is built and pinned by digest in `models.toml`; `make live-serve` passed on
+  an RTX A5000, a `curl` and a chat each answered, and no pod was left ([live/serve_last_run.txt](live/serve_last_run.txt)).
+
+### Changed
+
+- README: *Serve a model*, with *From a container*; the verbs and exits name `serve` and `down --serve`.
+  `CLAUDE.md`'s layout names `gpunit/serve/` and `serve/`.
+
+### Fixed
+
+- `gpunit serve` waits up to 1200s, not 420s, for the pod's SSH port, so a cold host's pull of vLLM's image no
+  longer tears the session down before the model wait begins.
+- `gpunit serve`'s "at most" price counts the 1200s SSH wait with the ceiling: the pod bills while it pulls, and
+  boot arms the ceiling only after, so the figure agreed is no longer short by up to 20 minutes of the dearest card.
+
 ## [0.2.0] - 2026-10-09
 
 ### Added

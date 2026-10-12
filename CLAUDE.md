@@ -22,7 +22,11 @@ CLI is recorded, not pinned: `@fission-ai/openspec@1.11.0`, resolved on `PATH`.
   `provider.py` (the `Provider` seam), `runpod.py` (RunPod's REST v2), `lifecycle.py` (`up · status · down · ssh`),
   `library.py` (the public session: signals, tunnel, teardown), `run.py` (`run`, on the library), `log.py`
   (gpunit's lines, to stderr or a sink).
+- **`gpunit/serve/`** — `gpunit serve`: `models.toml` (the model table and the image's digest), `table.py` (a row's
+  `Spec`), `session.py` (the price, the wait, the `--api` hold), `chat.py` (the streamed chat).
 - **`boot/boot.sh`** — the pod's entrypoint: the ceiling, sshd, the fingerprint, the command.
+- **`serve/Dockerfile`** — the serve image, vLLM by digest; built on request by
+  `.github/workflows/build-serve-image.yml`.
 - **`tests/`** — `fakes.py` (`FakeProvider`, `FakeOpener`), `fixtures/` (v2 bodies), one `test_*.py` per module;
   every test carries `@pytest.mark.spec("<scenario key>")`.
 - **`live/`** — the metered proof on a real pod, run by hand.
@@ -37,7 +41,7 @@ CLI is recorded, not pinned: `@fission-ai/openspec@1.11.0`, resolved on `PATH`.
   (`test_gpu_reads_the_memory_and_the_secure_price`, `test_the_commands_end_stops_the_pod`).
 - **The ceiling is required:** no default, no pod without it (`test_no_ceiling_no_pod`).
 - **A 404 is never gone:** `down` keeps the record (`test_a_404_keeps_the_record`).
-- **`make live` is never in CI:** it rents a real pod; the gate fakes every provider answer.
+- **`make live` and `make live-serve` are never in CI:** they rent a real pod; the gate fakes every provider answer.
 
 ## Guardrails (hold for every role)
 

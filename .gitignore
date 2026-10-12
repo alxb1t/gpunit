@@ -7,3 +7,5 @@
 
 # Python bytecode, rewritten on every import.
 __pycache__/
+
+.env

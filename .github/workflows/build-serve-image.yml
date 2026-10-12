@@ -1,0 +1,69 @@
+# Build and push the serve image on a manual request only; its digest goes to the run's summary,
+# to be pinned in gpunit/serve/models.toml. Why: 0005 design D7.
+name: build-serve-image
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "The image tag, e.g. v0.3-rc1; latest is refused"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refuse latest, and any tag Docker would not take
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          if [ "$TAG" = "latest" ]; then
+            echo "::error::the tag latest is refused; name a version, e.g. v0.3-rc1"
+            exit 1
+          fi
+          if ! printf '%s' "$TAG" | grep -Eqx '[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}'; then
+            echo "::error::$TAG is not a Docker tag"
+            exit 1
+          fi
+
+      # vLLM's image outgrows the runner's free disk; these preinstalled toolchains are unused here.
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: serve/Dockerfile
+          push: true
+          tags: ghcr.io/alxb1t/gpunit-vllm:${{ inputs.tag }}
+
+      - name: Write the digest to the summary
+        env:
+          TAG: ${{ inputs.tag }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          {
+            echo "## gpunit-vllm:$TAG"
+            echo
+            echo "Pin it in gpunit/serve/models.toml:"
+            echo
+            echo "    image = \"ghcr.io/alxb1t/gpunit-vllm@$DIGEST\""
+          } >> "$GITHUB_STEP_SUMMARY"
