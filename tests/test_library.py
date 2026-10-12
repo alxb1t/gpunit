@@ -18,12 +18,12 @@ from gpunit.runpod import RunPod
 from gpunit.spec import load_spec
 from gpunit.state import State
 from tests.fakes import (
-    KEY_LINE,
+    BOOT_LOG,
     RECORD,
-    STEP_LINE,
     FakeOpener,
     FakeProvider,
     fixture,
+    log_stream,
     page,
     quiet,
 )
@@ -286,11 +286,7 @@ def test_the_key_comes_from_the_mapping(
         (200, fixture("gpu.json")),
         (201, fixture("pod_created.json")),
         (200, fixture("pod_running.json")),
-        quiet(
-            "".join(
-                f'data: {{"line": "{line}"}}\n' for line in (KEY_LINE, STEP_LINE)
-            ).encode()
-        ),
+        quiet(log_stream(*BOOT_LOG)),
         (204, b""),
         (200, page([], None)),
     )

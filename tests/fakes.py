@@ -25,6 +25,7 @@ SERVED = "SHA256:served"
 KEY_LINE = f"gpunit host key: {SERVED}"
 # Boot prints it once the key line is out, just before the command starts.
 STEP_LINE = "2026-10-07T00:00:05Z step: the command"
+BOOT_LOG = [KEY_LINE, STEP_LINE]
 
 
 class FakeClock:
@@ -56,7 +57,7 @@ class FakeProvider:
         volumes: Mapping[str, VolumeInfo | Exception] | None = None,
         creates: Sequence[str | Exception] = ("pod-1",),
         gets: Sequence[PodInfo | None] = (RUNNING,),
-        logs: Sequence[list[str]] = ([KEY_LINE, STEP_LINE],),
+        logs: Sequence[list[str]] = (BOOT_LOG,),
         since_logs: Sequence[list[str]] = ([],),
         listings: Sequence[list[tuple[str, str]] | Exception] = ([],),
         deletes: Mapping[str, int] | None = None,
@@ -130,6 +131,11 @@ def _raise_or(answer: T | Exception) -> T:
 def fixture(name: str) -> bytes:
     """Return the body of `tests/fixtures/<name>`."""
     return (FIXTURES / name).read_bytes()
+
+
+def log_stream(*lines: str) -> bytes:
+    """Return a body of RunPod's container log stream holding `lines`."""
+    return "".join(f"data: {json.dumps({'line': line})}\n" for line in lines).encode()
 
 
 def page(pods: list[dict[str, str]], cursor: str | None) -> bytes:

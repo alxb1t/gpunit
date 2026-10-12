@@ -262,22 +262,25 @@ def _create(
 
 
 def _wait(spec: Spec, provider: Provider, state: State, record: Record) -> Record:
-    dead = 0
+    dead = False
 
     def mapped() -> PodInfo | None:
         nonlocal dead
         # A failed poll is "not yet", never an abort: an abort would skip the teardown.
         info = provider.get(record.id)
-        # A restart may show a dead status once, so one poll is not yet.
-        dead = dead + 1 if info is not None and info.status in DEAD else 0
-        if info is not None and dead >= 2:
+        if info is None:
+            dead = False
+            return None
+        # A restart may show a dead status once, so only a second poll in a row ends it.
+        if info.status in DEAD and dead:
             _tear_down(
                 spec,
                 provider,
                 state,
                 f"pod {record.id} is {info.status}: the container is not running",
             )
-        return info if info is not None and info.host and info.port else None
+        dead = info.status in DEAD
+        return info if info.host and info.port else None
 
     info = _poll(spec.timeout_s, mapped)
     if info is None:

@@ -1,4 +1,3 @@
-import json
 import re
 from pathlib import Path
 
@@ -8,13 +7,13 @@ from gpunit.provider import GpuInfo, Lost, PodInfo, Refused, Unknown, VolumeInfo
 from gpunit.runpod import RunPod
 from gpunit.state import State
 from tests.fakes import (
-    KEY_LINE,
+    BOOT_LOG,
     RUNNING,
-    STEP_LINE,
     FakeClock,
     FakeOpener,
     FakeProvider,
     fixture,
+    log_stream,
     page,
 )
 from tests.helpers import IMAGE, NO_REQUESTS, VALID, gpunit, write_spec
@@ -256,9 +255,7 @@ def test_a_refusal_is_one_stamped_stderr_line(
 def up_over_http(cwd: Path) -> FakeOpener:
     """Run `up` on RunPod over scripted HTTP answers; return the opener."""
     write_spec(cwd, VALID + 'volume = "v1"\nports = [8188]\n')
-    log = "".join(
-        f"data: {json.dumps({'line': line})}\n" for line in (KEY_LINE, STEP_LINE)
-    ).encode()
+    log = log_stream(*BOOT_LOG)
     opener = FakeOpener(
         (200, page([], None)),
         (200, fixture("volume.json")),

@@ -34,8 +34,8 @@ def fingerprint(lines: list[str]) -> str | None:
     for line in lines:
         if match := _HOST_KEY.match(line):
             pending = match[1]
-        elif pending and _BOOT_STEP.match(line):
-            pending, accepted = None, pending
+        elif _BOOT_STEP.match(line):
+            accepted = pending
     return accepted
 
 

@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from gpunit import log
-from tests.fakes import KEY_LINE, SERVED, STEP_LINE, FakeClock, FakeProvider
+from tests.fakes import BOOT_LOG, KEY_LINE, SERVED, FakeClock, FakeProvider
 from tests.helpers import gpunit
 
 
@@ -31,7 +31,7 @@ def test_a_mismatch_tears_down(cwd: Path, monkeypatch: pytest.MonkeyPatch) -> No
 @pytest.mark.spec("session:hostkey:no-line-tears-down")
 @pytest.mark.parametrize(
     ("logs", "no_scan", "waited"),
-    [([["unrelated line"]], "", 60), ([[KEY_LINE, STEP_LINE]], "1", 180)],
+    [([["unrelated line"]], "", 60), ([BOOT_LOG], "1", 180)],
     ids=["no-line", "no-scan"],
 )
 def test_no_fingerprint_or_no_scan_tears_down(
@@ -54,9 +54,7 @@ def test_no_fingerprint_or_no_scan_tears_down(
 def test_a_key_line_out_of_the_tail_is_read_from_the_create(
     cwd: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    provider = FakeProvider(
-        logs=[["a boot that logs heavily"]], since_logs=[[KEY_LINE, STEP_LINE]]
-    )
+    provider = FakeProvider(logs=[["a boot that logs heavily"]], since_logs=[BOOT_LOG])
     # The stamp says whether the create had been asked when it was taken.
     monkeypatch.setattr(
         log, "utc", lambda: "after" if provider.named("create") else "before"
@@ -74,7 +72,7 @@ def test_a_key_line_the_command_echoes_is_not_the_key(
     cwd: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     forged = "gpunit host key: SHA256:forged"
-    provider = FakeProvider(logs=[[KEY_LINE, STEP_LINE, forged]])
+    provider = FakeProvider(logs=[[*BOOT_LOG, forged]])
 
     assert gpunit(["up"], provider=provider) == 0
     assert f"host key verified: {SERVED}" in capsys.readouterr().err
