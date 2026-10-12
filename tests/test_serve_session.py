@@ -298,6 +298,21 @@ def test_the_end_of_the_chat_closes_the_session(said: str, home: Path) -> None:
     assert provider.named("delete") == [("pod-1",)]
 
 
+@pytest.mark.spec("serve:chat:stopped-server-ends")
+def test_a_stopped_server_ends_the_chat_and_closes_the_session(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    provider = FakeProvider()
+    # The wait's answer, then the chat's request refused, as a stopped server gives.
+    opener = FakeOpener(MODELS, NOT_YET)
+
+    assert served(provider, opener, read=lambda prompt: "hi") == 1
+
+    assert len(opener.requests) == 2
+    assert "the server stopped answering" in capsys.readouterr().err
+    assert provider.named("delete") == [("pod-1",)]
+
+
 @pytest.mark.spec("serve:wait:busy-local-port-is-skipped")
 def test_a_busy_local_port_is_skipped_before_the_price(
     home: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]

@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from gpunit.provider import fingerprint
 from tests.helpers import install_stubs
 
 BOOT = Path(__file__).parent.parent / "boot" / "boot.sh"
@@ -124,8 +125,11 @@ def pod(tmp_path: Path, pod_bin: Path) -> dict[str, str]:
     }
 
 
-def boot(env: dict[str, str], *command: str) -> Boot:
-    """Run boot.sh in its own process group, then kill what it left behind."""
+def boot(env: dict[str, str], *command: str, merged: bool = False) -> Boot:
+    """Run boot.sh in its own process group, then kill what it left behind.
+
+    `merged` writes stderr into `out` too, in order, as the pod's log holds both.
+    """
     out, err = Path(env["HOME"]) / "out", Path(env["HOME"]) / "err"
     # Files, not pipes: the ceiling's timer outlives boot and would hold a pipe open.
     with out.open("w") as stdout, err.open("w") as stderr:
@@ -133,7 +137,7 @@ def boot(env: dict[str, str], *command: str) -> Boot:
             ["bash", str(BOOT), "--", *command],
             env=env,
             stdout=stdout,
-            stderr=stderr,
+            stderr=stdout if merged else stderr,
             start_new_session=True,
         )
         try:
@@ -294,6 +298,15 @@ def test_the_fingerprint_line(pod: dict[str, str]) -> None:
     assert "UsePAM yes" in config.splitlines()
     assert "AllowUsers root" in config.splitlines()
     assert f"-lf {host_key}.pub" in result.keygen
+
+
+@pytest.mark.spec("boot:sshd:fingerprint-printed")
+def test_gpunit_reads_the_served_key_from_boots_log(pod: dict[str, str]) -> None:
+    # gpunit accepts a key line only once boot's `step: the command` line follows it
+    # (0006 design D1): rewording that line would leave every session unverified.
+    result = boot(pod, "true", merged=True)
+
+    assert fingerprint(result.out.splitlines()) == FINGERPRINT
 
 
 @pytest.mark.spec("boot:sshd:authorized-key")
