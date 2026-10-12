@@ -7,7 +7,7 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 - [x] 1 — The ledger
 - [x] 2 — The billing seam
-- [ ] 3 — The report
+- [x] 3 — The report
 - [ ] 4 — The handover
 - [ ] 5 — ⚠️ **HUMAN** — compare the total with the console
 
@@ -29,9 +29,9 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 ## 3 — The report
 
-- [ ] 3.1 Write `gpunit/spend.py` per [D3](design.md#d3); in `tests/test_spend.py` bind every `spend:report:*` and `spend:window:*` scenario of the change's `spend` spec.
+- [x] 3.1 Write `gpunit/spend.py` per [D3](design.md#d3); in `tests/test_spend.py` bind every `spend:report:*` and `spend:window:*` scenario of the change's `spend` spec.
   Verify: `grep -o -E 'spend:(report|window):[a-z-]+' tests/test_spend.py | sort -u | wc -l | tr -d ' '` prints `9`.
-- [ ] 3.2 Add the `spend` verb to `gpunit/cli.py` per [D4](design.md#d4); in `tests/test_cli.py` bind `cli:verbs:spend-bad-days-exits-2`.
+- [x] 3.2 Add the `spend` verb to `gpunit/cli.py` per [D4](design.md#d4); in `tests/test_cli.py` bind `cli:verbs:spend-bad-days-exits-2`.
   Verify: `uv run gpunit spend --help | grep -c -- '--days'` prints a number of at least `1`, and `grep -c 'cli:verbs:spend-bad-days-exits-2' tests/test_cli.py` prints `1`.
 
 ## 4 — The handover

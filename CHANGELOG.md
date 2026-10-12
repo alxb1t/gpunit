@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   so its billing finds the project after teardown; a ledger that cannot be written warns and blocks nothing.
 - The provider seam reads the pods' and the network volumes' billing in UTC day buckets, each record's
   `totalAmount` as RunPod charged it; an answer that does not read is `Lost`.
+- `gpunit spend [--days N] [--json]` reports the last N whole UTC days' billing: one line per project, the pods the
+  ledger does not name, each volume, and the total; an unreadable billing exits `1`, never a table of zeros.
 
 ## [0.3.1] - 2026-10-12
 
