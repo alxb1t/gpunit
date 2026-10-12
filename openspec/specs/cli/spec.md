@@ -8,9 +8,10 @@ can read its outcome without parsing its words.
 ### Requirement: The verbs and the usage exit
 
 The system SHALL accept the verbs `up`, `status`, `down`, `ssh` and `run`, each reading `gpunit.toml` from the
-working directory unless `--spec <path>` names another, and `serve <model>`, which reads the bundled model table;
-`down --serve <model>` SHALL tear down the session `serve` left for that model; and SHALL exit `2` with a
-usage line on an unknown verb, a missing argument or an unreadable spec path, before any network call.
+working directory unless `--spec <path>` names another, `serve <model>`, which reads the bundled model table, and
+`spend`, which reads the provider's billing and the ledger; `down --serve <model>` SHALL tear down the session
+`serve` left for that model; and SHALL exit `2` with a usage line on an unknown verb, a missing argument or an
+unreadable spec path, before any network call.
 
 #### Scenario: an unknown verb exits 2
 - **Key:** `cli:verbs:unknown-verb-exits-2`
@@ -31,6 +32,11 @@ usage line on an unknown verb, a missing argument or an unreadable spec path, be
 - **Key:** `cli:verbs:serve-unknown-model-exits-2`
 - **WHEN** `gpunit serve no-such-model --ceiling 1h` runs
 - **THEN** it exits `2`, names the models the table holds, and makes no request
+
+#### Scenario: spend with a bad window exits 2
+- **Key:** `cli:verbs:spend-bad-days-exits-2`
+- **WHEN** `gpunit spend --days 0` runs
+- **THEN** it exits `2`, names `--days`, and makes no request
 
 ### Requirement: The exit codes say what happened
 

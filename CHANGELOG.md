@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-12
+
+### Added
+
+- A ledger at `~/.local/state/gpunit/ledger.jsonl` names each pod `up` creates and `down` sweeps, with its project,
+  so its billing finds the project after teardown; a ledger that cannot be written warns and blocks nothing.
+- The provider seam reads the pods' and the network volumes' billing in UTC day buckets, each record's
+  `totalAmount` as RunPod charged it; an answer that does not read is `Lost`.
+- `gpunit spend [--days N] [--json]` reports the last N whole UTC days' billing, N from 1 to 3660: one line per
+  project, the pods the ledger does not name, each volume, and the total; an unreadable billing or ledger exits `1`,
+  never a table of zeros.
+- README's *What it cost* explains the report, `unattributed` and the day still billing; `CLAUDE.md` names
+  `ledger.py` and `spend.py`.
+- `live/spend_last_run.txt`: `gpunit spend --days 7`'s total matches the RunPod console's to the cent, $1.80.
+
 ## [0.3.1] - 2026-10-12
 
 ### Fixed

@@ -1,4 +1,4 @@
-"""Run each session test in its own directory, with OpenSSH stubbed and time faked."""
+"""Run each session test in its own directory and home, OpenSSH stubbed, time faked."""
 
 import os
 import socket
@@ -43,6 +43,14 @@ echo "$@" >> "${GPUNIT_TEST_SSH_LOG:-/dev/null}"
 [ -z "${GPUNIT_TEST_SSH_EXIT:-}" ] || exit 1
 exec sleep 30
 """
+
+
+@pytest.fixture(autouse=True)
+def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    # No test may write the operator's ledger or serve state (0007 design D5).
+    place = tmp_path / "home"
+    monkeypatch.setenv("HOME", str(place))
+    return place
 
 
 @pytest.fixture

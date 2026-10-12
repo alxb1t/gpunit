@@ -1,0 +1,31 @@
+2026-10-12 — gpunit spend --days 7, 0007-spend
+
+The RunPod console, Billing explorer, Summary, Oct 6 → 12, Daily (UTC):
+
+Oct 12, 2026  $1.008
+Oct 11, 2026  $0.047
+Oct 10, 2026  $0.515
+Oct 9, 2026   $0.054
+Oct 8, 2026   $0.058
+Oct 7, 2026   $0.05
+Oct 6, 2026   $0.064
+total         $1.796
+
+The run just after the console was read:
+
+$ uv run gpunit spend --days 7
+spend, 2026-10-06 → 2026-10-12 (UTC)
+pods      unattributed         17 pods $1.47
+storage   db7sc8cild                   $0.31
+storage   3vh5895lws                   $0.02
+storage   klklbwxdhu                   $0.00
+total                                  $1.80
+2026-10-12T17:18:09Z the current UTC day is still being billed; its figures can change
+
+totals equal to the cent: gpunit $1.80, console $1.796
+
+The closed days agree: Oct 6 → 11, from the records gpunit read, sum to $0.78768; the console's rows sum to
+$0.788. Oct 12 is still billing, and the console runs an hour behind.
+
+An earlier run, at 17:11:27Z, read $1.79 for the total, before Oct 12 had grown; it was compared with the same
+console read and differed by Oct 12 alone: $1.0053 then, $1.008 in the console.

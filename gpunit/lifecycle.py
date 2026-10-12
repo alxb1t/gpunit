@@ -9,7 +9,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from typing import NoReturn, TypeVar
 
-from gpunit import log
+from gpunit import ledger, log
 from gpunit.provider import (
     DELETED,
     Lost,
@@ -179,6 +179,8 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
     for pod_id, pod_status in listed:
         if record is not None and pod_id == record.id:
             continue
+        # Before the delete: a pod the delete fails on is still named.
+        ledger.record(spec.project, pod_id, None, spec.image)
         code = provider.delete(pod_id)
         if code in DELETED:
             log.say(f"swept pod {pod_id} ({pod_status})")
@@ -248,9 +250,10 @@ def _create(
     for card in cards:
         log.say(f"creating on {card}")
         try:
-            return provider.create(spec, card, pubkey, spec.ceiling_s)
+            pod_id = provider.create(spec, card, pubkey, spec.ceiling_s)
         except Refused as refusal:
             log.say(str(refusal))
+            continue
         except Lost as lost:
             log.say(str(lost))
             log.say(f"the create's outcome is unknown: a {pod_name(spec.project)}")
@@ -258,6 +261,8 @@ def _create(
                 "pod may exist and bill; run gpunit down, which finds and deletes it"
             )
             raise
+        ledger.record(spec.project, pod_id, card, spec.image)
+        return pod_id
     return None
 
 

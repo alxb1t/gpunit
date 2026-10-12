@@ -17,9 +17,11 @@ from gpunit.provider import (
     GpuInfo,
     Lost,
     NoImage,
+    PodCost,
     PodInfo,
     Refused,
     Unknown,
+    VolumeCost,
     VolumeInfo,
     pod_name,
 )
@@ -185,6 +187,29 @@ class RunPod:
             pass  # what arrived before the fault is what was read
         return lines
 
+    def pod_billing(self, start: str, end: str) -> list[PodCost]:
+        """Return each pod's charge per UTC day in `[start, end)`; raise `Lost`."""
+        records = self._billing("pods", "podId", start, end)
+        return [PodCost(pod_id, day, amount) for pod_id, day, amount in records]
+
+    def volume_billing(self, start: str, end: str) -> list[VolumeCost]:
+        """Return each volume's charge per UTC day in `[start, end)`; raise `Lost`."""
+        records = self._billing("network-volumes", "networkVolumeId", start, end)
+        return [VolumeCost(volume, day, amount) for volume, day, amount in records]
+
+    def _billing(
+        self, kind: str, key: str, start: str, end: str
+    ) -> list[tuple[str, str, float]]:
+        query = {"bucketSize": "day", "startTime": start, "endTime": end}
+        answer = self._call("GET", f"/billing/{kind}?{urllib.parse.urlencode(query)}")
+        try:
+            return [
+                (str(record[key]), str(record["startTime"]), _amount(record))
+                for record in answer.json(200)["records"]
+            ]
+        except (TypeError, KeyError, ValueError):
+            raise Lost(_report(f"{kind} billing read", answer)) from None
+
     def list(self, project: str, image: str) -> list[tuple[str, str]]:
         """Return (id, status) of each live project pod; raise `Lost` or `NoImage`."""
         name, repo = pod_name(project), image.split("@", 1)[0]
@@ -259,6 +284,14 @@ def _quote(part: str) -> str:
 def _ours(pod_image: str, repo: str) -> bool:
     # A look-alike, one that only begins with the repository's name, is not ours.
     return pod_image == repo or pod_image.startswith((repo + "@", repo + ":"))
+
+
+def _amount(record: dict[str, object]) -> float:
+    amount = record["totalAmount"]
+    # A string or a bool is no amount the provider charged.
+    if isinstance(amount, bool) or not isinstance(amount, int | float):
+        raise ValueError(amount)
+    return float(amount)
 
 
 def _event_line(raw: bytes) -> list[str]:

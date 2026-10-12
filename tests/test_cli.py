@@ -59,6 +59,27 @@ def test_serve_without_a_ceiling_exits_2_naming_it(
     assert "--ceiling" in capsys.readouterr().err
 
 
+@pytest.mark.spec("cli:verbs:spend-bad-days-exits-2")
+@pytest.mark.parametrize(
+    ("days", "code"),
+    [("0", 2), ("-1", 2), ("two", 2), ("1000000", 2), ("1", 0), ("3660", 0)],
+    ids=["zero", "negative", "word", "past-any-date", "twin-one", "ten-years"],
+)
+def test_spend_with_a_bad_window_exits_2_naming_days(
+    days: str,
+    code: int,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # No gpunit.toml here: spend reads none.
+    monkeypatch.chdir(tmp_path)
+    provider = NO_REQUESTS if code == 2 else FakeProvider()
+
+    assert gpunit(["spend", "--days", days], provider=provider) == code
+    assert ("--days" in capsys.readouterr().err) is (code == 2)
+
+
 @pytest.mark.spec("cli:verbs:serve-unknown-model-exits-2")
 @pytest.mark.parametrize(
     "argv",

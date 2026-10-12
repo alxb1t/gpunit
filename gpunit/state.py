@@ -1,4 +1,4 @@
-"""Read and write the session's files under `.gpunit/` in the directory it is given."""
+"""Read and write the session's files under `.gpunit/`, and name gpunit's home state."""
 
 import json
 import os
@@ -7,6 +7,14 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 DIR = ".gpunit"
+
+
+def home_state() -> Path:
+    """Return gpunit's directory under the home of whoever runs it, from any directory.
+
+    e.g. HOME=/home/ada → /home/ada/.local/state/gpunit
+    """
+    return Path.home() / ".local" / "state" / "gpunit"
 
 
 @dataclass(frozen=True)

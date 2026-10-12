@@ -1,0 +1,46 @@
+{
+  "records": [
+    {
+      "podId": "dnlnasr56lt2uq",
+      "startTime": "2026-10-07T00:00:00Z",
+      "endTime": "2026-10-08T00:00:00Z",
+      "gpuAmount": 0.00341992499306798,
+      "cpuAmount": 0,
+      "diskAmount": 0,
+      "totalAmount": 0.00341992499306798
+    },
+    {
+      "podId": "gypz8tpe5pbl50",
+      "startTime": "2026-10-10T00:00:00Z",
+      "endTime": "2026-10-11T00:00:00Z",
+      "gpuAmount": 0.09161920100450516,
+      "cpuAmount": 0,
+      "diskAmount": 0.000347222201526165,
+      "totalAmount": 0.09196642320603132
+    },
+    {
+      "podId": "fh5qgxf87eu6nr",
+      "startTime": "2026-10-12T00:00:00Z",
+      "endTime": "2026-10-13T00:00:00Z",
+      "gpuAmount": 0.5273639969527721,
+      "cpuAmount": 0,
+      "diskAmount": 0.003124999813735485,
+      "totalAmount": 0.5304889967665076
+    }
+  ],
+  "metadata": {
+    "query": {
+      "startTime": "2026-10-06T00:00:00Z",
+      "endTime": "2026-10-13T00:00:00Z",
+      "bucketSize": "day"
+    },
+    "recordCount": 3,
+    "uniquePodCount": 3,
+    "totals": {
+      "gpuAmount": 0.6224031229503448,
+      "cpuAmount": 0,
+      "diskAmount": 0.00347222201526165,
+      "totalAmount": 0.6258753449656069
+    }
+  }
+}
