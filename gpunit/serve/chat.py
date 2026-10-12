@@ -12,6 +12,7 @@ from gpunit import log
 # Per read, not per answer: a long answer streams for as long as it takes.
 READ_S = 300
 EXIT = "/exit"
+LOST = "the server stopped answering; the pod's ceiling may have ended it"
 
 
 def run(
@@ -61,6 +62,10 @@ def run(
         )
         try:
             answer = _stream(opener, request, write)
+        except ConnectionError:
+            # A closed tunnel raises `RemoteDisconnected`, an HTTPException.
+            write("\n")
+            log.refuse(LOST)
         except (urllib.error.HTTPError, http.client.HTTPException, ValueError) as fault:
             # The server answered: the turn is dropped, as if it was never sent.
             write("\n")
@@ -68,9 +73,7 @@ def run(
             continue
         except OSError:
             write("\n")
-            log.refuse(
-                "the server stopped answering; the pod's ceiling may have ended it"
-            )
+            log.refuse(LOST)
         write("\n")
         messages = [*turn, {"role": "assistant", "content": answer}]
 

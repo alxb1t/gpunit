@@ -1,3 +1,4 @@
+import http.client
 import json
 import threading
 import urllib.error
@@ -174,6 +175,35 @@ def test_a_server_that_cannot_be_reached_ends_the_chat(
             read,
             lambda text: None,
             opener=FakeOpener(refused),
+        )
+
+    assert asked == ["> "]
+    assert "the server stopped answering" in capsys.readouterr().err
+
+
+@pytest.mark.spec("serve:chat:stopped-server-ends")
+def test_a_tunnel_that_closes_without_an_answer_ends_the_chat(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # `ssh -L` accepts the local connection, then closes it when the pod side is gone.
+    asked: list[str] = []
+
+    def read(prompt: str) -> str:
+        asked.append(prompt)
+        return "hi"
+
+    closed = http.client.RemoteDisconnected(
+        "Remote end closed connection without response"
+    )
+    with pytest.raises(log.Refusal):
+        chat.run(
+            "http://127.0.0.1:1/v1",
+            KEY,
+            "qwen3-4b",
+            False,
+            read,
+            lambda text: None,
+            opener=FakeOpener(closed),
         )
 
     assert asked == ["> "]

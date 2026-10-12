@@ -69,8 +69,8 @@ None.
 - **Consumers:** `boot.sh`'s bytes change by a comment, so its sha256 at `v0.3.1` differs; an image pinned at an older
   tag is unaffected.
 - **Dependencies:** none ([Dependencies](design.md#dependencies)).
-- **Spend:** `make live` and `make live-dead` rent a pod each, for at most ten minutes and two, by hand
-  ([D6](design.md#d6)).
+- **Spend:** `make live` and `make live-dead` rent a pod each, by hand: `make live` for at most its 10 m ceiling plus
+  the 420 s wait for SSH, `make live-dead` for at most its 120 s wait ([D6](design.md#d6)).
 
 ## Not in this change
 

@@ -79,8 +79,9 @@ poll is made. `DEAD = ("EXITED", "ERROR", "TERMINATED")` is a constant in `lifec
 ### D3
 
 - **`0005·R2`:** in `chat.run`, a `urllib.error.HTTPError` (the server answered) and `ValueError` and `HTTPException`
-  keep dropping the turn; any other `OSError` — refused, reset, timed out — calls `log.refuse("the server stopped
-  answering; the pod's ceiling may have ended it")`, which ends the chat and closes the session.
+  keep dropping the turn; a `ConnectionError`, caught first because `RemoteDisconnected` (a tunnel closed with no
+  answer) is also an `HTTPException`, and any other `OSError` — refused, reset, timed out — call `log.refuse("the
+  server stopped answering; the pod's ceiling may have ended it")`, which ends the chat and closes the session.
 - **`0005·R6`:** `serve` asks the OS for a free local port (`socket.bind(("127.0.0.1", 0))`) before building the spec;
   `Row.spec(ceiling_s, volume, max_hourly, key, local_port)` forwards remote `PORT` to it; `down` passes `PORT`.
 - **`0005·R7`:** `_agree` catches `KeyboardInterrupt` around `ask`, writes a newline, says `not rented` and re-raises;
