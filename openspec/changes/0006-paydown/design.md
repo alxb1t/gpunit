@@ -57,7 +57,7 @@ lines.
 ### D1
 
 `provider.py` gains `_BOOT_STEP = re.compile(r"^\S+ step: the command\s*$")`. `fingerprint(lines)` walks the lines: a
-key line sets `pending`; a step line moves `pending` to `accepted` and clears it; the result is `accepted`. A key line
+key line sets `pending`; a step line copies `pending` to `accepted`; the result is `accepted`. A key line
 no step follows is never accepted, and a later boot's key replaces `pending`. The read in `_verify_host_key` is
 unchanged: it already asks the tail, then the log since the create. The residual risk — a command that prints the key
 line and then a step line itself — is named in the proposal; a command that can do so is trusted with the key by

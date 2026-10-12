@@ -29,7 +29,7 @@ The host key, the `serve` fixes, the wait, the handover, then the metered proof 
 - [x] 2.2 Make `_agree` say `not rented` on `KeyboardInterrupt` and re-raise it, and `outcome` in `gpunit/run.py` return `130` for it, per [D3](design.md#d3); in `tests/test_serve_session.py` bind `serve:price:interrupt-is-no` and `cli:exits:serve-signal-is-128-plus-n`.
   Verify: `grep -c 'except KeyboardInterrupt' gpunit/run.py` prints `1`, and `grep -c -E 'serve:price:interrupt-is-no|cli:exits:serve-signal-is-128-plus-n' tests/test_serve_session.py` prints `2`.
 - [x] 2.3 In `gpunit/serve/chat.py`, end the chat with `log.refuse` when a request cannot connect and keep dropping the turn on an HTTP error, per [D3](design.md#d3); in `tests/test_serve_chat.py` bind `serve:chat:stopped-server-ends` and `serve:chat:server-error-drops-the-turn`.
-  Verify: `grep -c 'the server stopped answering' gpunit/serve/chat.py` prints `1`, and `grep -c -E 'serve:chat:(stopped-server-ends|server-error-drops-the-turn)' tests/test_serve_chat.py` prints `2`.
+  Verify: `grep -c 'the server stopped answering' gpunit/serve/chat.py` prints `1`, and `grep -o -E 'serve:chat:(stopped-server-ends|server-error-drops-the-turn)' tests/test_serve_chat.py | sort -u | wc -l | tr -d ' '` prints `2`.
 
 ## 3 — The wait
 
