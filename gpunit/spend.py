@@ -10,7 +10,6 @@ from decimal import ROUND_HALF_UP, Decimal
 from gpunit import ledger, log
 from gpunit.provider import Lost, PodCost, Provider, VolumeCost
 
-DAYS = 7
 UNATTRIBUTED = "unattributed"
 STILL_BILLING = "the current UTC day is still being billed; its figures can change"
 CENT = Decimal("0.01")
@@ -18,7 +17,7 @@ CENT = Decimal("0.01")
 
 @dataclass(frozen=True)
 class Line:
-    """One project's pods, or one volume: its name, its pod count and its amount."""
+    """One project's pods: its name, its pod count and its amount."""
 
     name: str
     pods: int
@@ -33,8 +32,15 @@ class Report:
     last: date
     projects: list[Line]
     unattributed: Line
-    storage: list[Line]
-    total: Decimal
+    storage: list[tuple[str, Decimal]]
+
+    @property
+    def total(self) -> Decimal:
+        """Return the sum of the unrounded amounts; it is rounded once, when printed."""
+        lines = [*self.projects, self.unattributed]
+        return sum((line.amount for line in lines), Decimal()) + sum(
+            (amount for _, amount in self.storage), Decimal()
+        )
 
 
 def utc_now() -> datetime:
@@ -81,19 +87,13 @@ def build(
     by_project: dict[str, list[Decimal]] = defaultdict(list)
     for pod_id, amount in by_pod.items():
         by_project[owners.get(pod_id, UNATTRIBUTED)].append(amount)
-    stray = by_project.pop(UNATTRIBUTED, [])
-    return Report(
-        first,
-        last,
-        _ranked(
-            Line(name, len(sums), sum(sums, Decimal()))
-            for name, sums in by_project.items()
-        ),
-        Line(UNATTRIBUTED, len(stray), sum(stray, Decimal())),
-        _ranked(Line(volume, 0, amount) for volume, amount in by_volume.items()),
-        # The unrounded sums: the total is rounded once, when printed.
-        sum(by_pod.values(), Decimal()) + sum(by_volume.values(), Decimal()),
-    )
+    lines = {
+        name: Line(name, len(sums), sum(sums, Decimal()))
+        for name, sums in by_project.items()
+    }
+    stray = lines.pop(UNATTRIBUTED, Line(UNATTRIBUTED, 0, Decimal()))
+    storage = sorted(by_volume.items(), key=lambda item: (-item[1], item[0]))
+    return Report(first, last, _ranked(lines.values()), stray, storage)
 
 
 def render(report: Report) -> str:
@@ -102,8 +102,8 @@ def render(report: Report) -> str:
     for line in [*report.projects, report.unattributed]:
         count = f"{line.pods} pod{'' if line.pods == 1 else 's'}"
         rows.append(f"{'pods':<10}{line.name:<21}{count:<8}{_dollars(line.amount)}")
-    for line in report.storage:
-        rows.append(f"{'storage':<10}{line.name:<21}{'':<8}{_dollars(line.amount)}")
+    for volume, amount in report.storage:
+        rows.append(f"{'storage':<10}{volume:<21}{'':<8}{_dollars(amount)}")
     rows.append(f"{'total':<39}{_dollars(report.total)}")
     return "\n".join(rows)
 
@@ -122,8 +122,8 @@ def to_json(report: Report) -> dict[str, object]:
             "amount": _cents(report.unattributed.amount),
         },
         "storage": [
-            {"volume": line.name, "amount": _cents(line.amount)}
-            for line in report.storage
+            {"volume": volume, "amount": _cents(amount)}
+            for volume, amount in report.storage
         ],
         "total": _cents(report.total),
     }

@@ -25,10 +25,8 @@ NOT_YET = urllib.error.URLError(ConnectionRefusedError(61, "Connection refused")
 
 
 @pytest.fixture
-def home(tmp_path: Path, cwd: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    place = tmp_path / "home"
-    monkeypatch.setenv("HOME", str(place))
-    return place
+def home(isolated_home: Path, cwd: Path) -> Path:
+    return isolated_home
 
 
 def no_question(prompt: str) -> NoReturn:

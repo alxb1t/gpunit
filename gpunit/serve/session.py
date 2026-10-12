@@ -14,7 +14,7 @@ from gpunit.provider import Lost, Provider, Unknown
 from gpunit.run import outcome
 from gpunit.serve import chat, table
 from gpunit.spec import Spec
-from gpunit.state import State
+from gpunit.state import State, home_state
 
 WAIT_S = table.WAIT_S
 POLL_S = 5
@@ -31,7 +31,7 @@ def home(name: str) -> Path:
 
     e.g. "qwen3-4b" → ~/.local/state/gpunit/serve/qwen3-4b
     """
-    return Path.home() / ".local" / "state" / "gpunit" / "serve" / name
+    return home_state() / "serve" / name
 
 
 def serve(

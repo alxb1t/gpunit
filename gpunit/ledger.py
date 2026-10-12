@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 
 from gpunit import log
+from gpunit.state import home_state
 
 
 @dataclass(frozen=True)
@@ -21,7 +22,7 @@ class Entry:
 
 def path() -> Path:
     """Return the ledger file, under the home directory of whoever runs gpunit."""
-    return Path.home() / ".local" / "state" / "gpunit" / "ledger.jsonl"
+    return home_state() / "ledger.jsonl"
 
 
 def record(project: str, pod_id: str, card: str | None, image: str) -> None:

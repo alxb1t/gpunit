@@ -27,8 +27,7 @@ def report(
     capsys: pytest.CaptureFixture[str], provider: FakeProvider, *argv: str
 ) -> tuple[str, str]:
     assert gpunit(["spend", *argv], provider=provider) == 0
-    out, err = capsys.readouterr()
-    return out, err
+    return capsys.readouterr()
 
 
 @pytest.mark.spec("spend:report:by-project")

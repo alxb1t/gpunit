@@ -7,7 +7,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import NoReturn
 
-from gpunit import lifecycle, log, run, spend
+from gpunit import lifecycle, log, run
 from gpunit.provider import Lost, Provider
 from gpunit.runpod import RunPod
 from gpunit.serve import table
@@ -21,6 +21,7 @@ USAGE = (
 )
 
 FAILED, USAGE_FAULT = 1, 2
+DAYS = 7
 
 
 class Usage(Exception):
@@ -51,7 +52,7 @@ def _parser() -> _Parser:
     serve.add_argument("--yes", action="store_true")
     serve.add_argument("--think", action="store_true")
     report = verbs.add_parser("spend")
-    report.add_argument("--days", type=_days, default=spend.DAYS)
+    report.add_argument("--days", type=_days, default=DAYS)
     report.add_argument("--json", action="store_true")
     return parser
 
@@ -94,9 +95,9 @@ def parse(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
     if args.verb != "run" and command is not None:
         raise Usage(f"gpunit {args.verb} takes no command after --")
     # `serve` and `down --serve` name a model, whose spec is its table row;
-    # `spend` reads only the billing and the ledger.
+    # `spend` has no `--spec`: it reads only the billing and the ledger.
     args.model = getattr(args, "model", None)
-    if args.model is not None or args.verb == "spend":
+    if args.model is not None or not hasattr(args, "spec"):
         return args, []
     if not args.spec.is_file() or not os.access(args.spec, os.R_OK):
         raise Usage(f"cannot read the spec {args.spec}")
@@ -131,6 +132,9 @@ def _run(argv: list[str], provider: Provider | None) -> int:
         if args.model is not None:
             return _serve(args, lazy)
         if args.verb == "spend":
+            # Here, not at the top: `decimal` would slow every other verb's start.
+            from gpunit import spend
+
             return spend.spend(lazy(), args.days, as_json=args.json)
         spec = load_spec(args.spec)
         match args.verb:
