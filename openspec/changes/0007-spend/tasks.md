@@ -9,7 +9,7 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 - [x] 2 — The billing seam
 - [x] 3 — The report
 - [x] 4 — The handover
-- [ ] 5 — ⚠️ **HUMAN** — compare the total with the console
+- [x] 5 — ⚠️ **HUMAN** — compare the total with the console
 
 ## 1 — The ledger
 
@@ -41,5 +41,5 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 ## 5 — ⚠️ **HUMAN** — compare the total with the console
 
-- [ ] 5.1 **HUMAN** — with `RUNPOD_API_KEY` set, run `uv run gpunit spend --days 7`; read the RunPod console's billing for the same UTC days; write both totals, and the word `equal` when they are, to `live/spend_last_run.txt` under a header `<date> — gpunit spend --days 7, 0007-spend`. A difference is a halt: say so, and keep the figures.
+- [x] 5.1 **HUMAN** — with `RUNPOD_API_KEY` set, run `uv run gpunit spend --days 7`; read the RunPod console's billing for the same UTC days; write both totals, and the word `equal` when they are, to `live/spend_last_run.txt` under a header `<date> — gpunit spend --days 7, 0007-spend`. A difference is a halt: say so, and keep the figures.
   Verify: `grep -c '^totals equal' live/spend_last_run.txt` prints `1`.
