@@ -6,7 +6,7 @@ The row, the check, the handover, then the one metered proof, per [design](desig
 ## Progress
 
 - [x] 1 — The row
-- [ ] 2 — The check
+- [x] 2 — The check
 - [ ] 3 — The handover
 - [ ] 4 — ⚠️ **HUMAN · METERED** — make live-serve MODEL=qwen3.8-27b
 
@@ -19,9 +19,9 @@ The row, the check, the handover, then the one metered proof, per [design](desig
 
 ## 2 — The check
 
-- [ ] 2.1 Write `live/tool_call.py` per [D3](design.md#d3); in `tests/test_tool_call.py` bind the four `serve:tools:*` scenarios against a local `http.server` that answers each case.
+- [x] 2.1 Write `live/tool_call.py` per [D3](design.md#d3); in `tests/test_tool_call.py` bind the four `serve:tools:*` scenarios against a local `http.server` that answers each case.
   Verify: `grep -o 'serve:tools:[a-z-]*' tests/test_tool_call.py | sort -u | wc -l | tr -d ' '` prints `4`, and `grep -c 'sys.argv' live/tool_call.py` prints a number of at least `1`.
-- [ ] 2.2 Give the `Makefile` `MODEL ?= qwen3-4b`, use it in `live-serve`, and run `live/tool_call.py` beside the `curl`, per [D4](design.md#d4).
+- [x] 2.2 Give the `Makefile` `MODEL ?= qwen3-4b`, use it in `live-serve`, and run `live/tool_call.py` beside the `curl`, per [D4](design.md#d4).
   Verify: `grep -c 'qwen3-4b' Makefile` prints `1`, and `make -n live-serve MODEL=qwen3.8-27b | grep -c 'tool_call.py'` prints a number of at least `1`.
 
 ## 3 — The handover

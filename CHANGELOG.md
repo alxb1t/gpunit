@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The model table's second row, `qwen3.8-27b`: `Qwen/Qwen3.8-27B-FP8` at a pinned revision, on a 48 GB card, with
   the `qwen3_coder` tool-call parser and the language model alone, so `serve` offers a model large enough for an agent.
+- `live/tool_call.py` sends one chat request with a function and passes only on a parseable call to it, the key read
+  from `OPENAI_API_KEY`; `make live-serve MODEL=<row>` runs it after the `curl`, so a live run proves a row's tools.
 
 ## [0.4.0] - 2026-10-12
 
