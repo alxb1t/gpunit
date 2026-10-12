@@ -114,7 +114,7 @@ image pinned by digest.
 laptop                                         pod (gpunit-vllm)
 gpunit serve qwen3-4b --ceiling 2h             boot.sh -- vllm serve, key required
  ├─ the price · [y/N]: nothing rented without y
- ├─ up · ssh -L 8000 ◀───────────────────────▶ vLLM on 127.0.0.1:8000
+ ├─ up · ssh -L <port> ◀─────────────────────▶ vLLM on 127.0.0.1:8000
  ├─ wait for /v1/models, at most 1200s
  ├─ the chat, or --api's two lines and a hold
  └─ down: /exit, end of input, Ctrl-C, or the ceiling
@@ -139,12 +139,14 @@ A warp is ...
   have 1200s, a `loading:` line from the pod's log comes every 30s, and past 1200s the session is torn down.
   `--volume <id>` keeps the weights on a network volume across sessions.
 - **The chat** streams each answer and keeps the conversation in memory. Thinking is off unless `--think`.
-  `/exit` or the end of input ends the session.
+  `/exit` or the end of input ends the session; so does a server that stops answering, as when the ceiling has
+  stopped the pod.
+- **The local port** `<port>` is a free one, picked before the price is asked.
 - **`--api`** prints two lines to stdout, then holds the session until Ctrl-C, or until the server has not
   answered for 60s, as when the ceiling has stopped the pod:
 
   ```sh
-  OPENAI_BASE_URL=http://127.0.0.1:8000/v1
+  OPENAI_BASE_URL=http://127.0.0.1:<port>/v1
   OPENAI_API_KEY=<a fresh key per session>
   ```
 

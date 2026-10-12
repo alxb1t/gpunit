@@ -6,7 +6,7 @@ The host key, the `serve` fixes, the wait, the handover, then the metered proof 
 ## Progress
 
 - [x] 1 — The host key
-- [ ] 2 — Serve
+- [x] 2 — Serve
 - [ ] 3 — The wait
 - [ ] 4 — The handover
 - [ ] 5 — ⚠️ **HUMAN · METERED** — make live-dead, make live
@@ -24,11 +24,11 @@ The host key, the `serve` fixes, the wait, the handover, then the metered proof 
 
 ## 2 — Serve
 
-- [ ] 2.1 Give `Row.spec` a `local_port` in `gpunit/serve/table.py`, pick a free one in `serve` before the price, pass `PORT` from `down`, and cut `NVIDIA RTX A4500` from `gpunit/serve/models.toml`, per [D3](design.md#d3); update `tests/test_serve_table.py` and bind `serve:wait:busy-local-port-is-skipped` in `tests/test_serve_session.py`.
+- [x] 2.1 Give `Row.spec` a `local_port` in `gpunit/serve/table.py`, pick a free one in `serve` before the price, pass `PORT` from `down`, and cut `NVIDIA RTX A4500` from `gpunit/serve/models.toml`, per [D3](design.md#d3); update `tests/test_serve_table.py` and bind `serve:wait:busy-local-port-is-skipped` in `tests/test_serve_session.py`.
   Verify: `grep -c 'A4500' gpunit/serve/models.toml` prints `0`, and `grep -c 'serve:wait:busy-local-port-is-skipped' tests/test_serve_session.py` prints `1`.
-- [ ] 2.2 Make `_agree` say `not rented` on `KeyboardInterrupt` and re-raise it, and `outcome` in `gpunit/run.py` return `130` for it, per [D3](design.md#d3); in `tests/test_serve_session.py` bind `serve:price:interrupt-is-no` and `cli:exits:serve-signal-is-128-plus-n`.
+- [x] 2.2 Make `_agree` say `not rented` on `KeyboardInterrupt` and re-raise it, and `outcome` in `gpunit/run.py` return `130` for it, per [D3](design.md#d3); in `tests/test_serve_session.py` bind `serve:price:interrupt-is-no` and `cli:exits:serve-signal-is-128-plus-n`.
   Verify: `grep -c 'except KeyboardInterrupt' gpunit/run.py` prints `1`, and `grep -c -E 'serve:price:interrupt-is-no|cli:exits:serve-signal-is-128-plus-n' tests/test_serve_session.py` prints `2`.
-- [ ] 2.3 In `gpunit/serve/chat.py`, end the chat with `log.refuse` when a request cannot connect and keep dropping the turn on an HTTP error, per [D3](design.md#d3); in `tests/test_serve_chat.py` bind `serve:chat:stopped-server-ends` and `serve:chat:server-error-drops-the-turn`.
+- [x] 2.3 In `gpunit/serve/chat.py`, end the chat with `log.refuse` when a request cannot connect and keep dropping the turn on an HTTP error, per [D3](design.md#d3); in `tests/test_serve_chat.py` bind `serve:chat:stopped-server-ends` and `serve:chat:server-error-drops-the-turn`.
   Verify: `grep -c 'the server stopped answering' gpunit/serve/chat.py` prints `1`, and `grep -c -E 'serve:chat:(stopped-server-ends|server-error-drops-the-turn)' tests/test_serve_chat.py` prints `2`.
 
 ## 3 — The wait

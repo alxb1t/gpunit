@@ -3,6 +3,7 @@
 import http.client
 import json
 import sys
+import urllib.error
 import urllib.request
 from collections.abc import Callable
 
@@ -23,7 +24,7 @@ def run(
     *,
     opener: urllib.request.OpenerDirector,
 ) -> None:
-    """Chat until `/exit` or the end of input, the conversation kept in memory."""
+    """Chat until `/exit`, the end of input or a lost server, kept in memory."""
     if read is None:
         try:
             # Gives `input` line editing and history where the platform has it.
@@ -60,11 +61,16 @@ def run(
         )
         try:
             answer = _stream(opener, request, write)
-        except (OSError, http.client.HTTPException, ValueError) as fault:
-            # The turn is dropped, so the next one is sent as if it never was.
+        except (urllib.error.HTTPError, http.client.HTTPException, ValueError) as fault:
+            # The server answered: the turn is dropped, as if it was never sent.
             write("\n")
             log.say(f"the model did not answer: {fault}")
             continue
+        except OSError:
+            write("\n")
+            log.refuse(
+                "the server stopped answering; the pod's ceiling may have ended it"
+            )
         write("\n")
         messages = [*turn, {"role": "assistant", "content": answer}]
 

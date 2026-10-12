@@ -1,5 +1,6 @@
 import os
 import signal
+import socket
 import urllib.error
 import urllib.request
 from collections.abc import Callable
@@ -11,18 +12,21 @@ import pytest
 from gpunit.provider import Provider
 from gpunit.serve import session, table
 from gpunit.spec import Spec
-from tests.fakes import KEY_LINE, STEP_LINE, FakeOpener, FakeProvider, _Response
+from tests.fakes import (
+    KEY_LINE,
+    STEP_LINE,
+    Answer,
+    FakeOpener,
+    FakeProvider,
+    _Response,
+)
 
 MODELS = (200, b'{"object": "list", "data": [{"id": "qwen3-4b"}]}')
 NOT_YET = urllib.error.URLError(ConnectionRefusedError(61, "Connection refused"))
 
 
 @pytest.fixture
-def home(
-    tmp_path: Path, cwd: Path, free_port: int, monkeypatch: pytest.MonkeyPatch
-) -> Path:
-    # A free port stands for 8000, which this machine may already serve.
-    monkeypatch.setattr(table, "PORT", free_port)
+def home(tmp_path: Path, cwd: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     place = tmp_path / "home"
     monkeypatch.setenv("HOME", str(place))
     return place
@@ -64,6 +68,11 @@ def created_spec(provider: FakeProvider) -> Spec:
     [(spec, *_)] = provider.named("create")
     assert isinstance(spec, Spec)
     return spec
+
+
+def local_port(provider: FakeProvider) -> int:
+    [port] = created_spec(provider).ports
+    return port.local
 
 
 @pytest.mark.spec("serve:price:no-by-default")
@@ -148,7 +157,7 @@ def test_the_agreed_price_covers_the_ceiling_and_the_ssh_wait(
 
 @pytest.mark.spec("serve:wait:awaited")
 def test_the_model_is_awaited_through_the_tunnel_with_the_key(
-    home: Path, free_port: int, capsys: pytest.CaptureFixture[str]
+    home: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     provider = FakeProvider()
     opener = FakeOpener(NOT_YET, (503, b""), NOT_YET, MODELS)
@@ -156,13 +165,14 @@ def test_the_model_is_awaited_through_the_tunnel_with_the_key(
     assert served(provider, opener) == 0
 
     key = created_spec(provider).env["VLLM_API_KEY"]
+    local = local_port(provider)
     assert len(opener.requests) == 4
     for request in opener.requests:
-        assert request.full_url == f"http://127.0.0.1:{free_port}/v1/models"
+        assert request.full_url == f"http://127.0.0.1:{local}/v1/models"
         assert request.get_header("Authorization") == f"Bearer {key}"
     assert opener.timeouts == [5, 5, 5, 5]
     err = capsys.readouterr().err
-    assert f"qwen3-4b answers on http://127.0.0.1:{free_port}/v1" in err
+    assert f"qwen3-4b answers on http://127.0.0.1:{local}/v1" in err
     assert provider.named("delete") == [("pod-1",)]
 
 
@@ -210,7 +220,11 @@ def test_down_serve_reads_the_models_record(home: Path, cwd: Path) -> None:
 
 
 class InterruptingOpener(FakeOpener):
-    """Answer the wait, then send this process `SIGINT` from the hold's first poll."""
+    """Answer the wait, then send this process `number` from the hold's first poll."""
+
+    def __init__(self, *answers: Answer, number: int = signal.SIGINT) -> None:
+        super().__init__(*answers)
+        self.number = number
 
     def open(
         self,
@@ -219,7 +233,7 @@ class InterruptingOpener(FakeOpener):
         timeout: float | None = None,
     ) -> _Response:
         if len(self.requests) == 1:
-            os.kill(os.getpid(), signal.SIGINT)
+            os.kill(os.getpid(), self.number)
         return super().open(fullurl, data, timeout)
 
 
@@ -228,7 +242,6 @@ class InterruptingOpener(FakeOpener):
 def test_api_prints_the_endpoint_and_holds_until_the_end(
     end: str,
     home: Path,
-    free_port: int,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     provider = FakeProvider()
@@ -243,7 +256,7 @@ def test_api_prints_the_endpoint_and_holds_until_the_end(
     out, err = capsys.readouterr()
     key = created_spec(provider).env["VLLM_API_KEY"]
     assert out.splitlines() == [
-        f"OPENAI_BASE_URL=http://127.0.0.1:{free_port}/v1",
+        f"OPENAI_BASE_URL=http://127.0.0.1:{local_port(provider)}/v1",
         f"OPENAI_API_KEY={key}",
     ]
     assert len(key) >= 32
@@ -283,4 +296,56 @@ def test_the_end_of_the_chat_closes_the_session(said: str, home: Path) -> None:
         return said
 
     assert served(provider, FakeOpener(MODELS), read=read) == 0
+    assert provider.named("delete") == [("pod-1",)]
+
+
+@pytest.mark.spec("serve:wait:busy-local-port-is-skipped")
+def test_a_busy_local_port_is_skipped_before_the_price(
+    home: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    provider = FakeProvider()
+    asked: list[str] = []
+
+    def ask(prompt: str) -> str:
+        asked.append(prompt)
+        return "y"
+
+    with socket.socket() as busy:
+        busy.bind(("127.0.0.1", 0))
+        busy.listen()
+        taken = busy.getsockname()[1]
+        # The served port answers on this machine already, as a local vLLM's 8000 would.
+        monkeypatch.setattr(table, "PORT", taken)
+        code = served(provider, FakeOpener(MODELS), yes=False, ask=ask)
+
+    [port] = created_spec(provider).ports
+    assert code == 0
+    assert len(asked) == 1
+    assert port.remote == taken
+    assert port.local != taken
+    assert f"answers on http://127.0.0.1:{port.local}/v1" in capsys.readouterr().err
+
+
+@pytest.mark.spec("serve:price:interrupt-is-no")
+def test_an_interrupt_at_the_question_rents_nothing(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    provider = FakeProvider()
+
+    def interrupted(prompt: str) -> str:
+        raise KeyboardInterrupt
+
+    assert served(provider, FakeOpener(MODELS), yes=False, ask=interrupted) == 130
+    assert provider.named("create") == []
+    err = capsys.readouterr().err
+    assert "not rented" in err
+    assert "Traceback" not in err
+
+
+@pytest.mark.spec("cli:exits:serve-signal-is-128-plus-n")
+def test_a_sigterm_on_the_held_endpoint_exits_143(home: Path) -> None:
+    provider = FakeProvider()
+    opener = InterruptingOpener(MODELS, MODELS, number=signal.SIGTERM)
+
+    assert served(provider, opener, api=True) == 143
     assert provider.named("delete") == [("pod-1",)]

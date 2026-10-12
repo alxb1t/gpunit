@@ -69,14 +69,14 @@ def test_a_row_becomes_the_sessions_spec() -> None:
     loaded = table.load()
     row = loaded.models["qwen3-4b"]
 
-    spec = row.spec(7200, None, None, "k" * 43)
+    spec = row.spec(7200, None, None, "k" * 43, 49152)
 
     assert spec.project == "serve-qwen3-4b"
     assert spec.image == loaded.image
     assert spec.gpus == row.gpus
     assert spec.vram_gb == 24
     assert spec.disk_gb == 40
-    assert spec.ports == (Port(remote=8000, local=8000),)
+    assert spec.ports == (Port(remote=8000, local=49152),)
     assert spec.ceiling_s == 7200
     # A cold host pulls vLLM's image before it maps port 22: the SSH wait covers it.
     assert spec.timeout_s == 1200

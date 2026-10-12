@@ -2,6 +2,8 @@
 
 import http.client
 import secrets
+import socket
+import sys
 import urllib.request
 from collections.abc import Callable
 from decimal import ROUND_UP, Decimal
@@ -49,7 +51,7 @@ def serve(
     """Serve `name` until the session ends; return the exit code `gpunit run` would."""
     row = table.load().models[name]
     key = secrets.token_urlsafe(32)
-    spec = row.spec(ceiling_s, volume, max_hourly, key)
+    spec = row.spec(ceiling_s, volume, max_hourly, key, _free_port())
     # No proxy: the endpoint is the tunnel's loopback side.
     opener = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
@@ -72,8 +74,15 @@ def serve(
 
 def down(name: str, provider: Provider) -> int:
     """Tear down the session `serve` left for `name`; return 0, or 1 on a fault."""
-    spec = table.load().models[name].spec(0, None, None, "")
+    spec = table.load().models[name].spec(0, None, None, "", table.PORT)
     return lifecycle.down(spec, provider, State(home(name)))
+
+
+def _free_port() -> int:
+    # Picked before the price, so a busy local port is never refused after a yes.
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]
 
 
 def _agree(
@@ -108,6 +117,11 @@ def _agree(
         answer = ask(f"rent {spec.project} for at most ${most}? [y/N] ")
     except EOFError:
         answer = ""
+    except KeyboardInterrupt:
+        # Ends the prompt's line, so the next line opens at its start.
+        print(file=sys.stderr, flush=True)
+        log.say("not rented")
+        raise
     if answer.strip().lower() not in ("y", "yes"):
         log.refuse("not rented")
 

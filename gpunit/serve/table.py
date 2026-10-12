@@ -47,6 +47,7 @@ class Row:
         volume: str | None,
         max_hourly: float | None,
         key: str,
+        local_port: int,
     ) -> Spec:
         """Return the session's spec: the row's cards and image, its model in `env`."""
         return Spec(
@@ -57,7 +58,7 @@ class Row:
             ceiling_s=ceiling_s,
             disk_gb=self.disk_gb,
             volume=volume,
-            ports=(Port(remote=PORT, local=PORT),),
+            ports=(Port(remote=PORT, local=local_port),),
             timeout_s=WAIT_S,
             max_hourly=max_hourly,
             env={
