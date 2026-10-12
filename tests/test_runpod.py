@@ -379,14 +379,21 @@ def test_volume_billing_takes_each_records_total_amount() -> None:
     "answer",
     [
         (500, fixture("problem.json")),
-        (200, b'{"records": [{"podId": "p", "startTime": "t"}]}'),
-        (200, b'{"records": [{"podId": "p", "startTime": "t", "totalAmount": "1"}]}'),
+        (200, b'{"records": [{"ID": "p", "startTime": "t"}]}'),
+        (200, b'{"records": [{"ID": "p", "startTime": "t", "totalAmount": "1"}]}'),
         urllib.error.URLError("down"),
     ],
     ids=["500", "no-amount", "string-amount", "transport"],
 )
-@pytest.mark.parametrize("read", ["pod_billing", "volume_billing"])
-def test_an_unreadable_billing_is_lost(answer: Answer, read: str) -> None:
+@pytest.mark.parametrize(
+    ("read", "key"),
+    [("pod_billing", b"podId"), ("volume_billing", b"networkVolumeId")],
+    ids=["pod_billing", "volume_billing"],
+)
+def test_an_unreadable_billing_is_lost(answer: Answer, read: str, key: bytes) -> None:
+    # Each record carries the id its read expects, so only the amount is at fault.
+    if isinstance(answer, tuple):
+        answer = (answer[0], answer[1].replace(b'"ID"', b'"' + key + b'"'))
     provider, _ = runpod(answer)
 
     with pytest.raises(Lost, match="billing read"):
