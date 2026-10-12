@@ -10,6 +10,7 @@ from gpunit.state import State
 from tests.fakes import (
     KEY_LINE,
     RUNNING,
+    STEP_LINE,
     FakeClock,
     FakeOpener,
     FakeProvider,
@@ -222,7 +223,9 @@ def test_a_refusal_is_one_stamped_stderr_line(
 def up_over_http(cwd: Path) -> FakeOpener:
     """Run `up` on RunPod over scripted HTTP answers; return the opener."""
     write_spec(cwd, VALID + 'volume = "v1"\nports = [8188]\n')
-    log = f"data: {json.dumps({'line': KEY_LINE})}\n".encode()
+    log = "".join(
+        f"data: {json.dumps({'line': line})}\n" for line in (KEY_LINE, STEP_LINE)
+    ).encode()
     opener = FakeOpener(
         (200, page([], None)),
         (200, fixture("volume.json")),

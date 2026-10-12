@@ -89,7 +89,8 @@ EOF
 echo "gpunit host key: $(ssh-keygen -lf "$HOST_KEY.pub" | awk '{print $2}')"
 
 # 5. Run: the command as a child, so a SIGTERM reaches it and its code is ours.
-#    The stop key is boot's: the command never sees it. env execs, so $! is the command.
+#    The stop key is boot's: the command does not inherit it, though a root command can
+#    still read it from boot's /proc. env execs, so $! is the command.
 say "step: the command"
 env -u RUNPOD_API_KEY "$@" &
 child=$!

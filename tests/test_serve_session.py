@@ -11,7 +11,7 @@ import pytest
 from gpunit.provider import Provider
 from gpunit.serve import session, table
 from gpunit.spec import Spec
-from tests.fakes import FakeOpener, FakeProvider, _Response
+from tests.fakes import KEY_LINE, STEP_LINE, FakeOpener, FakeProvider, _Response
 
 MODELS = (200, b'{"object": "list", "data": [{"id": "qwen3-4b"}]}')
 NOT_YET = urllib.error.URLError(ConnectionRefusedError(61, "Connection refused"))
@@ -170,7 +170,7 @@ def test_the_model_is_awaited_through_the_tunnel_with_the_key(
 def test_a_model_that_never_answers_is_refused_and_torn_down(
     home: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    provider = FakeProvider(logs=[["gpunit host key: SHA256:served"]] * 3 + [["50%"]])
+    provider = FakeProvider(logs=[[KEY_LINE, STEP_LINE]] * 3 + [["50%"]])
     # One answer a poll: 1200s at 5s, and the first.
     opener = FakeOpener(*[NOT_YET] * (1200 // 5 + 1))
 

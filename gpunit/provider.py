@@ -8,6 +8,8 @@ from gpunit.spec import Spec
 
 # Only a whole line counts, so nothing logged later can echo a key line in.
 _HOST_KEY = re.compile(r"^gpunit host key: (SHA256:[A-Za-z0-9+/]+)\s*$")
+# Boot says this after its key line, before the command starts; see 0006 design D1.
+_BOOT_STEP = re.compile(r"^\S+ step: the command\s*$")
 
 
 def pod_name(project: str) -> str:
@@ -23,13 +25,18 @@ DELETED = (200, 204)
 
 
 def fingerprint(lines: list[str]) -> str | None:
-    """Return the last host-key fingerprint the pod's log printed, or None.
+    """Return the last fingerprint boot printed before its command started, or None.
 
-    e.g. ["gpunit host key: SHA256:abc"] → "SHA256:abc"
+    e.g. ["gpunit host key: SHA256:abc", "<UTC> step: the command"] → "SHA256:abc"
     """
-    # The last wins: a restarted container prints a new key.
-    found = [match[1] for line in lines if (match := _HOST_KEY.match(line))]
-    return found[-1] if found else None
+    # The last boot wins: a restarted container prints a new key.
+    pending = accepted = None
+    for line in lines:
+        if match := _HOST_KEY.match(line):
+            pending = match[1]
+        elif pending and _BOOT_STEP.match(line):
+            pending, accepted = None, pending
+    return accepted
 
 
 @dataclass(frozen=True)

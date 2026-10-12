@@ -177,7 +177,7 @@ def test_the_logs_last_fingerprint_wins() -> None:
     assert "tail=5000&source=container" in opener.requests[0].full_url
     assert fingerprint(lines) == "SHA256:LastKeyWins+/111111111111111111111111111111"
     assert (
-        fingerprint(lines[:2]) == "SHA256:FirstKeyFromAnEarlierBoot0000000000000000000"
+        fingerprint(lines[:3]) == "SHA256:FirstKeyFromAnEarlierBoot0000000000000000000"
     )
     assert fingerprint(["echo gpunit host key: SHA256:abc"]) is None
 

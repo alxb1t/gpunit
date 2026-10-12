@@ -5,7 +5,7 @@ The host key, the `serve` fixes, the wait, the handover, then the metered proof 
 
 ## Progress
 
-- [ ] 1 — The host key
+- [x] 1 — The host key
 - [ ] 2 — Serve
 - [ ] 3 — The wait
 - [ ] 4 — The handover
@@ -13,13 +13,13 @@ The host key, the `serve` fixes, the wait, the handover, then the metered proof 
 
 ## 1 — The host key
 
-- [ ] 1.1 **HALT CHECK** — none of this change's fixes exists yet, and every card it closes is still in the backlog.
+- [x] 1.1 **HALT CHECK** — none of this change's fixes exists yet, and every card it closes is still in the backlog.
   Verify: `grep -c -E '_BOOT_STEP|DEAD = |local_port' gpunit/provider.py gpunit/lifecycle.py gpunit/serve/table.py | grep -v ':0$' | wc -l | tr -d ' '` prints `0`, and `grep -c -E '^- \*\*(0003·(R2|R3|R4|R5|S2)|0005·(R2|R3|R4|R5|R6|R7|R8|R9|R10)) ' .minions/backlog.md` prints `14`.
-- [ ] 1.2 In `gpunit/provider.py`, make `fingerprint` accept a key line only when boot's step line follows it, per [D1](design.md#d1); add `STEP_LINE` to `tests/fakes.py` and give `FakeProvider`'s default `logs` the key line then the step line.
+- [x] 1.2 In `gpunit/provider.py`, make `fingerprint` accept a key line only when boot's step line follows it, per [D1](design.md#d1); add `STEP_LINE` to `tests/fakes.py` and give `FakeProvider`'s default `logs` the key line then the step line.
   Verify: `grep -c '^_BOOT_STEP' gpunit/provider.py` prints `1`, and `grep -c 'STEP_LINE' tests/fakes.py` prints a number of at least `2`.
-- [ ] 1.3 Add the step line to the log lines of `tests/test_hostkey.py`, `tests/test_runpod.py`, `tests/test_library.py`, `tests/test_up.py` and `tests/test_serve_session.py`, and in `tests/test_hostkey.py` bind `session:hostkey:echoed-line-is-ignored` and `session:hostkey:key-without-step-waits`.
+- [x] 1.3 Add the step line to the log lines of `tests/test_hostkey.py`, `tests/test_runpod.py`, `tests/test_library.py`, `tests/test_up.py` and `tests/test_serve_session.py`, and in `tests/test_hostkey.py` bind `session:hostkey:echoed-line-is-ignored` and `session:hostkey:key-without-step-waits`.
   Verify: `grep -c -E 'session:hostkey:(echoed-line-is-ignored|key-without-step-waits)' tests/test_hostkey.py` prints `2`, and `uv run pytest -q tests/test_hostkey.py tests/test_runpod.py tests/test_library.py tests/test_up.py tests/test_serve_session.py` exits 0.
-- [ ] 1.4 Reword `boot/boot.sh`'s step-5 comment and `gpunit/state.py`'s docstring, per [D4](design.md#d4).
+- [x] 1.4 Reword `boot/boot.sh`'s step-5 comment and `gpunit/state.py`'s docstring, per [D4](design.md#d4).
   Verify: `grep -c 'never sees it' boot/boot.sh` prints `0`, and `grep -c 'working directory' gpunit/state.py` prints `0`.
 
 ## 2 — Serve
