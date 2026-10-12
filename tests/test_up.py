@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from gpunit.provider import GpuInfo, Lost, Refused, Unknown, VolumeInfo
+from gpunit.provider import GpuInfo, Lost, PodInfo, Refused, Unknown, VolumeInfo
 from gpunit.runpod import RunPod
 from gpunit.state import State
 from tests.fakes import (
@@ -145,6 +145,39 @@ def test_a_failed_poll_is_not_yet(cwd: Path) -> None:
     assert len(provider.named("get")) == 3
     record = State(cwd).read()
     assert record is not None and (record.host, record.port) == ("203.0.113.7", 40022)
+
+
+EXITED = PodInfo(status="EXITED", host=None, port=None)
+
+
+@pytest.mark.spec("session:wait:dead-pod-tears-down")
+def test_a_dead_pod_ends_the_wait(
+    cwd: Path, clock: FakeClock, capsys: pytest.CaptureFixture[str]
+) -> None:
+    starting = PodInfo(status="STARTING", host=None, port=None)
+    provider = FakeProvider(gets=[starting, EXITED, EXITED, RUNNING])
+
+    assert gpunit(["up"], provider=provider) == 1
+    assert len(provider.named("get")) == 3
+    assert provider.named("delete") == [("pod-1",)]
+    assert not (cwd / ".gpunit" / "pod").exists()
+    assert (
+        "pod pod-1 is EXITED: the container is not running" in capsys.readouterr().err
+    )
+    assert clock.now < 420
+
+
+@pytest.mark.spec("session:wait:one-dead-poll-is-not-yet")
+@pytest.mark.parametrize(
+    "gets",
+    [[EXITED, RUNNING], [EXITED, None, EXITED, RUNNING]],
+    ids=["then-mapped", "a-failed-read-between"],
+)
+def test_one_dead_poll_is_not_yet(cwd: Path, gets: list[PodInfo | None]) -> None:
+    provider = FakeProvider(gets=gets)
+
+    assert gpunit(["up"], provider=provider) == 0
+    assert len(provider.named("get")) == len(gets)
 
 
 @pytest.mark.spec("session:volume:unreadable-refuses")

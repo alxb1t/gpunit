@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `serve` forwards to a free local port picked before the price, so a busy 8000 is never refused after a `y`;
   Ctrl-C at the question says `not rented` and exits `130`; the chat ends when the server cannot be reached.
 - `qwen3-4b`'s cards are 24 GB only: the RTX A4500 (20 GB) gives way to the L4.
+- A pod `EXITED`, `ERROR` or `TERMINATED` on two polls in a row ends the wait and is torn down, so a container
+  that cannot start stops billing in seconds, not at `timeout`.
 
 ## [0.3.0] - 2026-10-12
 

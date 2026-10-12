@@ -7,7 +7,7 @@ The host key, the `serve` fixes, the wait, the handover, then the metered proof 
 
 - [x] 1 — The host key
 - [x] 2 — Serve
-- [ ] 3 — The wait
+- [x] 3 — The wait
 - [ ] 4 — The handover
 - [ ] 5 — ⚠️ **HUMAN · METERED** — make live-dead, make live
 
@@ -33,7 +33,7 @@ The host key, the `serve` fixes, the wait, the handover, then the metered proof 
 
 ## 3 — The wait
 
-- [ ] 3.1 In `gpunit/lifecycle.py`, add `DEAD` and make `_wait` tear down on two terminal polls in a row, per [D2](design.md#d2); in `tests/test_up.py` bind `session:wait:dead-pod-tears-down` and `session:wait:one-dead-poll-is-not-yet`.
+- [x] 3.1 In `gpunit/lifecycle.py`, add `DEAD` and make `_wait` tear down on two terminal polls in a row, per [D2](design.md#d2); in `tests/test_up.py` bind `session:wait:dead-pod-tears-down` and `session:wait:one-dead-poll-is-not-yet`.
   Verify: `grep -c '^DEAD = ' gpunit/lifecycle.py` prints `1`, and `grep -c -E 'session:wait:(dead-pod-tears-down|one-dead-poll-is-not-yet)' tests/test_up.py` prints `2`.
 
 ## 4 — The handover
