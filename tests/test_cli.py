@@ -62,8 +62,8 @@ def test_serve_without_a_ceiling_exits_2_naming_it(
 @pytest.mark.spec("cli:verbs:spend-bad-days-exits-2")
 @pytest.mark.parametrize(
     ("days", "code"),
-    [("0", 2), ("-1", 2), ("two", 2), ("1", 0)],
-    ids=["zero", "negative", "word", "twin-one"],
+    [("0", 2), ("-1", 2), ("two", 2), ("1000000", 2), ("1", 0), ("3660", 0)],
+    ids=["zero", "negative", "word", "past-any-date", "twin-one", "ten-years"],
 )
 def test_spend_with_a_bad_window_exits_2_naming_days(
     days: str,

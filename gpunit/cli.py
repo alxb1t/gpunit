@@ -21,7 +21,8 @@ USAGE = (
 )
 
 FAILED, USAGE_FAULT = 1, 2
-DAYS = 7
+# Ten years: a window past any date the calendar can hold is refused, not a traceback.
+DAYS, MAX_DAYS = 7, 3660
 
 
 class Usage(Exception):
@@ -62,9 +63,9 @@ def _days(text: str) -> int:
         days = int(text)
     except ValueError:
         days = 0
-    if days < 1:
+    if not 1 <= days <= MAX_DAYS:
         raise argparse.ArgumentTypeError(
-            f"{text!r} is not a whole number of days, 1 or more"
+            f"{text!r} is not a whole number of days, from 1 to {MAX_DAYS}"
         )
     return days
 

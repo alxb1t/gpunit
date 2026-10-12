@@ -41,12 +41,16 @@ def record(project: str, pod_id: str, card: str | None, image: str) -> None:
 def read() -> dict[str, Entry]:
     """Return each pod id's entry, the first line for an id winning.
 
-    A missing ledger is empty; a line that is not JSON or lacks a key is skipped.
+    A missing ledger is empty; a line that is not JSON, lacks a key, or holds a
+    field that is not a string (`card` may be null) is skipped. A ledger that
+    cannot be read refuses.
     """
     try:
         lines = path().read_text(encoding="utf-8").splitlines()
     except FileNotFoundError:
         return {}
+    except (OSError, UnicodeDecodeError, RuntimeError) as fault:
+        log.refuse(f"the ledger could not be read: {fault}")
     keys = [field.name for field in fields(Entry)]
     entries: dict[str, Entry] = {}
     for line in lines:
@@ -54,6 +58,11 @@ def read() -> dict[str, Entry]:
             raw = json.loads(line)
             entry = Entry(**{key: raw[key] for key in keys})
         except (ValueError, TypeError, KeyError):
+            continue
+        texts = (entry.id, entry.project, entry.image, entry.at)
+        if not all(isinstance(text, str) for text in texts) or not isinstance(
+            entry.card, str | None
+        ):
             continue
         entries.setdefault(entry.id, entry)
     return entries

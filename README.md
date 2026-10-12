@@ -171,7 +171,7 @@ A client in a container, such as an agent's box, needs two checks before it can 
 ## What it cost
 
 `gpunit spend` prints what the provider billed over the last 7 whole UTC days, each pod under its project.
-`--days N` picks another window, from 1; `--json` prints one object, its amounts in whole cents.
+`--days N` picks another window, from 1 to 3660; `--json` prints one object, its amounts in whole cents.
 
 ```console
 $ uv run gpunit spend --days 7
@@ -187,7 +187,7 @@ total                                  $1.79
   estimated from a price. The total sums the unrounded amounts, so a line's cents may miss it by a cent.
 - **A pod's project comes from the ledger**, `~/.local/state/gpunit/ledger.jsonl`: `up` adds a line when a create
   answers, and `down` when it sweeps a pod no record names. Each line holds the pod's id, the project, the card,
-  the image and the time; one that cannot be written warns and blocks nothing.
+  the image and the time; one that cannot be written warns and blocks nothing, one that cannot be read exits `1`.
 - **`unattributed`** counts the pods the ledger does not name: made before this version, on another machine, by a
   create whose answer was lost, or outside gpunit.
 - **`storage`** is one line per network volume, billed whether or not a pod runs; no project is given one.

@@ -77,7 +77,7 @@ amount the provider's own and never an estimate. Storage SHALL never be attribut
 ### Requirement: The window is whole UTC days
 
 The system SHALL report `--days N` whole UTC days ending with the current one, `N` being 7 when not given, and SHALL
-refuse an `N` under 1 before any request.
+refuse an `N` under 1 or over 3660 before any request.
 
 #### Scenario: the default window
 - **Key:** `spend:window:default-is-seven-days`

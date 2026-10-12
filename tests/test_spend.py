@@ -1,5 +1,6 @@
 import json
 from datetime import UTC, datetime
+from typing import NoReturn
 
 import pytest
 
@@ -146,6 +147,56 @@ def test_an_unreadable_billing_is_an_error_not_zeros(
     out, err = capsys.readouterr()
     assert out == ""
     assert "the billing could not be read" in err
+
+
+def _no_home() -> NoReturn:
+    raise RuntimeError("Could not determine home directory.")
+
+
+@pytest.mark.spec("spend:report:unreadable-billing-fails")
+@pytest.mark.parametrize("fault", ["not-utf8", "a-directory", "no-home"])
+def test_an_unreadable_ledger_is_an_error_not_a_table(
+    fault: str, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ledger.path().parent.mkdir(parents=True)
+    if fault == "not-utf8":
+        ledger.path().write_bytes(b"\xff\xfe\n")
+    elif fault == "a-directory":
+        ledger.path().mkdir()
+    else:
+        monkeypatch.setattr(ledger, "home_state", _no_home)
+    provider = FakeProvider(pod_costs=[PodCost("p1", DAY_1, 0.5)])
+
+    assert gpunit(["spend"], provider=provider) == 1
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert "refused: the ledger could not be read" in err
+
+
+@pytest.mark.spec("spend:report:unattributed")
+def test_a_ledger_line_whose_fields_are_not_strings_is_skipped(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    good = {"id": "p1", "project": "isekai", "card": None, "image": "i", "at": "t"}
+    ledger.path().parent.mkdir(parents=True)
+    ledger.path().write_text(
+        "\n".join(
+            json.dumps(line)
+            for line in (
+                {**good, "id": "p2", "project": None},
+                {**good, "id": "p3", "card": 5},
+                {**good, "id": 4},
+                good,
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    costs = [PodCost(pod_id, DAY_1, 0.25) for pod_id in ("p1", "p2", "p3", "4")]
+
+    out, _ = report(capsys, FakeProvider(pod_costs=costs))
+    assert "pods      isekai               1 pod   $0.25\n" in out
+    assert "pods      unattributed         3 pods  $0.75\n" in out
 
 
 @pytest.mark.spec("spend:window:default-is-seven-days")
