@@ -9,7 +9,7 @@ The host key, the `serve` fixes, the wait, the handover, then the metered proof 
 - [x] 2 — Serve
 - [x] 3 — The wait
 - [x] 4 — The handover
-- [ ] 5 — ⚠️ **HUMAN · METERED** — make live-dead, make live
+- [x] 5 — ⚠️ **HUMAN · METERED** — make live-dead, make live
 
 ## 1 — The host key
 
@@ -47,7 +47,7 @@ The host key, the `serve` fixes, the wait, the handover, then the metered proof 
 
 ## 5 — ⚠️ **HUMAN · METERED** — make live-dead, make live
 
-- [ ] 5.1 **HUMAN · METERED** — build `live/Dockerfile.dead` for `linux/amd64` from the repository root, push it as `ghcr.io/alxb1t/gpunit-live-dead`, and write its digest into `live/gpunit.dead.toml`, per [D6](design.md#d6).
+- [x] 5.1 **HUMAN · METERED** — build `live/Dockerfile.dead` for `linux/amd64` from the repository root, push it as `ghcr.io/alxb1t/gpunit-live-dead`, and write its digest into `live/gpunit.dead.toml`, per [D6](design.md#d6).
   Verify: `grep -c '@sha256:0000' live/gpunit.dead.toml` prints `0`.
-- [ ] 5.2 **HUMAN · METERED** — run `make live-dead`, then `make live`, with `RUNPOD_API_KEY` set; confirm through the RunPod console that no pod is left; append both tails to `live/last_run.txt` under a header `<date> — make live-dead, 0006-paydown` and `<date> — make live, 0006-paydown`. If `make live-dead` ends at its `timeout` with no `EXITED`, `ERROR` or `TERMINATED` line, halt and say so: the abort is unproven.
+- [x] 5.2 **HUMAN · METERED** — run `make live-dead`, then `make live`, with `RUNPOD_API_KEY` set; confirm through the RunPod console that no pod is left; append both tails to `live/last_run.txt` under a header `<date> — make live-dead, 0006-paydown` and `<date> — make live, 0006-paydown`. If `make live-dead` ends at its `timeout` with no `EXITED`, `ERROR` or `TERMINATED` line, halt and say so: the abort is unproven.
   Verify: `grep -c -E 'is (EXITED|ERROR|TERMINATED): the container is not running' live/last_run.txt` prints a number of at least `1`, and `grep -c '^2026-.*0006-paydown' live/last_run.txt` prints `2`.

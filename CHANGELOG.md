@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `make live-dead`: an image without `curl`, so boot refuses and the container exits, to show what RunPod reports
   for a dead boot. `live/price.py` takes a spec path and counts the wait for SSH with the ceiling.
+- The image `gpunit-live-dead` is built and pinned by digest; `make live-dead` saw RunPod report `EXITED`, and `up`
+  tore the pod down in 17s. `make live` passed on an A40; no pod was left ([live/last_run.txt](live/last_run.txt)).
 
 ### Changed
 
