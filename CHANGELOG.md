@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `gpunit serve` waits up to 1200s, not 420s, for the pod's SSH port, so a cold host's pull of vLLM's image no
   longer tears the session down before the model wait begins.
+- `gpunit serve`'s "at most" price counts the 1200s SSH wait with the ceiling: the pod bills while it pulls, and
+  boot arms the ceiling only after, so the figure agreed is no longer short by up to 20 minutes of the dearest card.
 
 ## [0.2.0] - 2026-10-09
 

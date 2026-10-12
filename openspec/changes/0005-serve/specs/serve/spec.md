@@ -32,8 +32,9 @@ field is missing, the revision is not a commit hash, or the image is not a diges
 ### Requirement: Nothing is rented before the operator agrees to the price
 
 The system SHALL print each placeable card's hourly price and the most the session can cost — the highest price times
-the ceiling — and SHALL ask `rent … for at most $X? [y/N]` before any create, renting nothing unless the answer is
-`y`; `--yes` SHALL skip the question.
+the ceiling plus the wait for SSH, since the pod bills while it pulls and boot arms the ceiling after — and SHALL ask
+`rent … for at most $X? [y/N]` before any create, renting nothing unless the answer is `y`; `--yes` SHALL skip the
+question.
 
 #### Scenario: no is the default
 - **Key:** `serve:price:no-by-default`
@@ -44,6 +45,11 @@ the ceiling — and SHALL ask `rent … for at most $X? [y/N]` before any create
 - **Key:** `serve:price:yes-skips`
 - **WHEN** `--yes` is given
 - **THEN** the prices and the maximum are printed and the session opens without a question
+
+#### Scenario: the maximum covers the wait for SSH
+- **Key:** `serve:price:covers-the-wait`
+- **WHEN** `qwen3-4b` is served with `--ceiling 30m` on a card at `$0.69/h`
+- **THEN** the question names at most `$0.58`, the price for the 1800 s ceiling plus the 1200 s wait for SSH
 
 ### Requirement: A served session waits for the model, within a bound
 

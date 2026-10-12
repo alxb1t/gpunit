@@ -80,7 +80,7 @@ def test_nothing_is_rented_unless_the_operator_says_y(
 
     code = served(provider, FakeOpener(MODELS), yes=False, ask=ask)
 
-    assert asked == ["rent serve-qwen3-4b for at most $1.38? [y/N] "]
+    assert asked == ["rent serve-qwen3-4b for at most $1.61? [y/N] "]
     if answer == "y":
         # The twin: a `y` rents.
         assert code == 0
@@ -112,8 +112,38 @@ def test_yes_prints_the_prices_and_opens_without_a_question(
 
     err = capsys.readouterr().err
     assert "price: NVIDIA RTX A5000 $0.69/h" in err
-    assert "at most $1.38 for 7200s" in err
+    assert "at most $1.61 for 7200s and a 1200s wait for SSH" in err
     assert len(provider.named("create")) == 1
+
+
+@pytest.mark.spec("serve:price:covers-the-wait")
+def test_the_agreed_price_covers_the_ceiling_and_the_ssh_wait(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    provider = FakeProvider()
+    asked: list[str] = []
+
+    def ask(prompt: str) -> str:
+        asked.append(prompt)
+        return "n"
+
+    code = session.serve(
+        "qwen3-4b",
+        1800,
+        api=False,
+        volume=None,
+        max_hourly=None,
+        yes=False,
+        think=False,
+        provider=provider,
+        ask=ask,
+        opener=FakeOpener(MODELS),
+    )
+
+    # The pull bills before boot arms the ceiling: $0.69/h × (1800s + 1200s), up.
+    assert code == 1
+    assert asked == ["rent serve-qwen3-4b for at most $0.58? [y/N] "]
+    assert "at most $0.58 for 1800s and a 1200s wait for SSH" in capsys.readouterr().err
 
 
 @pytest.mark.spec("serve:wait:awaited")

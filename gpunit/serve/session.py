@@ -95,9 +95,13 @@ def _agree(
         prices.append(Decimal(str(info.hourly)))
     if not prices:
         log.refuse("no card in the table meets its vram_gb and max_hourly")
-    # Up to the cent: the figure agreed is never under the most it can cost.
-    most = (max(prices) * spec.ceiling_s / 3600).quantize(Decimal("0.01"), ROUND_UP)
-    log.say(f"at most ${most} for {spec.ceiling_s}s")
+    # Up to the cent: the figure agreed is never under the most it can cost. The pod
+    # bills while it pulls, and boot arms the ceiling only after: count the SSH wait.
+    billed_s = spec.ceiling_s + spec.timeout_s
+    most = (max(prices) * billed_s / 3600).quantize(Decimal("0.01"), ROUND_UP)
+    log.say(
+        f"at most ${most} for {spec.ceiling_s}s and a {spec.timeout_s}s wait for SSH"
+    )
     if yes:
         return
     try:

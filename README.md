@@ -124,7 +124,7 @@ gpunit serve qwen3-4b --ceiling 2h             boot.sh -- vllm serve, key requir
 $ export RUNPOD_API_KEY=...
 $ uv run gpunit serve qwen3-4b --ceiling 2h
 <UTC> price: NVIDIA RTX A5000 $<hourly>/h
-<UTC> at most $<max> for 7200s
+<UTC> at most $<max> for 7200s and a 1200s wait for SSH
 rent serve-qwen3-4b for at most $<max>? [y/N] y
 ...
 > What is a warp?
@@ -133,8 +133,8 @@ A warp is ...
 ```
 
 - **The price comes first.** Each card's hourly price and the most the session can cost — the highest price times
-  the ceiling — are printed, and nothing is rented without `y`. `--yes` skips the question; `--max-hourly` drops
-  the dearer cards.
+  the ceiling plus the 1200s wait for SSH, since the pod bills while it pulls and the ceiling starts after — are
+  printed, and nothing is rented without `y`. `--yes` skips the question; `--max-hourly` drops the dearer cards.
 - **The wait is minutes.** The first boot pulls vLLM's image and downloads the weights; the pull and the load each
   have 1200s, a `loading:` line from the pod's log comes every 30s, and past 1200s the session is torn down.
   `--volume <id>` keeps the weights on a network volume across sessions.

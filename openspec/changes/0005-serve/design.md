@@ -35,7 +35,7 @@ See [proposal](proposal.md) — *Why*. What holds at the cut, `main` at `d0b63ab
 |---|---|---|---|
 | [D1](#d1) | `gpunit/serve/models.toml` and `table.py`: rows, the image digest, `Row.spec(ceiling, volume, max_hourly, key)` | a model is a row; the spec is built, never written | a `gpunit.toml` per model |
 | [D2](#d2) | the state under `~/.local/state/gpunit/serve/<model>/`; `gpunit down --serve <model>` | one session per model, from any directory | the working directory |
-| [D3](#d3) | the price from `RunPod.gpu` per card, the max over placeable cards × ceiling, `input` for `y/N` | a person runs serve by hand at cost | no prompt |
+| [D3](#d3) | the price from `RunPod.gpu` per card, the max over placeable cards × (ceiling + SSH wait), `input` for `y/N` | a person runs serve by hand at cost | no prompt |
 | [D4](#d4) | the wait polls `GET /v1/models` with the key every 5 s for 1200 s; a log line every 30 s | pull, download, load | no wait |
 | [D5](#d5) | `chat.py`: `readline` when importable, SSE over `urllib`, history in memory, `enable_thinking` false unless `--think` | stdlib only | a client library |
 | [D6](#d6) | `--api`: a `secrets.token_urlsafe(32)` key in the pod's environment; the URL and key printed; hold until `Interrupted` | the key keeps the loopback port the session's | no key |
@@ -76,7 +76,8 @@ naming the table's models.
 ### D3
 
 For each of the row's cards, `RunPod.gpu(card)` gives the price; cards over `--max-hourly` are dropped; the maximum
-is the highest remaining price × the ceiling in hours. The prompt reads one line through an injectable `ask`;
+is the highest remaining price × the ceiling plus the SSH wait (`timeout_s`, 1200 s) in hours: the pod bills while it
+pulls, and boot arms the ceiling only after. The prompt reads one line through an injectable `ask`;
 anything but `y` or `yes` refuses with `refused: not rented`, exit `1`.
 
 ### D4
