@@ -8,7 +8,7 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 - [x] 1 — The ledger
 - [x] 2 — The billing seam
 - [x] 3 — The report
-- [ ] 4 — The handover
+- [x] 4 — The handover
 - [ ] 5 — ⚠️ **HUMAN** — compare the total with the console
 
 ## 1 — The ledger
@@ -36,7 +36,7 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 ## 4 — The handover
 
-- [ ] 4.1 Add *What it cost* to `README.md` — the verb, the report's lines, what unattributed means, the day still billing — and name `ledger.py` and `spend.py` in `CLAUDE.md`'s layout.
+- [x] 4.1 Add *What it cost* to `README.md` — the verb, the report's lines, what unattributed means, the day still billing — and name `ledger.py` and `spend.py` in `CLAUDE.md`'s layout.
   Verify: `grep -c 'What it cost' README.md` prints `1`, and `grep -c 'spend.py' CLAUDE.md` prints `1`.
 
 ## 5 — ⚠️ **HUMAN** — compare the total with the console
