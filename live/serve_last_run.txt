@@ -1,0 +1,70 @@
+2026-10-12 — make live-serve, 0005-serve
+
+Image: ghcr.io/alxb1t/gpunit-vllm:v0.3-rc1@sha256:8e75d9e846eb9d88c8137b3f83a06b7c351aed6ce5522002917ae804a740a49e,
+built by build-serve-image run 38245592099. After the run, no serve-qwen3-4b pod was listed.
+
+2026-10-12T12:01:33Z price: NVIDIA RTX A5000 $0.27/h
+2026-10-12T12:01:34Z price: NVIDIA GeForce RTX 4090 $0.89/h
+2026-10-12T12:01:34Z at most $0.45 for 1800s
+2026-10-12T12:01:36Z skipped: NVIDIA RTX A4500 has 20 GB, under 24
+2026-10-12T12:01:37Z creating on NVIDIA RTX A5000
+2026-10-12T12:01:38Z pod 144sojx0qt358d created; waiting for SSH
+2026-10-12T12:06:59Z host key verified: SHA256:rKouKoaKFGr7nSY6GFFLzUErfCKkefV+meV03GApo1w
+2026-10-12T12:06:59Z session up: pod 144sojx0qt358d, root@69.30.85.189 -p 22046
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+2026-10-12T12:07:38Z loading: (EngineCore pid=445) INFO 10-12 12:07:34 [model_runner.py:407] Model loading took 7.56 GiB memory and 12.526534 seconds
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+2026-10-12T12:08:09Z loading: (EngineCore pid=445) INFO 10-12 12:08:06 [backends.py:391] Compiling a graph for compile range (1, 2048) takes 23.25 s
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+2026-10-12T12:08:40Z loading: INFO:     Application startup complete.
+2026-10-12T12:08:45Z qwen3-4b answers on http://127.0.0.1:8000/v1
+2026-10-12T12:08:45Z serving until interrupted or the ceiling; Ctrl-C ends the session
+{"id":"chatcmpl-a7042cfbde3d458d","object":"chat.completion","created":1791806930,"model":"qwen3-4b","choices":[{"index":0,"message":{"role":"assistant","content":"Hello!","refusal":null,"annotations":null,"audio":null,"function_call":null,"reasoning":null},"logprobs":null,"finish_reason":"stop","stop_reason":null,"token_ids":null,"routed_experts":null}],"service_tier":null,"system_fingerprint":"vllm-0.31.0-8f880aa1","usage":{"prompt_tokens":18,"total_tokens":21,"completion_tokens":3,"prompt_tokens_details":null,"completion_tokens_details":{"reasoning_tokens":0}},"prompt_logprobs":null,"prompt_token_ids":null,"prompt_text":null,"kv_transfer_params":null,"ec_transfer_params":null,"metrics":null}
+2026-10-12T12:08:51Z pod 144sojx0qt358d deleted
+echo 'What is 2 + 2? Answer with the number.' | uv run gpunit serve qwen3-4b --ceiling 30m --yes
+2026-10-12T12:08:53Z price: NVIDIA RTX A5000 $0.27/h
+2026-10-12T12:08:54Z price: NVIDIA GeForce RTX 4090 $0.89/h
+2026-10-12T12:08:54Z at most $0.45 for 1800s
+2026-10-12T12:08:55Z skipped: NVIDIA RTX A4500 has 20 GB, under 24
+2026-10-12T12:08:56Z creating on NVIDIA RTX A5000
+2026-10-12T12:08:57Z pod iymqp3dhvxzjdd created; waiting for SSH
+2026-10-12T12:09:24Z host key verified: SHA256:dGNWU19cwKvTKQksJfE8rCWgXT6FLPK0ztQnvNNqXNY
+2026-10-12T12:09:24Z session up: pod iymqp3dhvxzjdd, root@69.30.85.189 -p 22189
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+2026-10-12T12:10:00Z loading: (EngineCore pid=445) INFO 10-12 12:09:57 [model_runner.py:375] Loading model from scratch...
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+2026-10-12T12:10:29Z loading: [rank0]:W1012 12:10:20.429000 445 torch/_inductor/utils.py:1953] Not enough SMs to use max_autotune_gemm mode
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+channel 2: open failed: connect failed: Connection refused
+2026-10-12T12:11:04Z loading: (EngineCore pid=445) INFO 10-12 12:10:58 [kernel_warmup.py:185] JIT kernel warmup finished in 0.00s.
+channel 2: open failed: connect failed: Connection refused
+2026-10-12T12:11:15Z qwen3-4b answers on http://127.0.0.1:8000/v1
+> 4
+> 
+2026-10-12T12:11:16Z pod iymqp3dhvxzjdd deleted

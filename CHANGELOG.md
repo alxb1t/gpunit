@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `serve/Dockerfile`, vLLM `v0.31.0` by digest with sshd and `boot.sh`, built only by a manual run of
   `build-serve-image.yml`, which refuses `latest` and writes the digest to its summary. `make live-serve` is the
   metered proof.
+- The serve image `gpunit-vllm:v0.3-rc1` is built and pinned by digest in `models.toml`; `make live-serve` passed on
+  an RTX A5000, a `curl` and a chat each answered, and no pod was left ([live/serve_last_run.txt](live/serve_last_run.txt)).
 
 ### Changed
 

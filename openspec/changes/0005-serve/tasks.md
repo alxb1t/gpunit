@@ -9,7 +9,7 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 - [x] 2 — The served session
 - [x] 3 — The chat and the endpoint
 - [x] 4 — The image and the documents
-- [ ] 5 — ⚠️ **HUMAN · METERED** — build, pin, make live-serve
+- [x] 5 — ⚠️ **HUMAN · METERED** — build, pin, make live-serve
 
 ## 1 — The table
 
@@ -41,5 +41,5 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 ## 5 — ⚠️ **HUMAN · METERED** — build, pin, make live-serve
 
-- [ ] 5.1 **HUMAN · METERED** — push `v0.3_serve`; dispatch `build-serve-image.yml` on it with tag `v0.3-rc1`; write its digest into `gpunit/serve/models.toml`'s `image`; run `make live-serve` with `RUNPOD_API_KEY` set; confirm with the RunPod console that no pod is left; append the run's tail to `live/serve_last_run.txt` under a header `<date> — make live-serve, 0005-serve`; per [D9](design.md#d9).
+- [x] 5.1 **HUMAN · METERED** — push `v0.3_serve`; dispatch `build-serve-image.yml` on it with tag `v0.3-rc1`; write its digest into `gpunit/serve/models.toml`'s `image`; run `make live-serve` with `RUNPOD_API_KEY` set; confirm with the RunPod console that no pod is left; append the run's tail to `live/serve_last_run.txt` under a header `<date> — make live-serve, 0005-serve`; per [D9](design.md#d9).
   Verify: `grep -c 'gpunit-vllm@sha256:0000' gpunit/serve/models.toml` prints `0`, and `grep -c '^2026-.*0005-serve' live/serve_last_run.txt` prints a number of at least `1`.
