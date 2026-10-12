@@ -5,7 +5,7 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 ## Progress
 
-- [ ] 1 — The ledger
+- [x] 1 — The ledger
 - [ ] 2 — The billing seam
 - [ ] 3 — The report
 - [ ] 4 — The handover
@@ -13,11 +13,11 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 ## 1 — The ledger
 
-- [ ] 1.1 **HALT CHECK** — no ledger and no billing read exist yet.
+- [x] 1.1 **HALT CHECK** — no ledger and no billing read exist yet.
   Verify: `ls gpunit/ledger.py 2>&1 | grep -c 'No such file'` prints `1`, and `grep -c 'billing' gpunit/provider.py` prints `0`.
-- [ ] 1.2 In `tests/conftest.py`, add an autouse fixture that sets `HOME` to a directory under the test's `tmp_path`, per [D5](design.md#d5).
+- [x] 1.2 In `tests/conftest.py`, add an autouse fixture that sets `HOME` to a directory under the test's `tmp_path`, per [D5](design.md#d5).
   Verify: `grep -c 'HOME' tests/conftest.py` prints a number of at least `1`.
-- [ ] 1.3 Write `gpunit/ledger.py` per [D1](design.md#d1) and call `ledger.record` in `_create` and in `down`'s sweep in `gpunit/lifecycle.py`; in `tests/test_ledger.py` bind the four `spend:ledger:*` scenarios.
+- [x] 1.3 Write `gpunit/ledger.py` per [D1](design.md#d1) and call `ledger.record` in `_create` and in `down`'s sweep in `gpunit/lifecycle.py`; in `tests/test_ledger.py` bind the four `spend:ledger:*` scenarios.
   Verify: `grep -c 'ledger.record' gpunit/lifecycle.py` prints `2`, and `grep -o 'spend:ledger:[a-z-]*' tests/test_ledger.py | sort -u | wc -l | tr -d ' '` prints `4`.
 
 ## 2 — The billing seam

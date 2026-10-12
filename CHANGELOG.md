@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A ledger at `~/.local/state/gpunit/ledger.jsonl` names each pod `up` creates and `down` sweeps, with its project,
+  so its billing finds the project after teardown; a ledger that cannot be written warns and blocks nothing.
+
 ## [0.3.1] - 2026-10-12
 
 ### Fixed
