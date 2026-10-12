@@ -61,9 +61,9 @@ disk_gb = 40
 
 `table.load()` reads it with `tomllib` and refuses a missing field, a revision that is not 40 hex, or an image that
 is not a digest. `Row.spec(...)` returns a `Spec`: project `serve-<name>`, the image, the row's cards, memory and disk,
-`ports = (8000,)`, the ceiling, the volume and `max_hourly` if given, and `env` holding `SERVE_REPO`,
-`SERVE_REVISION`, `SERVE_NAME`, `SERVE_ARGS` (the args joined) and `VLLM_API_KEY`. The `SERVE_*` names stay clear of
-the `GPUNIT_` names `[env]` reserves.
+`ports = (8000,)`, the ceiling, an SSH wait of 1200 s, the volume and `max_hourly` if given, and `env` holding
+`SERVE_REPO`, `SERVE_REVISION`, `SERVE_NAME`, `SERVE_ARGS` (the args joined) and `VLLM_API_KEY`. The `SERVE_*` names
+stay clear of the `GPUNIT_` names `[env]` reserves.
 
 ### D2
 
@@ -131,7 +131,8 @@ None.
 
 ## Risks / Trade-offs
 
-- **vLLM's image is large** → a pull of minutes inside the 20-minute wait; the progress lines say so.
+- **vLLM's image is large** → a cold host pulls it before it maps port 22, so the row's spec sets the SSH wait to
+  the same 20 minutes as the model's.
 - **The weights download at every boot** → `--volume` caches them for those who keep a volume.
 - **The key rides the create's environment** → RunPod, the GPU's operator, can read it; it lives one session.
 - **`SERVE_ARGS` is word-split by `sh`** → the table's args hold no spaces inside an argument; `table.load` refuses

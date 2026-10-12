@@ -135,9 +135,9 @@ A warp is ...
 - **The price comes first.** Each card's hourly price and the most the session can cost — the highest price times
   the ceiling — are printed, and nothing is rented without `y`. `--yes` skips the question; `--max-hourly` drops
   the dearer cards.
-- **The wait is minutes.** The first boot pulls vLLM's image and downloads the weights; a `loading:` line from the
-  pod's log comes every 30s, and at 1200s the session is torn down. `--volume <id>` keeps the weights on a network
-  volume across sessions.
+- **The wait is minutes.** The first boot pulls vLLM's image and downloads the weights; the pull and the load each
+  have 1200s, a `loading:` line from the pod's log comes every 30s, and past 1200s the session is torn down.
+  `--volume <id>` keeps the weights on a network volume across sessions.
 - **The chat** streams each answer and keeps the conversation in memory. Thinking is off unless `--think`.
   `/exit` or the end of input ends the session.
 - **`--api`** prints two lines to stdout, then holds the session until Ctrl-C, or until the server has not

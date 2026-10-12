@@ -14,7 +14,7 @@ from gpunit.serve import chat, table
 from gpunit.spec import Spec
 from gpunit.state import State
 
-WAIT_S = 1200
+WAIT_S = table.WAIT_S
 POLL_S = 5
 PROGRESS_S = 30
 REQUEST_S = 5

@@ -78,6 +78,8 @@ def test_a_row_becomes_the_sessions_spec() -> None:
     assert spec.disk_gb == 40
     assert spec.ports == (Port(remote=8000, local=8000),)
     assert spec.ceiling_s == 7200
+    # A cold host pulls vLLM's image before it maps port 22: the SSH wait covers it.
+    assert spec.timeout_s == 1200
     assert spec.env == {
         "SERVE_REPO": "Qwen/Qwen3-4B",
         "SERVE_REVISION": PINNED,

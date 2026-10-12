@@ -11,6 +11,8 @@ from gpunit.spec import DIGEST, Port, Spec
 
 TABLE = Path(__file__).with_name("models.toml")
 PORT = 8000
+# The bound on each wait: a cold host pulls vLLM's image before it maps port 22.
+WAIT_S = 1200
 _REVISION = re.compile(r"[0-9a-f]{40}")
 
 # The key, then the TOML type it holds.
@@ -56,6 +58,7 @@ class Row:
             disk_gb=self.disk_gb,
             volume=volume,
             ports=(Port(remote=PORT, local=PORT),),
+            timeout_s=WAIT_S,
             max_hourly=max_hourly,
             env={
                 "SERVE_REPO": self.repo,

@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README: *Serve a model*, with *From a container*; the verbs and exits name `serve` and `down --serve`.
   `CLAUDE.md`'s layout names `gpunit/serve/` and `serve/`.
 
+### Fixed
+
+- `gpunit serve` waits up to 1200s, not 420s, for the pod's SSH port, so a cold host's pull of vLLM's image no
+  longer tears the session down before the model wait begins.
+
 ## [0.2.0] - 2026-10-09
 
 ### Added
