@@ -8,7 +8,7 @@ The host key, the `serve` fixes, the wait, the handover, then the metered proof 
 - [x] 1 — The host key
 - [x] 2 — Serve
 - [x] 3 — The wait
-- [ ] 4 — The handover
+- [x] 4 — The handover
 - [ ] 5 — ⚠️ **HUMAN · METERED** — make live-dead, make live
 
 ## 1 — The host key
@@ -38,11 +38,11 @@ The host key, the `serve` fixes, the wait, the handover, then the metered proof 
 
 ## 4 — The handover
 
-- [ ] 4.1 Add the patch rule to `CLAUDE.md`'s *Invariants*, per [D5](design.md#d5).
+- [x] 4.1 Add the patch rule to `CLAUDE.md`'s *Invariants*, per [D5](design.md#d5).
   Verify: `grep -c 'A patch closes cards and fixes' CLAUDE.md` prints `1`.
-- [ ] 4.2 Correct README's serve diagram and its two `live-serve` figures, the `live-serve` comment in the `Makefile`, and make `live/price.py` count `ceiling + timeout` and take an optional spec path, per [D4](design.md#d4).
+- [x] 4.2 Correct README's serve diagram and its two `live-serve` figures, the `live-serve` comment in the `Makefile`, and make `live/price.py` count `ceiling + timeout` and take an optional spec path, per [D4](design.md#d4).
   Verify: `grep -c 'or the ceiling' README.md` prints `0`, and `grep -c 'spec.timeout_s' live/price.py` prints `1`.
-- [ ] 4.3 Write `live/Dockerfile.dead`, `live/gpunit.dead.toml` and the `live-dead` target of the `Makefile`, per [D6](design.md#d6).
+- [x] 4.3 Write `live/Dockerfile.dead`, `live/gpunit.dead.toml` and the `live-dead` target of the `Makefile`, per [D6](design.md#d6).
   Verify: `grep -c -E 'install .*curl' live/Dockerfile.dead` prints `0`, and `make -n live-dead | grep -c 'gpunit.dead.toml'` prints a number of at least `1`.
 
 ## 5 — ⚠️ **HUMAN · METERED** — make live-dead, make live

@@ -41,7 +41,9 @@ CLI is recorded, not pinned: `@fission-ai/openspec@1.11.0`, resolved on `PATH`.
   (`test_gpu_reads_the_memory_and_the_secure_price`, `test_the_commands_end_stops_the_pod`).
 - **The ceiling is required:** no default, no pod without it (`test_no_ceiling_no_pod`).
 - **A 404 is never gone:** `down` keeps the record (`test_a_404_keeps_the_record`).
-- **`make live` and `make live-serve` are never in CI:** they rent a real pod; the gate fakes every provider answer.
+- **`make live`, `make live-serve` and `make live-dead` are never in CI:** they rent a real pod; the gate fakes
+  every provider answer.
+- **A patch closes cards and fixes; it adds no verb, `gpunit.toml` key or exit code.**
 
 ## Guardrails (hold for every role)
 

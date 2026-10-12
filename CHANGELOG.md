@@ -17,6 +17,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A pod `EXITED`, `ERROR` or `TERMINATED` on two polls in a row ends the wait and is torn down, so a container
   that cannot start stops billing in seconds, not at `timeout`.
 
+### Added
+
+- `make live-dead`: an image without `curl`, so boot refuses and the container exits, to show what RunPod reports
+  for a dead boot. `live/price.py` takes a spec path and counts the wait for SSH with the ceiling.
+
+### Changed
+
+- README, the `live-serve` comment and `CLAUDE.md` say what the code does: the serve diagram's end, the live runs'
+  wait for SSH, and what a patch may hold.
+
 ## [0.3.0] - 2026-10-12
 
 ### Added

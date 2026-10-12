@@ -117,7 +117,7 @@ gpunit serve qwen3-4b --ceiling 2h             boot.sh -- vllm serve, key requir
  ├─ up · ssh -L <port> ◀─────────────────────▶ vLLM on 127.0.0.1:8000
  ├─ wait for /v1/models, at most 1200s
  ├─ the chat, or --api's two lines and a hold
- └─ down: /exit, end of input, Ctrl-C, or the ceiling
+ └─ down: /exit, end of input, Ctrl-C; the chat ends if the server stops answering
 ```
 
 ```console
@@ -208,8 +208,11 @@ chat and `--api`'s two lines.
 
 ## The proof — `make live`
 
-`make live` rents one real pod for at most ten minutes, run by hand: it prints the card's price and the
-maximum first, then runs `nvidia-smi` through `gpunit run`. The gate, `make gate`, fakes every provider answer.
+`make live` rents one real pod for at most ten minutes plus its 420s wait for SSH, run by hand: it prints the
+card's price and the maximum first, then runs `nvidia-smi` through `gpunit run`. The gate, `make gate`, fakes every
+provider answer.
 
-`make live-serve` proves the serve image and the model on one 24 GB card, for at most 30 minutes a session:
-`gpunit serve qwen3-4b --api` for one `curl`, then a chat of one prompt.
+`make live-serve` proves the serve image and the model on one 24 GB card, for at most 30 minutes plus the 1200s wait
+for SSH a session: `gpunit serve qwen3-4b --api` for one `curl`, then a chat of one prompt.
+
+`make live-dead` boots an image whose container exits at once, and shows `up` tearing it down within seconds.
