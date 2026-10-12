@@ -45,6 +45,20 @@ def test_pods_are_summed_by_project(capsys: pytest.CaptureFixture[str]) -> None:
     assert out.index("isekai") < out.index("serve-qwen3-4b")
 
 
+@pytest.mark.spec("spend:report:by-project")
+def test_a_long_name_or_count_never_runs_into_the_next_column(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    owned(p1="research-diffusion-lab")
+    strays = [PodCost(f"s{n}", DAY_1, 0.01) for n in range(120)]
+
+    out, _ = report(
+        capsys, FakeProvider(pod_costs=[PodCost("p1", DAY_1, 0.5), *strays])
+    )
+    assert "pods      research-diffusion-lab 1 pod   $0.50\n" in out
+    assert "pods      unattributed         120 pods $1.20\n" in out
+
+
 @pytest.mark.spec("spend:report:unattributed")
 def test_a_pod_the_ledger_does_not_name_is_unattributed(
     capsys: pytest.CaptureFixture[str],

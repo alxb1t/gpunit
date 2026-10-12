@@ -97,13 +97,13 @@ def build(
 
 
 def render(report: Report) -> str:
-    """Return the report as the table `spend` prints."""
+    """Return the report as the table `spend` prints, a space always between columns."""
     rows = [f"spend, {report.first} → {report.last} (UTC)"]
     for line in [*report.projects, report.unattributed]:
         count = f"{line.pods} pod{'' if line.pods == 1 else 's'}"
-        rows.append(f"{'pods':<10}{line.name:<21}{count:<8}{_dollars(line.amount)}")
+        rows.append(f"{'pods':<10}{line.name:<20} {count:<7} {_dollars(line.amount)}")
     for volume, amount in report.storage:
-        rows.append(f"{'storage':<10}{volume:<21}{'':<8}{_dollars(amount)}")
+        rows.append(f"{'storage':<10}{volume:<20} {'':<7} {_dollars(amount)}")
     rows.append(f"{'total':<39}{_dollars(report.total)}")
     return "\n".join(rows)
 
