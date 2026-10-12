@@ -1,12 +1,16 @@
+import http.client
 import json
 import threading
+import urllib.error
 import urllib.request
 from collections.abc import Callable, Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
+from gpunit import log
 from gpunit.serve import chat
+from tests.fakes import FakeOpener
 
 KEY = "k" * 43
 OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -149,3 +153,81 @@ def test_exit_or_the_end_of_input_ends_the_chat(
 
     assert asked == ["> "]
     assert model.requests == []
+
+
+@pytest.mark.spec("serve:chat:stopped-server-ends")
+def test_a_server_that_cannot_be_reached_ends_the_chat(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    asked: list[str] = []
+
+    def read(prompt: str) -> str:
+        asked.append(prompt)
+        return "hi"
+
+    refused = urllib.error.URLError(ConnectionRefusedError(61, "Connection refused"))
+    with pytest.raises(log.Refusal):
+        chat.run(
+            "http://127.0.0.1:1/v1",
+            KEY,
+            "qwen3-4b",
+            False,
+            read,
+            lambda text: None,
+            opener=FakeOpener(refused),
+        )
+
+    assert asked == ["> "]
+    assert "the server stopped answering" in capsys.readouterr().err
+
+
+@pytest.mark.spec("serve:chat:stopped-server-ends")
+def test_a_tunnel_that_closes_without_an_answer_ends_the_chat(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # `ssh -L` accepts the local connection, then closes it when the pod side is gone.
+    asked: list[str] = []
+
+    def read(prompt: str) -> str:
+        asked.append(prompt)
+        return "hi"
+
+    closed = http.client.RemoteDisconnected(
+        "Remote end closed connection without response"
+    )
+    with pytest.raises(log.Refusal):
+        chat.run(
+            "http://127.0.0.1:1/v1",
+            KEY,
+            "qwen3-4b",
+            False,
+            read,
+            lambda text: None,
+            opener=FakeOpener(closed),
+        )
+
+    assert asked == ["> "]
+    assert "the server stopped answering" in capsys.readouterr().err
+
+
+@pytest.mark.spec("serve:chat:server-error-drops-the-turn")
+def test_a_server_error_drops_the_turn_and_the_chat_goes_on(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    written: list[str] = []
+    streamed = b'data: {"choices": [{"delta": {"content": "Hi"}}]}\n\ndata: [DONE]\n'
+    opener = FakeOpener((500, b"oops"), (200, streamed))
+
+    chat.run(
+        "http://127.0.0.1:1/v1",
+        KEY,
+        "qwen3-4b",
+        False,
+        reader("lost", "kept"),
+        written.append,
+        opener=opener,
+    )
+
+    assert "the model did not answer" in capsys.readouterr().err
+    assert "Hi" in written
+    assert opener.sent(1)["messages"] == [{"role": "user", "content": "kept"}]

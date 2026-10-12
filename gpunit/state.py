@@ -1,4 +1,4 @@
-"""Read and write the session's files under `.gpunit/` in the working directory."""
+"""Read and write the session's files under `.gpunit/` in the directory it is given."""
 
 import json
 import os

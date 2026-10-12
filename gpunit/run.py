@@ -43,6 +43,9 @@ def outcome(body: Callable[[], int]) -> int:
         return LOST_EXIT if isinstance(failed.__cause__, Lost) else 1
     except library.Interrupted as interrupted:
         return 128 + interrupted.signal
+    except KeyboardInterrupt:
+        # A Ctrl-C before the session opens, as at `serve`'s price question.
+        return 128 + signal.SIGINT
 
 
 def _command(spec: Spec, opened: library.Session, command: list[str]) -> int:

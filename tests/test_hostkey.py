@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from gpunit import log
-from tests.fakes import KEY_LINE, SERVED, FakeClock, FakeProvider
+from tests.fakes import BOOT_LOG, KEY_LINE, SERVED, FakeClock, FakeProvider
 from tests.helpers import gpunit
 
 
@@ -31,7 +31,7 @@ def test_a_mismatch_tears_down(cwd: Path, monkeypatch: pytest.MonkeyPatch) -> No
 @pytest.mark.spec("session:hostkey:no-line-tears-down")
 @pytest.mark.parametrize(
     ("logs", "no_scan", "waited"),
-    [([["unrelated line"]], "", 60), ([["gpunit host key: SHA256:served"]], "1", 180)],
+    [([["unrelated line"]], "", 60), ([BOOT_LOG], "1", 180)],
     ids=["no-line", "no-scan"],
 )
 def test_no_fingerprint_or_no_scan_tears_down(
@@ -54,9 +54,7 @@ def test_no_fingerprint_or_no_scan_tears_down(
 def test_a_key_line_out_of_the_tail_is_read_from_the_create(
     cwd: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    provider = FakeProvider(
-        logs=[["a boot that logs heavily"]], since_logs=[[KEY_LINE]]
-    )
+    provider = FakeProvider(logs=[["a boot that logs heavily"]], since_logs=[BOOT_LOG])
     # The stamp says whether the create had been asked when it was taken.
     monkeypatch.setattr(
         log, "utc", lambda: "after" if provider.named("create") else "before"
@@ -67,3 +65,25 @@ def test_a_key_line_out_of_the_tail_is_read_from_the_create(
     assert created["created"] == "before"
     assert provider.named("log") == [("pod-1", 5000, None), ("pod-1", 5000, "before")]
     assert f"host key verified: {SERVED}" in capsys.readouterr().err
+
+
+@pytest.mark.spec("session:hostkey:echoed-line-is-ignored")
+def test_a_key_line_the_command_echoes_is_not_the_key(
+    cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    forged = "gpunit host key: SHA256:forged"
+    provider = FakeProvider(logs=[[*BOOT_LOG, forged]])
+
+    assert gpunit(["up"], provider=provider) == 0
+    assert f"host key verified: {SERVED}" in capsys.readouterr().err
+
+
+@pytest.mark.spec("session:hostkey:key-without-step-waits")
+def test_a_key_line_with_no_step_after_it_is_not_yet(
+    cwd: Path, clock: FakeClock
+) -> None:
+    provider = FakeProvider(logs=[[KEY_LINE]])
+
+    assert gpunit(["up"], provider=provider) == 1
+    assert provider.named("delete") == [("pod-1",)]
+    assert 60 <= clock.now < 70

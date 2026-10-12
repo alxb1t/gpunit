@@ -1,19 +1,19 @@
-import json
 import re
 from pathlib import Path
 
 import pytest
 
-from gpunit.provider import GpuInfo, Lost, Refused, Unknown, VolumeInfo
+from gpunit.provider import GpuInfo, Lost, PodInfo, Refused, Unknown, VolumeInfo
 from gpunit.runpod import RunPod
 from gpunit.state import State
 from tests.fakes import (
-    KEY_LINE,
+    BOOT_LOG,
     RUNNING,
     FakeClock,
     FakeOpener,
     FakeProvider,
     fixture,
+    log_stream,
     page,
 )
 from tests.helpers import IMAGE, NO_REQUESTS, VALID, gpunit, write_spec
@@ -146,6 +146,39 @@ def test_a_failed_poll_is_not_yet(cwd: Path) -> None:
     assert record is not None and (record.host, record.port) == ("203.0.113.7", 40022)
 
 
+EXITED = PodInfo(status="EXITED", host=None, port=None)
+
+
+@pytest.mark.spec("session:wait:dead-pod-tears-down")
+def test_a_dead_pod_ends_the_wait(
+    cwd: Path, clock: FakeClock, capsys: pytest.CaptureFixture[str]
+) -> None:
+    starting = PodInfo(status="STARTING", host=None, port=None)
+    provider = FakeProvider(gets=[starting, EXITED, EXITED, RUNNING])
+
+    assert gpunit(["up"], provider=provider) == 1
+    assert len(provider.named("get")) == 3
+    assert provider.named("delete") == [("pod-1",)]
+    assert not (cwd / ".gpunit" / "pod").exists()
+    assert (
+        "pod pod-1 is EXITED: the container is not running" in capsys.readouterr().err
+    )
+    assert clock.now < 420
+
+
+@pytest.mark.spec("session:wait:one-dead-poll-is-not-yet")
+@pytest.mark.parametrize(
+    "gets",
+    [[EXITED, RUNNING], [EXITED, None, EXITED, RUNNING]],
+    ids=["then-mapped", "a-failed-read-between"],
+)
+def test_one_dead_poll_is_not_yet(cwd: Path, gets: list[PodInfo | None]) -> None:
+    provider = FakeProvider(gets=gets)
+
+    assert gpunit(["up"], provider=provider) == 0
+    assert len(provider.named("get")) == len(gets)
+
+
 @pytest.mark.spec("session:volume:unreadable-refuses")
 def test_an_unreadable_volume_refuses(
     cwd: Path, capsys: pytest.CaptureFixture[str]
@@ -222,7 +255,7 @@ def test_a_refusal_is_one_stamped_stderr_line(
 def up_over_http(cwd: Path) -> FakeOpener:
     """Run `up` on RunPod over scripted HTTP answers; return the opener."""
     write_spec(cwd, VALID + 'volume = "v1"\nports = [8188]\n')
-    log = f"data: {json.dumps({'line': KEY_LINE})}\n".encode()
+    log = log_stream(*BOOT_LOG)
     opener = FakeOpener(
         (200, page([], None)),
         (200, fixture("volume.json")),

@@ -1,7 +1,7 @@
 # The gate: the one list of the commands that say a change is done. Prose names
 # `make gate` and never copies them. A new command lands through a change whose
 # cut names this recipe in a task.
-.PHONY: gate live live-serve
+.PHONY: gate live live-serve live-dead
 
 gate:
 # the environment, from the tracked lock; not a quality axis, hence first
@@ -21,7 +21,8 @@ live:
 	uv run gpunit status --spec live/gpunit.toml
 
 # The serve proof: the endpoint for one curl, then a chat of one prompt (0005 design D9).
-# Not part of the gate: each session rents a 24 GB card with RUNPOD_API_KEY, for at most 30m.
+# Not part of the gate: each session rents a 24 GB card with RUNPOD_API_KEY, for at most 30m
+# plus the 1200s wait for SSH.
 # SIGTERM ends the endpoint: an `&` job starts with SIGINT ignored.
 live-serve:
 	@set -eu; out=$$(mktemp); trap 'rm -f "$$out"' EXIT; \
@@ -34,3 +35,14 @@ live-serve:
 	  || { kill -TERM $$pid; wait $$pid || true; exit 1; }; \
 	echo; kill -TERM $$pid; wait $$pid || true
 	echo 'What is 2 + 2? Answer with the number.' | uv run gpunit serve qwen3-4b --ceiling 30m --yes
+
+# The dead-boot proof: a container that exits at once ends `up`'s wait (0006 design D6).
+# Not part of the gate: it rents a pod with RUNPOD_API_KEY, for at most its 120s wait.
+# `up` must exit 1; status runs either way, to show no pod is left.
+live-dead:
+	@uv run python live/price.py live/gpunit.dead.toml
+	@set -u; start=$$(date +%s); \
+	uv run gpunit up --spec live/gpunit.dead.toml; code=$$?; \
+	echo "up exited $$code after $$(( $$(date +%s) - start ))s"; \
+	uv run gpunit status --spec live/gpunit.dead.toml; \
+	test $$code -eq 1

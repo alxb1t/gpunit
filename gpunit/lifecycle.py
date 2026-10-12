@@ -25,6 +25,8 @@ from gpunit.spec import Spec
 from gpunit.state import Record, State
 
 POLL_S = 5
+# The statuses of a container that is not running; two polls in a row end the wait.
+DEAD = ("EXITED", "ERROR", "TERMINATED")
 LOG_WAIT_S = 60
 # sshd can answer after the port is mapped, so the scan waits longer than the log.
 SCAN_WAIT_S = 180
@@ -260,10 +262,25 @@ def _create(
 
 
 def _wait(spec: Spec, provider: Provider, state: State, record: Record) -> Record:
+    dead = False
+
     def mapped() -> PodInfo | None:
+        nonlocal dead
         # A failed poll is "not yet", never an abort: an abort would skip the teardown.
         info = provider.get(record.id)
-        return info if info is not None and info.host and info.port else None
+        if info is None:
+            dead = False
+            return None
+        # A restart may show a dead status once, so only a second poll in a row ends it.
+        if info.status in DEAD and dead:
+            _tear_down(
+                spec,
+                provider,
+                state,
+                f"pod {record.id} is {info.status}: the container is not running",
+            )
+        dead = info.status in DEAD
+        return info if info.host and info.port else None
 
     info = _poll(spec.timeout_s, mapped)
     if info is None:

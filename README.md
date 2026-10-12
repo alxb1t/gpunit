@@ -40,7 +40,7 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    image, and BuildKit for the checksum; on an older Docker, copy the file in.
 
    ```dockerfile
-   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.3.0/boot/boot.sh /opt/gpunit/boot.sh
+   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.3.1/boot/boot.sh /opt/gpunit/boot.sh
    RUN chmod +x /opt/gpunit/boot.sh
    ENTRYPOINT ["/opt/gpunit/boot.sh", "--"]
    CMD ["python3", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
@@ -54,7 +54,7 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    on the pod you would not trust with the key.
 
    ```sh
-   uv add --dev git+https://github.com/alxb1t/gpunit@v0.3.0
+   uv add --dev git+https://github.com/alxb1t/gpunit@v0.3.1
    echo .gpunit/ >> .gitignore
    export RUNPOD_API_KEY=...
    uv run gpunit run -- python3 render.py
@@ -114,10 +114,10 @@ image pinned by digest.
 laptop                                         pod (gpunit-vllm)
 gpunit serve qwen3-4b --ceiling 2h             boot.sh -- vllm serve, key required
  ├─ the price · [y/N]: nothing rented without y
- ├─ up · ssh -L 8000 ◀───────────────────────▶ vLLM on 127.0.0.1:8000
+ ├─ up · ssh -L <port> ◀─────────────────────▶ vLLM on 127.0.0.1:8000
  ├─ wait for /v1/models, at most 1200s
  ├─ the chat, or --api's two lines and a hold
- └─ down: /exit, end of input, Ctrl-C, or the ceiling
+ └─ down: /exit, end of input, Ctrl-C; the chat ends if the server stops answering
 ```
 
 ```console
@@ -139,12 +139,14 @@ A warp is ...
   have 1200s, a `loading:` line from the pod's log comes every 30s, and past 1200s the session is torn down.
   `--volume <id>` keeps the weights on a network volume across sessions.
 - **The chat** streams each answer and keeps the conversation in memory. Thinking is off unless `--think`.
-  `/exit` or the end of input ends the session.
+  `/exit` or the end of input ends the session; so does a server that stops answering, as when the ceiling has
+  stopped the pod.
+- **The local port** `<port>` is a free one, picked before the price is asked.
 - **`--api`** prints two lines to stdout, then holds the session until Ctrl-C, or until the server has not
   answered for 60s, as when the ceiling has stopped the pod:
 
   ```sh
-  OPENAI_BASE_URL=http://127.0.0.1:8000/v1
+  OPENAI_BASE_URL=http://127.0.0.1:<port>/v1
   OPENAI_API_KEY=<a fresh key per session>
   ```
 
@@ -206,8 +208,11 @@ chat and `--api`'s two lines.
 
 ## The proof — `make live`
 
-`make live` rents one real pod for at most ten minutes, run by hand: it prints the card's price and the
-maximum first, then runs `nvidia-smi` through `gpunit run`. The gate, `make gate`, fakes every provider answer.
+`make live` rents one real pod for at most ten minutes plus its 420s wait for SSH, run by hand: it prints the
+card's price and the maximum first, then runs `nvidia-smi` through `gpunit run`. The gate, `make gate`, fakes every
+provider answer.
 
-`make live-serve` proves the serve image and the model on one 24 GB card, for at most 30 minutes a session:
-`gpunit serve qwen3-4b --api` for one `curl`, then a chat of one prompt.
+`make live-serve` proves the serve image and the model on one 24 GB card, for at most 30 minutes plus the 1200s wait
+for SSH a session: `gpunit serve qwen3-4b --api` for one `curl`, then a chat of one prompt.
+
+`make live-dead` boots an image whose container exits at once, and shows `up` tearing it down within seconds.

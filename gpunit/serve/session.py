@@ -2,6 +2,8 @@
 
 import http.client
 import secrets
+import socket
+import sys
 import urllib.request
 from collections.abc import Callable
 from decimal import ROUND_UP, Decimal
@@ -49,7 +51,7 @@ def serve(
     """Serve `name` until the session ends; return the exit code `gpunit run` would."""
     row = table.load().models[name]
     key = secrets.token_urlsafe(32)
-    spec = row.spec(ceiling_s, volume, max_hourly, key)
+    spec = row.spec(ceiling_s, volume, max_hourly, key, _free_port())
     # No proxy: the endpoint is the tunnel's loopback side.
     opener = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
@@ -72,8 +74,26 @@ def serve(
 
 def down(name: str, provider: Provider) -> int:
     """Tear down the session `serve` left for `name`; return 0, or 1 on a fault."""
-    spec = table.load().models[name].spec(0, None, None, "")
+    spec = table.load().models[name].spec(0, None, None, "", table.PORT)
     return lifecycle.down(spec, provider, State(home(name)))
+
+
+def most_cost(hourly: Decimal, spec: Spec) -> Decimal:
+    """Return the most `spec` can cost at `hourly` dollars an hour, up to the cent.
+
+    e.g. $0.69/h, a 1800s ceiling and a 1200s wait → Decimal("0.58")
+    """
+    # Up to the cent: the figure agreed is never under the most it can cost. The pod
+    # bills while it pulls, and boot arms the ceiling only after: count the SSH wait.
+    billed_s = spec.ceiling_s + spec.timeout_s
+    return (hourly * billed_s / 3600).quantize(Decimal("0.01"), ROUND_UP)
+
+
+def _free_port() -> int:
+    # Picked before the price, so a busy local port is never refused after a yes.
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]
 
 
 def _agree(
@@ -95,10 +115,7 @@ def _agree(
         prices.append(Decimal(str(info.hourly)))
     if not prices:
         log.refuse("no card in the table meets its vram_gb and max_hourly")
-    # Up to the cent: the figure agreed is never under the most it can cost. The pod
-    # bills while it pulls, and boot arms the ceiling only after: count the SSH wait.
-    billed_s = spec.ceiling_s + spec.timeout_s
-    most = (max(prices) * billed_s / 3600).quantize(Decimal("0.01"), ROUND_UP)
+    most = most_cost(max(prices), spec)
     log.say(
         f"at most ${most} for {spec.ceiling_s}s and a {spec.timeout_s}s wait for SSH"
     )
@@ -108,6 +125,11 @@ def _agree(
         answer = ask(f"rent {spec.project} for at most ${most}? [y/N] ")
     except EOFError:
         answer = ""
+    except KeyboardInterrupt:
+        # Ends the prompt's line, so the next line opens at its start.
+        print(file=sys.stderr, flush=True)
+        log.say("not rented")
+        raise
     if answer.strip().lower() not in ("y", "yes"):
         log.refuse("not rented")
 

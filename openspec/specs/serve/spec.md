@@ -8,10 +8,10 @@ session ends.
 
 ### Requirement: The model table names what each model serves on
 
-The system SHALL bundle a model table whose rows each name a model's Hugging Face repository at a pinned revision,
-its served name, its vLLM arguments, the card memory it needs, the cards to try in order, and its disk; and SHALL
-bundle the digest of the image every row serves on. A row SHALL be refused, naming the row and the field, when a
-field is missing, the revision is not a commit hash, or the image is not a digest.
+The system SHALL bundle a model table whose rows each name a model's Hugging Face repository at a pinned revision, its
+served name, its vLLM arguments, the card memory it needs, the cards to try in order, and its disk; and SHALL bundle
+the digest of the image every row serves on. A row SHALL be refused, naming the row and the field, when a field is
+missing, the revision is not a commit hash, or the image is not a digest.
 
 #### Scenario: the table loads
 - **Key:** `serve:table:loads`
@@ -26,8 +26,9 @@ field is missing, the revision is not a commit hash, or the image is not a diges
 #### Scenario: a row becomes a session's spec
 - **Key:** `serve:table:row-makes-the-spec`
 - **WHEN** `qwen3-4b` is served with `--ceiling 2h`
-- **THEN** the session's spec names the project `serve-qwen3-4b`, the table's image, the row's cards, memory and disk,
-  port `8000`, the ceiling `7200` seconds, and the model, its revision and its arguments in the pod's environment
+- **THEN** the session's spec names the project `serve-qwen3-4b`, the table's image, the row's cards, memory and
+  disk, its remote port `8000` forwarded to the local port it was given, the ceiling `7200` seconds, and the model, its
+  revision and its arguments in the pod's environment
 
 ### Requirement: Nothing is rented before the operator agrees to the price
 
@@ -51,6 +52,11 @@ question.
 - **WHEN** `qwen3-4b` is served with `--ceiling 30m` on a card at `$0.69/h`
 - **THEN** the question names at most `$0.58`, the price for the 1800 s ceiling plus the 1200 s wait for SSH
 
+#### Scenario: an interrupt at the question rents nothing
+- **Key:** `serve:price:interrupt-is-no`
+- **WHEN** the operator presses Ctrl-C at the question
+- **THEN** nothing is created, stderr says `not rented` without a traceback, and the command exits `130`
+
 ### Requirement: A served session waits for the model, within a bound
 
 The system SHALL keep a served session's files under `~/.local/state/gpunit/serve/<model>/`, wherever the command
@@ -73,11 +79,17 @@ tear down at that bound.
 - **WHEN** `gpunit serve qwen3-4b` runs from any directory
 - **THEN** its session files are under `~/.local/state/gpunit/serve/qwen3-4b/.gpunit/`
 
+#### Scenario: a busy local port is not a clash
+- **Key:** `serve:wait:busy-local-port-is-skipped`
+- **WHEN** local port `8000` already answers
+- **THEN** the forward uses another free local port before the price is asked, and the endpoint names it
+
 ### Requirement: The chat streams the model's answer in the terminal
 
 The system SHALL read the operator's lines, send each with the conversation so far to the model's chat completions
-endpoint, print the answer as it streams, keep the conversation in memory, and end the session on `/exit` or the end
-of input. Thinking SHALL be off unless `--think` is given.
+endpoint, print the answer as it streams, keep the conversation in memory, and end the session on `/exit`, the end of
+input, or a request that cannot connect, which says the server stopped answering. Thinking SHALL be off unless
+`--think` is given.
 
 #### Scenario: an answer streams
 - **Key:** `serve:chat:streams`
@@ -93,6 +105,16 @@ of input. Thinking SHALL be off unless `--think` is given.
 - **Key:** `serve:chat:eof-ends`
 - **WHEN** the operator sends `/exit`, or the input ends
 - **THEN** the session closes
+
+#### Scenario: a stopped server ends the chat
+- **Key:** `serve:chat:stopped-server-ends`
+- **WHEN** a request cannot connect, as when the pod's ceiling has stopped it
+- **THEN** the chat ends, the session closes, and stderr says the server stopped answering
+
+#### Scenario: a server error drops the turn
+- **Key:** `serve:chat:server-error-drops-the-turn`
+- **WHEN** a request is answered with an HTTP 500
+- **THEN** the turn is dropped, stderr says the model did not answer, and the chat goes on
 
 ### Requirement: The endpoint is served on loopback with a key of its own
 

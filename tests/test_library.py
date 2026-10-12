@@ -17,7 +17,16 @@ from gpunit.provider import Lost, Provider
 from gpunit.runpod import RunPod
 from gpunit.spec import load_spec
 from gpunit.state import State
-from tests.fakes import KEY_LINE, RECORD, FakeOpener, FakeProvider, fixture, page, quiet
+from tests.fakes import (
+    BOOT_LOG,
+    RECORD,
+    FakeOpener,
+    FakeProvider,
+    fixture,
+    log_stream,
+    page,
+    quiet,
+)
 from tests.helpers import IMAGE, NO_REQUESTS, install_stubs, with_port
 
 KEY = "rpa_mapping_key"
@@ -277,7 +286,7 @@ def test_the_key_comes_from_the_mapping(
         (200, fixture("gpu.json")),
         (201, fixture("pod_created.json")),
         (200, fixture("pod_running.json")),
-        quiet(f'data: {{"line": "{KEY_LINE}"}}\n'.encode()),
+        quiet(log_stream(*BOOT_LOG)),
         (204, b""),
         (200, page([], None)),
     )

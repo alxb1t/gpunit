@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-12
+
+### Fixed
+
+- The host key is the last one boot printed before its `step: the command` line, so a command that echoes a key
+  line cannot supply it; a key line with no step after it is not yet read.
+- `serve` forwards to a free local port picked before the price, so a busy 8000 is never refused after a `y`;
+  Ctrl-C at the question says `not rented` and exits `130`; the chat ends when the server cannot be reached,
+  or when the tunnel closes the connection with no answer.
+- `qwen3-4b`'s cards are 24 GB only: the RTX A4500 (20 GB) gives way to the L4.
+- A pod `EXITED`, `ERROR` or `TERMINATED` on two polls in a row ends the wait and is torn down, so a container
+  that cannot start stops billing in seconds, not at `timeout`.
+
+### Added
+
+- `make live-dead`: an image without `curl`, so boot refuses and the container exits, to show what RunPod reports
+  for a dead boot. `live/price.py` takes a spec path and counts the wait for SSH with the ceiling.
+- The image `gpunit-live-dead` is built and pinned by digest; `make live-dead` saw RunPod report `EXITED`, and `up`
+  tore the pod down in 17s. `make live` passed on an A40; no pod was left ([live/last_run.txt](live/last_run.txt)).
+
+### Changed
+
+- README, the `live-serve` comment and `CLAUDE.md` say what the code does: the serve diagram's end, the live runs'
+  wait for SSH, and what a patch may hold.
+
 ## [0.3.0] - 2026-10-12
 
 ### Added
