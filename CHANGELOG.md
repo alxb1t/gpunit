@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The model table's second row, `qwen3.8-27b`: `Qwen/Qwen3.8-27B-FP8` at a pinned revision, on a 48 GB card, with
+  the `qwen3_coder` tool-call parser and the language model alone, so `serve` offers a model large enough for an agent.
+
 ## [0.4.0] - 2026-10-12
 
 ### Added

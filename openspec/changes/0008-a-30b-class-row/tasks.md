@@ -5,16 +5,16 @@ The row, the check, the handover, then the one metered proof, per [design](desig
 
 ## Progress
 
-- [ ] 1 — The row
+- [x] 1 — The row
 - [ ] 2 — The check
 - [ ] 3 — The handover
 - [ ] 4 — ⚠️ **HUMAN · METERED** — make live-serve MODEL=qwen3.8-27b
 
 ## 1 — The row
 
-- [ ] 1.1 **HALT CHECK** — the table holds the 4B row alone, and the larger model's revision is still on the Hub.
+- [x] 1.1 **HALT CHECK** — the table holds the 4B row alone, and the larger model's revision is still on the Hub.
   Verify: `grep -c '^\[models' gpunit/serve/models.toml` prints `1`, and `curl -s -m 20 https://huggingface.co/api/models/Qwen/Qwen3.8-27B-FP8/revision/017b9c7af6b5689d5dd426a76e0bc077eb5ca20a | grep -c '"sha":"017b9c7af6b5689d5dd426a76e0bc077eb5ca20a"'` prints `1`.
-- [ ] 1.2 Add the row `[models."qwen3.8-27b"]` to `gpunit/serve/models.toml` per [D1](design.md#d1) and [D2](design.md#d2); in `tests/test_serve_table.py` widen `serve:table:loads` to both rows and bind `serve:table:larger-row`; in `tests/test_cli.py` assert the unknown-model refusal names both rows.
+- [x] 1.2 Add the row `[models."qwen3.8-27b"]` to `gpunit/serve/models.toml` per [D1](design.md#d1) and [D2](design.md#d2); in `tests/test_serve_table.py` widen `serve:table:loads` to both rows and bind `serve:table:larger-row`; in `tests/test_cli.py` assert the unknown-model refusal names both rows.
   Verify: `uv run python -c 'from gpunit.serve import table; print(sorted(table.load().models))'` prints `['qwen3-4b', 'qwen3.8-27b']`, and `grep -c 'serve:table:larger-row' tests/test_serve_table.py` prints `1`.
 
 ## 2 — The check

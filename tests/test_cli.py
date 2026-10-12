@@ -95,7 +95,7 @@ def test_an_unknown_model_exits_2_naming_the_tables_models(
     monkeypatch.chdir(tmp_path)
 
     assert gpunit(argv, provider=NO_REQUESTS) == 2
-    assert "it holds qwen3-4b" in capsys.readouterr().err
+    assert "it holds qwen3-4b, qwen3.8-27b" in capsys.readouterr().err
 
 
 @pytest.fixture
