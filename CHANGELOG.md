@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-12
+
 ### Fixed
 
 - The host key is the last one boot printed before its `step: the command` line, so a command that echoes a key
