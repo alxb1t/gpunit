@@ -170,7 +170,8 @@ A client in a container, such as an agent's box, needs two checks before it can 
 
 ## What it cost
 
-`gpunit spend` prints what the provider billed over the last 7 whole UTC days, each pod under its project.
+`gpunit spend` prints what the provider billed for pods and network volumes over the last 7 whole UTC days, each
+pod under its project.
 `--days N` picks another window, from 1 to 3660; `--json` prints one object, its amounts in whole cents.
 
 ```console
@@ -185,6 +186,8 @@ total                                  $1.79
 
 - **Every amount is the provider's.** The pods' and the network volumes' billing is read from RunPod, never
   estimated from a price. The total sums the unrounded amounts, so a line's cents may miss it by a cent.
+- **Pods and network volumes only.** Serverless endpoints, public endpoints and clusters billed to the same account
+  are not read, so their charges are in no line and not in the total.
 - **A pod's project comes from the ledger**, `~/.local/state/gpunit/ledger.jsonl`: `up` adds a line when a create
   answers, and `down` when it sweeps a pod no record names. Each line holds the pod's id, the project, the card,
   the image and the time; one that cannot be written warns and blocks nothing, one that cannot be read exits `1`.
