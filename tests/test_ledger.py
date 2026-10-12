@@ -1,6 +1,8 @@
 import json
+import pwd
 import re
 from pathlib import Path
+from typing import NoReturn
 
 import pytest
 
@@ -82,6 +84,31 @@ def test_an_unwritable_ledger_blocks_nothing(
 
 def _unguarded(project: str, pod_id: str, card: str | None, image: str) -> None:
     ledger.path().parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+
+
+@pytest.mark.spec("spend:ledger:failure-never-blocks")
+def test_no_home_blocks_nothing(
+    cwd: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # No HOME and no passwd entry: `Path.home()` raises `RuntimeError`, not `OSError`.
+    monkeypatch.delenv("HOME")
+    monkeypatch.setattr(pwd, "getpwuid", _no_entry)
+
+    assert gpunit(["up"], provider=FakeProvider(creates=["pod-9"])) == 0
+    assert State(cwd).read() is not None
+    assert "the ledger could not be written" in capsys.readouterr().err
+
+    # pod-7 is not the recorded pod: the sweep names it in the ledger, then deletes it.
+    provider = FakeProvider(listings=[[("pod-9", "RUNNING"), ("pod-7", "RUNNING")]])
+    assert gpunit(["down"], provider=provider) == 0
+    assert provider.named("delete") == [("pod-9",), ("pod-7",)]
+    assert "the ledger could not be written" in capsys.readouterr().err
+
+
+def _no_entry(uid: int) -> NoReturn:
+    raise KeyError(f"getpwuid(): uid not found: {uid}")
 
 
 @pytest.mark.spec("spend:report:by-project")

@@ -26,15 +26,15 @@ def path() -> Path:
 
 
 def record(project: str, pod_id: str, card: str | None, image: str) -> None:
-    """Append the pod's line; on an `OSError` warn and return, never raise."""
+    """Append the pod's line; with no home or on an `OSError`, warn, never raise."""
     entry = Entry(pod_id, project, card, image, log.utc())
-    file = path()
     try:
+        file = path()
         file.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         fd = os.open(file, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
         with os.fdopen(fd, "a", encoding="utf-8") as out:
             out.write(json.dumps(asdict(entry)) + "\n")
-    except OSError as fault:
+    except (OSError, RuntimeError) as fault:
         log.say(f"warning: the ledger could not be written: {fault}")
 
 
