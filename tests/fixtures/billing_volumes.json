@@ -1,0 +1,42 @@
+{
+  "records": [
+    {
+      "networkVolumeId": "3vh5895lws",
+      "startTime": "2026-10-06T00:00:00Z",
+      "endTime": "2026-10-07T00:00:00Z",
+      "standardAmount": 0.01750000042375177,
+      "highPerformanceAmount": 0,
+      "totalAmount": 0.01750000042375177
+    },
+    {
+      "networkVolumeId": "db7sc8cild",
+      "startTime": "2026-10-06T00:00:00Z",
+      "endTime": "2026-10-07T00:00:00Z",
+      "standardAmount": 0.04666666779667139,
+      "highPerformanceAmount": 0,
+      "totalAmount": 0.04666666779667139
+    },
+    {
+      "networkVolumeId": "db7sc8cild",
+      "startTime": "2026-10-12T00:00:00Z",
+      "endTime": "2026-10-13T00:00:00Z",
+      "standardAmount": 0.031111111864447594,
+      "highPerformanceAmount": 0,
+      "totalAmount": 0.031111111864447594
+    }
+  ],
+  "metadata": {
+    "query": {
+      "startTime": "2026-10-06T00:00:00Z",
+      "endTime": "2026-10-13T00:00:00Z",
+      "bucketSize": "day"
+    },
+    "recordCount": 3,
+    "uniqueNetworkVolumeCount": 2,
+    "totals": {
+      "standardAmount": 0.09527778008487076,
+      "highPerformanceAmount": 0,
+      "totalAmount": 0.09527778008487076
+    }
+  }
+}

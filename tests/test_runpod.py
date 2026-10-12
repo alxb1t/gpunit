@@ -14,9 +14,11 @@ from gpunit.provider import (
     GpuInfo,
     Lost,
     NoImage,
+    PodCost,
     PodInfo,
     Refused,
     Unknown,
+    VolumeCost,
     VolumeInfo,
     fingerprint,
 )
@@ -335,3 +337,57 @@ def test_a_dotenv_beside_the_spec_is_ignored(
 
     with pytest.raises(Refusal, match="RUNPOD_API_KEY"):
         RunPod(opener=FakeOpener())
+
+
+WEEK = ("2026-10-06T00:00:00Z", "2026-10-13T00:00:00Z")
+
+
+def billing_query(opener: FakeOpener) -> tuple[str, dict[str, list[str]]]:
+    url = urllib.parse.urlsplit(opener.requests[0].full_url)
+    return url.path, urllib.parse.parse_qs(url.query)
+
+
+@pytest.mark.spec("spend:report:total-is-the-providers")
+def test_pod_billing_takes_each_records_total_amount() -> None:
+    provider, opener = runpod((200, fixture("billing_pods.json")))
+
+    assert provider.pod_billing(*WEEK) == [
+        PodCost("dnlnasr56lt2uq", "2026-10-07T00:00:00Z", 0.00341992499306798),
+        PodCost("gypz8tpe5pbl50", "2026-10-10T00:00:00Z", 0.09196642320603132),
+        PodCost("fh5qgxf87eu6nr", "2026-10-12T00:00:00Z", 0.5304889967665076),
+    ]
+    assert billing_query(opener) == (
+        "/v2/billing/pods",
+        {"bucketSize": ["day"], "startTime": [WEEK[0]], "endTime": [WEEK[1]]},
+    )
+
+
+@pytest.mark.spec("spend:report:total-is-the-providers")
+def test_volume_billing_takes_each_records_total_amount() -> None:
+    provider, opener = runpod((200, fixture("billing_volumes.json")))
+
+    assert provider.volume_billing(*WEEK) == [
+        VolumeCost("3vh5895lws", "2026-10-06T00:00:00Z", 0.01750000042375177),
+        VolumeCost("db7sc8cild", "2026-10-06T00:00:00Z", 0.04666666779667139),
+        VolumeCost("db7sc8cild", "2026-10-12T00:00:00Z", 0.031111111864447594),
+    ]
+    assert billing_query(opener)[0] == "/v2/billing/network-volumes"
+
+
+@pytest.mark.spec("spend:report:total-is-the-providers")
+@pytest.mark.parametrize(
+    "answer",
+    [
+        (500, fixture("problem.json")),
+        (200, b'{"records": [{"podId": "p", "startTime": "t"}]}'),
+        (200, b'{"records": [{"podId": "p", "startTime": "t", "totalAmount": "1"}]}'),
+        urllib.error.URLError("down"),
+    ],
+    ids=["500", "no-amount", "string-amount", "transport"],
+)
+@pytest.mark.parametrize("read", ["pod_billing", "volume_billing"])
+def test_an_unreadable_billing_is_lost(answer: Answer, read: str) -> None:
+    provider, _ = runpod(answer)
+
+    with pytest.raises(Lost, match="billing read"):
+        getattr(provider, read)(*WEEK)

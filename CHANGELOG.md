@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A ledger at `~/.local/state/gpunit/ledger.jsonl` names each pod `up` creates and `down` sweeps, with its project,
   so its billing finds the project after teardown; a ledger that cannot be written warns and blocks nothing.
+- The provider seam reads the pods' and the network volumes' billing in UTC day buckets, each record's
+  `totalAmount` as RunPod charged it; an answer that does not read is `Lost`.
 
 ## [0.3.1] - 2026-10-12
 

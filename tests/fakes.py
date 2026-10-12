@@ -9,7 +9,7 @@ from email.message import Message
 from pathlib import Path
 from typing import TypeVar
 
-from gpunit.provider import GpuInfo, PodInfo, VolumeInfo
+from gpunit.provider import GpuInfo, PodCost, PodInfo, VolumeCost, VolumeInfo
 from gpunit.spec import Spec
 from gpunit.state import Record
 from tests.helpers import IMAGE
@@ -61,6 +61,8 @@ class FakeProvider:
         since_logs: Sequence[list[str]] = ([],),
         listings: Sequence[list[tuple[str, str]] | Exception] = ([],),
         deletes: Mapping[str, int] | None = None,
+        pod_costs: Sequence[PodCost] | Exception = (),
+        volume_costs: Sequence[VolumeCost] | Exception = (),
     ) -> None:
         """Script the answers; a card or volume not named answers `CARD` or fails."""
         self.gpus = dict(gpus or {})
@@ -71,6 +73,8 @@ class FakeProvider:
         self.since_logs = [list(lines) for lines in since_logs]
         self.listings = list(listings)
         self.deletes = dict(deletes or {})
+        self.pod_costs = pod_costs
+        self.volume_costs = volume_costs
         self.calls: list[tuple[str, tuple[object, ...]]] = []
 
     def named(self, verb: str) -> list[tuple[object, ...]]:
@@ -102,6 +106,16 @@ class FakeProvider:
         self.calls.append(("log", (pod_id, tail, since)))
         return list(_next(self.logs if since is None else self.since_logs))
 
+    def pod_billing(self, start: str, end: str) -> list[PodCost]:
+        """Answer the scripted costs whose bucket starts in the window asked."""
+        self.calls.append(("pod_billing", (start, end)))
+        return _in_window(_raise_or(self.pod_costs), start, end)
+
+    def volume_billing(self, start: str, end: str) -> list[VolumeCost]:
+        """Answer the scripted costs whose bucket starts in the window asked."""
+        self.calls.append(("volume_billing", (start, end)))
+        return _in_window(_raise_or(self.volume_costs), start, end)
+
     def list(self, project: str, image: str) -> list[tuple[str, str]]:
         """Answer the next listing in the script."""
         self.calls.append(("list", (project, image)))
@@ -116,6 +130,14 @@ class FakeProvider:
         """Answer 200."""
         self.calls.append(("stop", (pod_id,)))
         return 200
+
+
+C = TypeVar("C", PodCost, VolumeCost)
+
+
+def _in_window(costs: Sequence[C], start: str, end: str) -> list[C]:
+    # RFC 3339 times in one form, Z, order as strings do.
+    return [cost for cost in costs if start <= cost.start < end]
 
 
 def _next(script: list[T]) -> T:

@@ -64,6 +64,24 @@ class PodInfo:
     port: int | None
 
 
+@dataclass(frozen=True)
+class PodCost:
+    """What the provider charged for one pod over the bucket starting at `start`."""
+
+    pod_id: str
+    start: str
+    amount: float
+
+
+@dataclass(frozen=True)
+class VolumeCost:
+    """What the provider charged for one network volume over one bucket."""
+
+    volume_id: str
+    start: str
+    amount: float
+
+
 class Lost(Exception):
     """The provider's answer did not arrive; a create may have made a pod."""
 
@@ -104,6 +122,14 @@ class Provider(Protocol):
 
         With `since`, an RFC 3339 time, return the lines from then on instead.
         """
+        ...
+
+    def pod_billing(self, start: str, end: str) -> list[PodCost]:
+        """Return each pod's charge per UTC day in `[start, end)`; raise `Lost`."""
+        ...
+
+    def volume_billing(self, start: str, end: str) -> list[VolumeCost]:
+        """Return each volume's charge per UTC day in `[start, end)`; raise `Lost`."""
         ...
 
     def list(self, project: str, image: str) -> list[tuple[str, str]]:

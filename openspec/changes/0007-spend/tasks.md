@@ -6,7 +6,7 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 ## Progress
 
 - [x] 1 — The ledger
-- [ ] 2 — The billing seam
+- [x] 2 — The billing seam
 - [ ] 3 — The report
 - [ ] 4 — The handover
 - [ ] 5 — ⚠️ **HUMAN** — compare the total with the console
@@ -22,9 +22,9 @@ per [design](design.md). Every new test carries `@pytest.mark.spec` with the key
 
 ## 2 — The billing seam
 
-- [ ] 2.1 Add `PodCost`, `VolumeCost`, `pod_billing` and `volume_billing` to `gpunit/provider.py` and implement them in `gpunit/runpod.py` per [D2](design.md#d2); write `tests/fixtures/billing_pods.json` and `tests/fixtures/billing_volumes.json`; in `tests/test_runpod.py` bind `spend:report:total-is-the-providers` to both reads and a 500 raising `Lost`.
+- [x] 2.1 Add `PodCost`, `VolumeCost`, `pod_billing` and `volume_billing` to `gpunit/provider.py` and implement them in `gpunit/runpod.py` per [D2](design.md#d2); write `tests/fixtures/billing_pods.json` and `tests/fixtures/billing_volumes.json`; in `tests/test_runpod.py` bind `spend:report:total-is-the-providers` to both reads and a 500 raising `Lost`.
   Verify: `grep -c 'def pod_billing' gpunit/provider.py gpunit/runpod.py | grep -c ':1$'` prints `2`, and `ls tests/fixtures | grep -c billing` prints `2`.
-- [ ] 2.2 Give `FakeProvider` in `tests/fakes.py` scripted `pod_costs` and `volume_costs` that record the window asked.
+- [x] 2.2 Give `FakeProvider` in `tests/fakes.py` scripted `pod_costs` and `volume_costs` that record the window asked.
   Verify: `grep -c -E 'def (pod_billing|volume_billing)' tests/fakes.py` prints `2`, and `uv run ty check` exits 0.
 
 ## 3 — The report
