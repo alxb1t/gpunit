@@ -7,6 +7,7 @@ from gpunit.serve import table
 from gpunit.spec import DIGEST, Port
 
 PINNED = "1cfa9a7208912126459214e8b04321603b3df60c"
+LARGER_PINNED = "017b9c7af6b5689d5dd426a76e0bc077eb5ca20a"
 
 
 def _bundled_with(old: str, new: str, tmp_path: Path) -> Path:
@@ -18,14 +19,36 @@ def _bundled_with(old: str, new: str, tmp_path: Path) -> Path:
 
 
 @pytest.mark.spec("serve:table:loads")
-def test_the_bundled_table_holds_qwen3_4b_at_a_pinned_revision() -> None:
+def test_the_bundled_table_holds_both_rows_at_pinned_revisions() -> None:
     loaded = table.load()
 
-    row = loaded.models["qwen3-4b"]
-    assert row.repo == "Qwen/Qwen3-4B"
-    assert row.revision == PINNED
+    assert sorted(loaded.models) == ["qwen3-4b", "qwen3.8-27b"]
+    assert loaded.models["qwen3-4b"].repo == "Qwen/Qwen3-4B"
+    assert loaded.models["qwen3-4b"].revision == PINNED
+    assert loaded.models["qwen3.8-27b"].repo == "Qwen/Qwen3.8-27B-FP8"
+    assert loaded.models["qwen3.8-27b"].revision == LARGER_PINNED
     assert DIGEST.search(loaded.image)
-    assert row.image == loaded.image
+    assert all(row.image == loaded.image for row in loaded.models.values())
+
+
+@pytest.mark.spec("serve:table:larger-row")
+def test_the_larger_row_asks_for_a_48_gb_card_and_its_familys_parser() -> None:
+    row = table.load().models["qwen3.8-27b"]
+
+    assert row.vram_gb == 48
+    assert row.gpus == (
+        "NVIDIA A40",
+        "NVIDIA RTX A6000",
+        "NVIDIA L40",
+        "NVIDIA RTX 6000 Ada Generation",
+        "NVIDIA L40S",
+    )
+    flags = dict(zip(row.args, row.args[1:]))
+    assert flags["--tool-call-parser"] == "qwen3_coder"
+    assert flags["--reasoning-parser"] == "qwen3"
+    assert "--language-model-only" in row.args
+    # Its Mamba cache holds 192 sequences on 48 GB: vLLM's default 256 fails to start.
+    assert int(flags["--max-num-seqs"]) <= 192
 
 
 @pytest.mark.spec("serve:table:revision-pinned")
