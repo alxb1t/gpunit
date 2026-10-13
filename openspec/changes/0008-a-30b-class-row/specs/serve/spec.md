@@ -57,6 +57,11 @@ otherwise.
 - **WHEN** the server answers with a call whose arguments are not JSON
 - **THEN** the check exits `1` and says so
 
+#### Scenario: a call to another function fails
+- **Key:** `serve:tools:other-function-fails`
+- **WHEN** the server answers with `finish_reason` `tool_calls` and a call to `get_time`
+- **THEN** the check exits `1` and names the function it was given
+
 #### Scenario: the key is not an argument
 - **Key:** `serve:tools:key-from-the-environment`
 - **WHEN** the check runs

@@ -34,7 +34,7 @@ See [proposal](proposal.md) — *Why*. What holds at the cut, `main` at `98f7b47
 
 **Goals:** the row, proved to load and to call a tool on a real card.
 
-**Non-Goals:** a second row; a code change in `serve`; a new image; a per-row wait.
+**Non-Goals:** a third row (the MoE `Qwen3.6-35B-A3B-FP8`); a code change in `serve`; a new image; a per-row wait.
 
 ## Decisions
 

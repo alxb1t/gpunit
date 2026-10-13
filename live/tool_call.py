@@ -77,6 +77,9 @@ def main(argv: list[str]) -> int:
         print(f"OPENAI_API_KEY is not set\n{USAGE}", file=sys.stderr)
         return 1
     base, model = argv
+    if not base.startswith(("http://", "https://")):
+        print(f"the base URL is not http(s)\n{USAGE}", file=sys.stderr)
+        return 1
     sent = urllib.request.Request(
         f"{base.rstrip('/')}/chat/completions",
         data=json.dumps(request(model)).encode(),

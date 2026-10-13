@@ -120,26 +120,27 @@ def test_plain_text_fails(model: ModelServer, reply: dict) -> None:
 
 
 @pytest.mark.spec("serve:tools:bad-arguments-fail")
-@pytest.mark.parametrize(
-    ("call", "said"),
-    [
-        (weather("{city: Paris"), "arguments are not JSON"),
-        (
-            {"type": "function", "function": {"name": "get_time", "arguments": "{}"}},
-            "named 'get_time'",
-        ),
-    ],
-    ids=["not-json", "other-function"],
-)
-def test_unparseable_arguments_fail(
-    model: ModelServer, call: dict[str, object], said: str
-) -> None:
+def test_unparseable_arguments_fail(model: ModelServer) -> None:
+    model.answer = answer("tool_calls", [weather("{city: Paris")])
+
+    done = check(model.base_url, "qwen3.8-27b")
+
+    assert done.returncode == 1
+    assert "arguments are not JSON" in done.stderr
+
+
+@pytest.mark.spec("serve:tools:other-function-fails")
+def test_a_call_to_another_function_fails(model: ModelServer) -> None:
+    call: dict[str, object] = {
+        "type": "function",
+        "function": {"name": "get_time", "arguments": "{}"},
+    }
     model.answer = answer("tool_calls", [call])
 
     done = check(model.base_url, "qwen3.8-27b")
 
     assert done.returncode == 1
-    assert said in done.stderr
+    assert "named 'get_time'" in done.stderr
 
 
 @pytest.mark.spec("serve:tools:key-from-the-environment")
@@ -153,12 +154,22 @@ def test_the_key_comes_from_the_environment_only(
 ) -> None:
     done = check(model.base_url, "qwen3.8-27b", *extra, key=key)
 
+    assert KEY not in done.stderr + done.stdout
     if extra or key is None:
         assert done.returncode == 1
         assert "usage" in done.stderr
-        assert KEY not in done.stderr + done.stdout
         assert model.requests == []
         return
     assert done.returncode == 0
     [(_, authorization, _)] = model.requests
     assert authorization == f"Bearer {KEY}"
+
+
+@pytest.mark.spec("serve:tools:key-from-the-environment")
+def test_a_key_given_as_the_base_url_is_not_echoed(model: ModelServer) -> None:
+    done = check(KEY, "qwen3.8-27b", key="x")
+
+    assert done.returncode == 1
+    assert "not http(s)" in done.stderr
+    assert KEY not in done.stderr + done.stdout
+    assert model.requests == []
