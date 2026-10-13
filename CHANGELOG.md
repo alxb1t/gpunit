@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `live/tool_call.py` sends one chat request with a function and passes only on a parseable call to it, the key read
   from `OPENAI_API_KEY`; `make live-serve MODEL=<row>` runs it after the `curl`, so a live run proves a row's tools.
 - README's *Serve a model* names both rows and their cards; its proof paragraph says `make live-serve MODEL=<row>`.
+- `live/serve_last_run.txt`: `make live-serve MODEL=qwen3.8-27b` on an NVIDIA A40 answers the `curl`, the chat, and
+  the tool call `get_weather {"city": "Paris"}`.
 
 ## [0.4.0] - 2026-10-12
 

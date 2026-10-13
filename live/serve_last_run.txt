@@ -68,3 +68,54 @@ channel 2: open failed: connect failed: Connection refused
 > 4
 > 
 2026-10-12T12:11:16Z pod iymqp3dhvxzjdd deleted
+
+2026-10-13 — make live-serve MODEL=qwen3.8-27b, 0008-a-30b-class-row
+
+Card: NVIDIA A40, both sessions. Image unchanged, by digest. After the run, no pod was listed.
+Two earlier runs stopped before serving: vLLM refused max_num_seqs 256 over the row's 192 Mamba
+cache blocks; the row now passes --max-num-seqs 64 (commit 8ac323a).
+
+2026-10-13T11:29:11Z price: NVIDIA A40 $0.59/h
+2026-10-13T11:29:11Z price: NVIDIA RTX A6000 $0.59/h
+2026-10-13T11:29:12Z price: NVIDIA L40 $0.82/h
+2026-10-13T11:29:12Z price: NVIDIA RTX 6000 Ada Generation $0.99/h
+2026-10-13T11:29:13Z price: NVIDIA L40S $1.09/h
+2026-10-13T11:29:13Z at most $0.91 for 1800s and a 1200s wait for SSH
+2026-10-13T11:29:16Z creating on NVIDIA A40
+2026-10-13T11:29:17Z pod qsbqe358icuniy created; waiting for SSH
+2026-10-13T11:37:45Z host key verified: SHA256:HFkhGa8KxW7BRAdqlnRSJXQVDIdq7+Nl00tt5z/J7uQ
+2026-10-13T11:37:45Z session up: pod qsbqe358icuniy, root@194.68.245.44 -p 22011
+2026-10-13T11:38:19Z loading: (APIServer pid=113) INFO 10-13 11:38:09 [compilation.py:331] Enabled custom fusions: norm_quant, act_quant
+2026-10-13T11:38:54Z loading: Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-10-13T11:39:28Z loading: (EngineCore pid=803) INFO 10-13 11:39:21 [backends.py:1151] Dynamo bytecode transform time: 13.51 s
+2026-10-13T11:40:03Z loading:   warn("tl.make_block_ptr is deprecated. Use TensorDescriptor or tl.make_tensor_descriptor instead.")
+2026-10-13T11:40:37Z loading:   warn("tl.make_block_ptr is deprecated. Use TensorDescriptor or tl.make_tensor_descriptor instead.")
+2026-10-13T11:41:11Z loading: (EngineCore pid=803) INFO 10-13 11:41:07 [monitor.py:81] Initial profiling/warmup run took 75.04 s
+2026-10-13T11:41:46Z loading: (EngineCore pid=803) INFO 10-13 11:41:29 [mamba_triton_warmup.py:42] Warmed Mamba batch_memcpy_kernel.
+2026-10-13T11:41:56Z qwen3.8-27b answers on http://127.0.0.1:52269/v1
+2026-10-13T11:41:56Z serving until interrupted or the ceiling; Ctrl-C ends the session
+{"id":"chatcmpl-8d460c5e9c765529","object":"chat.completion","created":1791891718,"model":"qwen3.8-27b","choices":[{"index":0,"message":{"role":"assistant","content":"Hello","refusal":null,"annotations":null,"audio":null,"function_call":null,"reasoning":null},"logprobs":null,"finish_reason":"stop","stop_reason":null,"token_ids":null,"routed_experts":null}],"service_tier":null,"system_fingerprint":"vllm-0.31.0-20b9db8c","usage":{"prompt_tokens":18,"total_tokens":20,"completion_tokens":2,"prompt_tokens_details":null,"completion_tokens_details":{"reasoning_tokens":0}},"prompt_logprobs":null,"prompt_token_ids":null,"prompt_text":null,"kv_transfer_params":null,"ec_transfer_params":null,"metrics":null}
+tool call: get_weather {"city": "Paris"}
+2026-10-13T11:42:02Z pod qsbqe358icuniy deleted
+echo 'What is 2 + 2? Answer with the number.' | uv run gpunit serve qwen3.8-27b --ceiling 30m --yes
+2026-10-13T11:42:03Z price: NVIDIA A40 $0.59/h
+2026-10-13T11:42:03Z price: NVIDIA RTX A6000 $0.59/h
+2026-10-13T11:42:04Z price: NVIDIA L40 $0.82/h
+2026-10-13T11:42:04Z price: NVIDIA RTX 6000 Ada Generation $0.99/h
+2026-10-13T11:42:04Z price: NVIDIA L40S $1.09/h
+2026-10-13T11:42:04Z at most $0.91 for 1800s and a 1200s wait for SSH
+2026-10-13T11:42:07Z creating on NVIDIA A40
+2026-10-13T11:42:09Z pod 7wy3rh59csnvy5 created; waiting for SSH
+2026-10-13T11:42:36Z host key verified: SHA256:okM62+VlV6ff8ccM6TFp9yyT7216aBe4MRw4z4gW1t0
+2026-10-13T11:42:36Z session up: pod 7wy3rh59csnvy5, root@194.68.245.44 -p 22133
+2026-10-13T11:43:13Z loading: (APIServer pid=112) INFO 10-13 11:43:10 [compilation.py:331] Enabled custom fusions: norm_quant, act_quant
+2026-10-13T11:43:42Z loading: Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+2026-10-13T11:44:17Z loading: (EngineCore pid=761) INFO 10-13 11:44:08 [utils.py:343] Using LBNHC KV cache layout.
+2026-10-13T11:44:53Z loading: /usr/local/lib/python3.12/dist-packages/triton/language/core.py:2284: UserWarning: tl.make_block_ptr is deprecated. Use TensorDescriptor or tl.make_tensor_descriptor instead.
+2026-10-13T11:45:22Z loading:   warn("tl.make_block_ptr is deprecated. Use TensorDescriptor or tl.make_tensor_descriptor instead.")
+2026-10-13T11:45:57Z loading:   warn("tl.make_block_ptr is deprecated. Use TensorDescriptor or tl.make_tensor_descriptor instead.")
+2026-10-13T11:46:31Z loading: (EngineCore pid=761) INFO 10-13 11:46:20 [mamba_triton_warmup.py:42] Warmed Mamba batch_memcpy_kernel.
+2026-10-13T11:46:47Z qwen3.8-27b answers on http://127.0.0.1:53281/v1
+> 4
+> 
+2026-10-13T11:46:48Z pod 7wy3rh59csnvy5 deleted

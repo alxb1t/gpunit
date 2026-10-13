@@ -8,7 +8,7 @@ The row, the check, the handover, then the one metered proof, per [design](desig
 - [x] 1 — The row
 - [x] 2 — The check
 - [x] 3 — The handover
-- [ ] 4 — ⚠️ **HUMAN · METERED** — make live-serve MODEL=qwen3.8-27b
+- [x] 4 — ⚠️ **HUMAN · METERED** — make live-serve MODEL=qwen3.8-27b
 
 ## 1 — The row
 
@@ -31,5 +31,5 @@ The row, the check, the handover, then the one metered proof, per [design](desig
 
 ## 4 — ⚠️ **HUMAN · METERED** — make live-serve MODEL=qwen3.8-27b
 
-- [ ] 4.1 **HUMAN · METERED** — with `RUNPOD_API_KEY` set, run `make live-serve MODEL=qwen3.8-27b`; confirm through the RunPod console that no pod is left; append the card that ran, the chat's answer, the `curl`'s answer and the check's line to `live/serve_last_run.txt` under a header `<date> — make live-serve MODEL=qwen3.8-27b, 0008-a-30b-class-row`, per [D6](design.md#d6). A card that fails to load the model leaves the row's `gpus`, and the run is repeated; a cold load past 1200s, or a refused name, is a halt: say so and keep the log.
+- [x] 4.1 **HUMAN · METERED** — with `RUNPOD_API_KEY` set, run `make live-serve MODEL=qwen3.8-27b`; confirm through the RunPod console that no pod is left; append the card that ran, the chat's answer, the `curl`'s answer and the check's line to `live/serve_last_run.txt` under a header `<date> — make live-serve MODEL=qwen3.8-27b, 0008-a-30b-class-row`, per [D6](design.md#d6). A card that fails to load the model leaves the row's `gpus`, and the run is repeated; a cold load past 1200s, or a refused name, is a halt: say so and keep the log.
   Verify: `grep -c '^2026-.*0008-a-30b-class-row' live/serve_last_run.txt` prints `1`, and `grep -c 'tool call: get_weather' live/serve_last_run.txt` prints a number of at least `1`.
