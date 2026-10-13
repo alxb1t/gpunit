@@ -29,7 +29,8 @@ missing, the revision is not a commit hash, or the image is not a digest.
 - **Key:** `serve:table:larger-row`
 - **WHEN** the row `qwen3.8-27b` is read
 - **THEN** it needs 48 GB of card, names `qwen3_coder` as its tool-call parser and `qwen3` as its reasoning parser,
-  serves the language model alone, and lists `NVIDIA A40`, `NVIDIA RTX A6000`, `NVIDIA L40`,
+  serves the language model alone, caps its concurrent sequences under the 192 its Mamba cache holds, and lists
+  `NVIDIA A40`, `NVIDIA RTX A6000`, `NVIDIA L40`,
   `NVIDIA RTX 6000 Ada Generation` and `NVIDIA L40S`, in that order
 
 ## ADDED Requirements

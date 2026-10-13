@@ -62,11 +62,15 @@ The pod's name becomes `gpunit-serve-qwen3.8-27b`; the live run is also the firs
 
 ```toml
 args = ["--max-model-len", "32768", "--reasoning-parser", "qwen3", "--enable-auto-tool-choice",
-        "--tool-call-parser", "qwen3_coder", "--language-model-only"]
+        "--tool-call-parser", "qwen3_coder", "--language-model-only", "--max-num-seqs", "64"]
 vram_gb = 48
 gpus = ["NVIDIA A40", "NVIDIA RTX A6000", "NVIDIA L40", "NVIDIA RTX 6000 Ada Generation", "NVIDIA L40S"]
 disk_gb = 80
 ```
+
+`--max-num-seqs 64` was added after the first live runs, 2026-10-13: vLLM refused to start with its default 256,
+`max_num_seqs (256) exceeds available Mamba cache blocks (192)`, on a 48 GB card at 32k context. 64 leaves room
+under 192 for an agent's few concurrent requests.
 
 No argument holds a space. The price prompt counts the dearest placeable card, `NVIDIA L40S` at $1.09/h: for
 `--ceiling 30m` and the 1200 s SSH wait, at most $0.91.

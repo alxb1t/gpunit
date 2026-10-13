@@ -47,6 +47,8 @@ def test_the_larger_row_asks_for_a_48_gb_card_and_its_familys_parser() -> None:
     assert args[args.index("--tool-call-parser") + 1] == "qwen3_coder"
     assert args[args.index("--reasoning-parser") + 1] == "qwen3"
     assert "--language-model-only" in args
+    # Its Mamba cache holds 192 sequences on 48 GB: vLLM's default 256 fails to start.
+    assert int(args[args.index("--max-num-seqs") + 1]) <= 192
 
 
 @pytest.mark.spec("serve:table:revision-pinned")
