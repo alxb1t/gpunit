@@ -14,11 +14,11 @@ KEY = "k" * 43
 
 
 def answer(finish_reason: str, calls: list[dict[str, object]] | None = None) -> dict:
-    message: dict[str, object] = {"role": "assistant", "content": None}
-    if calls is None:
-        message["content"] = "It is sunny in Paris."
-    else:
-        message["tool_calls"] = calls
+    message: dict[str, object] = (
+        {"role": "assistant", "content": "It is sunny in Paris."}
+        if calls is None
+        else {"role": "assistant", "content": None, "tool_calls": calls}
+    )
     return {"choices": [{"finish_reason": finish_reason, "message": message}]}
 
 
@@ -143,34 +143,22 @@ def test_unparseable_arguments_fail(
 
 
 @pytest.mark.spec("serve:tools:key-from-the-environment")
-def test_the_key_is_sent_from_the_environment(model: ModelServer) -> None:
-    assert check(model.base_url, "qwen3.8-27b").returncode == 0
+@pytest.mark.parametrize(
+    ("extra", "key"),
+    [(["--key", KEY], KEY), ([], None), ([], KEY)],
+    ids=["key-on-argv", "unset", "twin-from-env"],
+)
+def test_the_key_comes_from_the_environment_only(
+    model: ModelServer, extra: list[str], key: str | None
+) -> None:
+    done = check(model.base_url, "qwen3.8-27b", *extra, key=key)
 
+    if extra or key is None:
+        assert done.returncode == 1
+        assert "usage" in done.stderr
+        assert KEY not in done.stderr + done.stdout
+        assert model.requests == []
+        return
+    assert done.returncode == 0
     [(_, authorization, _)] = model.requests
     assert authorization == f"Bearer {KEY}"
-
-
-@pytest.mark.spec("serve:tools:key-from-the-environment")
-@pytest.mark.parametrize(
-    "extra", [["--key", KEY], []], ids=["key-on-argv", "twin-none"]
-)
-def test_a_key_on_the_command_line_is_refused(
-    model: ModelServer, extra: list[str]
-) -> None:
-    done = check(model.base_url, "qwen3.8-27b", *extra)
-
-    assert done.returncode == (1 if extra else 0)
-    assert ("usage" in done.stderr) is bool(extra)
-    assert KEY not in done.stderr + done.stdout
-    assert len(model.requests) == (0 if extra else 1)
-
-
-@pytest.mark.spec("serve:tools:key-from-the-environment")
-@pytest.mark.parametrize("key", [None, KEY], ids=["unset", "twin-set"])
-def test_no_key_in_the_environment_sends_nothing(
-    model: ModelServer, key: str | None
-) -> None:
-    done = check(model.base_url, "qwen3.8-27b", key=key)
-
-    assert done.returncode == (1 if key is None else 0)
-    assert len(model.requests) == (0 if key is None else 1)

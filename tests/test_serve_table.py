@@ -43,12 +43,12 @@ def test_the_larger_row_asks_for_a_48_gb_card_and_its_familys_parser() -> None:
         "NVIDIA RTX 6000 Ada Generation",
         "NVIDIA L40S",
     )
-    args = list(row.args)
-    assert args[args.index("--tool-call-parser") + 1] == "qwen3_coder"
-    assert args[args.index("--reasoning-parser") + 1] == "qwen3"
-    assert "--language-model-only" in args
+    flags = dict(zip(row.args, row.args[1:]))
+    assert flags["--tool-call-parser"] == "qwen3_coder"
+    assert flags["--reasoning-parser"] == "qwen3"
+    assert "--language-model-only" in row.args
     # Its Mamba cache holds 192 sequences on 48 GB: vLLM's default 256 fails to start.
-    assert int(args[args.index("--max-num-seqs") + 1]) <= 192
+    assert int(flags["--max-num-seqs"]) <= 192
 
 
 @pytest.mark.spec("serve:table:revision-pinned")

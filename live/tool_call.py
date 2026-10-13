@@ -45,10 +45,11 @@ def request(model: str) -> dict[str, object]:
 def verdict(answer: dict) -> str:
     """Return the call's line, or raise `ValueError` naming what the answer held."""
     choice = answer["choices"][0]
-    calls = choice["message"].get("tool_calls") or []
+    message = choice["message"]
+    calls = message.get("tool_calls")
     reason = choice.get("finish_reason")
     if reason != "tool_calls" or not calls:
-        content = choice["message"].get("content")
+        content = message.get("content")
         raise ValueError(
             f"the answer held no tool call: finish_reason {reason!r},"
             f" content {content!r}"
