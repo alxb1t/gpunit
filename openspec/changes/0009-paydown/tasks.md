@@ -10,7 +10,7 @@ names.
 - [x] 2 — The log
 - [x] 3 — The boot
 - [x] 4 — The drift
-- [ ] 5 — The proof
+- [x] 5 — The proof
 - [ ] 6 — The handover
 - [ ] 7 — ⚠️ **HUMAN** — the images
 - [ ] 8 — ⚠️ **HUMAN · METERED** — make live, make live-dead, make live-serve, make live-serve-dead
@@ -49,9 +49,9 @@ names.
 
 ## 5 — The proof
 
-- [ ] 5.1 Write `live/serve_dead.py` with its `check`, and `tests/test_serve_dead.py` binding `check` under `serve:wait:dead-pod-ends-the-wait`, per [D7](design.md#d7).
+- [x] 5.1 Write `live/serve_dead.py` with its `check`, and `tests/test_serve_dead.py` binding `check` under `serve:wait:dead-pod-ends-the-wait`, per [D7](design.md#d7).
   Verify: `grep -c '^def check' live/serve_dead.py` prints `1`, and `uv run pytest -q tests/test_serve_dead.py` exits 0.
-- [ ] 5.2 Add `live-serve-dead` to the `Makefile`'s targets and its `.PHONY`, per [D7](design.md#d7).
+- [x] 5.2 Add `live-serve-dead` to the `Makefile`'s targets and its `.PHONY`, per [D7](design.md#d7).
   Verify: `make -n live-serve-dead | grep -c 'serve_dead.py'` prints a number of at least `1`.
 
 ## 6 — The handover

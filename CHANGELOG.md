@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `make live-serve-dead` runs `live/serve_dead.py`: `qwen3-4b` with an argument vLLM refuses, passing only when the
+  dead-pod refusal, the crash's `pod:` lines and the delete within 15 s all show; its `check` is tested offline.
+
 ### Changed
 
 - **BREAKING for a consumer's image:** each pod gets a fresh `GPUNIT_NONCE`; `boot.sh` prints it in its key line,

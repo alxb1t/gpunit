@@ -1,7 +1,7 @@
 # The gate: the one list of the commands that say a change is done. Prose names
 # `make gate` and never copies them. A new command lands through a change whose
 # cut names this recipe in a task.
-.PHONY: gate live live-serve live-dead
+.PHONY: gate live live-serve live-dead live-serve-dead
 
 # The row `make live-serve` proves: e.g. `make live-serve MODEL=qwen3.8-27b`.
 MODEL ?= qwen3-4b
@@ -51,3 +51,9 @@ live-dead:
 	echo "up exited $$code after $$(( $$(date +%s) - start ))s"; \
 	uv run gpunit status --spec live/gpunit.dead.toml; \
 	test $$code -eq 1
+
+# The dead-serve proof: a model vLLM refuses ends `serve`'s wait, and the pod's log reaches
+# the laptop (0009 design D7). Not part of the gate: it rents one of qwen3-4b's cards with
+# RUNPOD_API_KEY, for at most 600s plus the 1200s wait for SSH; `serve` prints the price first.
+live-serve-dead:
+	uv run python live/serve_dead.py
