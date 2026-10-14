@@ -58,7 +58,10 @@ def window(days: int, now: datetime) -> tuple[date, date]:
 
 
 def spend(provider: Provider, days: int, *, as_json: bool) -> int:
-    """Print the report and return 0; refuse when the billing cannot be read."""
+    """Print the report and return 0.
+
+    Refuse when the billing or the ledger cannot be read.
+    """
     first, last = window(days, utc_now())
     start, end = _midnight(first), _midnight(last + timedelta(days=1))
     try:

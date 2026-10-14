@@ -9,7 +9,7 @@ names.
 - [x] 1 — The wait
 - [x] 2 — The log
 - [x] 3 — The boot
-- [ ] 4 — The drift
+- [x] 4 — The drift
 - [ ] 5 — The proof
 - [ ] 6 — The handover
 - [ ] 7 — ⚠️ **HUMAN** — the images
@@ -42,9 +42,9 @@ names.
 
 ## 4 — The drift
 
-- [ ] 4.1 Make `README.md`'s exit row for `2` read "`spend --days` under 1 or over 3660", per [D5](design.md#d5).
+- [x] 4.1 Make `README.md`'s exit row for `2` read "`spend --days` under 1 or over 3660", per [D5](design.md#d5).
   Verify: `grep -c 'under 1 or over 3660 |' README.md` prints `1`.
-- [ ] 4.2 Retag `tests/test_spend.py`'s ledger test with `spend:report:unreadable-ledger-fails`, and make `spend`'s docstring in `gpunit/spend.py` name the ledger, per [D5](design.md#d5).
+- [x] 4.2 Retag `tests/test_spend.py`'s ledger test with `spend:report:unreadable-ledger-fails`, and make `spend`'s docstring in `gpunit/spend.py` name the ledger, per [D5](design.md#d5).
   Verify: `grep -c 'spend:report:unreadable-ledger-fails' tests/test_spend.py` prints `1`, and `grep -c 'the billing or the ledger cannot be read' gpunit/spend.py` prints `1`.
 
 ## 5 — The proof

@@ -220,7 +220,7 @@ Each verb reads `gpunit.toml` from the working directory, or the file `--spec <p
 |---|---|
 | `0` | done; for `run`, the command's own code passes through |
 | `1` | refused or failed; the teardown failed |
-| `2` | usage: an unknown verb, a missing command, an unreadable spec path, `serve` without `--ceiling`, an unknown model, `spend --days` under 1 |
+| `2` | usage: an unknown verb, a missing command, an unreadable spec path, `serve` without `--ceiling`, an unknown model, `spend --days` under 1 or over 3660 |
 | `3` | a create's answer was lost; a pod may exist and bill — run `gpunit down` |
 | `128+n` | signal `n` stopped `run` or `serve`, or killed `run`'s command, and the teardown succeeded; a failed teardown is still `1` |
 
