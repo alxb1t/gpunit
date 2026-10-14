@@ -64,7 +64,7 @@ def serve(
             _wait(base, key, opened.pod_id, provider, opener)
             log.say(f"{row.served} answers on {base}")
             if api:
-                _hold(base, key, opener)
+                _hold(base, key, opened.pod_id, provider, opener)
             else:
                 chat.run(base, key, row.served, think, read, opener=opener)
         return 0
@@ -144,10 +144,13 @@ def _wait(
     clock = lifecycle.CLOCK
     start = clock.monotonic()
     progress = start + PROGRESS_S
+    dead = lifecycle.DeadPod()
     while not _answers(base, key, opener):
         now = clock.monotonic()
         if now - start >= WAIT_S:
             log.refuse(f"the model did not load within {WAIT_S}s")
+        if dead.seen(provider.get(pod_id)):
+            log.refuse("the pod stopped while the model loaded")
         if now >= progress:
             lines = provider.log(pod_id, tail=LOG_TAIL)
             if lines:
@@ -156,15 +159,24 @@ def _wait(
         clock.sleep(POLL_S)
 
 
-def _hold(base: str, key: str, opener: urllib.request.OpenerDirector) -> None:
+def _hold(
+    base: str,
+    key: str,
+    pod_id: str,
+    provider: Provider,
+    opener: urllib.request.OpenerDirector,
+) -> None:
     print(f"OPENAI_BASE_URL={base}", flush=True)
     print(f"OPENAI_API_KEY={key}", flush=True)
     log.say("serving until interrupted or the ceiling; Ctrl-C ends the session")
     clock = lifecycle.CLOCK
     answered = clock.monotonic()
+    dead = lifecycle.DeadPod()
     while True:
         clock.sleep(HOLD_S)
         now = clock.monotonic()
+        if dead.seen(provider.get(pod_id)):
+            log.refuse("the pod stopped while serving")
         if _answers(base, key, opener):
             answered = now
         elif now - answered >= QUIET_S:

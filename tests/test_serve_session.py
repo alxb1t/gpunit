@@ -9,11 +9,12 @@ from typing import NoReturn
 
 import pytest
 
-from gpunit.provider import Provider
+from gpunit.provider import PodInfo, Provider
 from gpunit.serve import session, table
 from gpunit.spec import Spec
 from tests.fakes import (
     BOOT_LOG,
+    RUNNING,
     Answer,
     FakeOpener,
     FakeProvider,
@@ -22,6 +23,7 @@ from tests.fakes import (
 
 MODELS = (200, b'{"object": "list", "data": [{"id": "qwen3-4b"}]}')
 NOT_YET = urllib.error.URLError(ConnectionRefusedError(61, "Connection refused"))
+EXITED = PodInfo(status="EXITED", host=None, port=None)
 
 
 @pytest.fixture
@@ -191,6 +193,44 @@ def test_a_model_that_never_answers_is_refused_and_torn_down(
     assert ("pod-1", 50, None) in provider.named("log")
 
 
+@pytest.mark.spec("serve:wait:dead-pod-ends-the-wait")
+def test_a_dead_pod_ends_the_wait_and_closes_the_session(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # `up`'s poll, then the wait's: one RUNNING, then EXITED on every poll.
+    provider = FakeProvider(gets=[RUNNING, RUNNING, EXITED])
+    opener = FakeOpener(*[NOT_YET] * 3)
+
+    assert served(provider, opener) == 1
+
+    err = capsys.readouterr().err
+    assert "refused: the pod stopped while the model loaded" in err
+    assert "did not load within" not in err
+    assert len(opener.requests) == 3
+    assert provider.named("delete") == [("pod-1",)]
+
+
+@pytest.mark.spec("serve:wait:running-pod-waits")
+@pytest.mark.parametrize(
+    "gets",
+    [[RUNNING], [RUNNING, RUNNING, EXITED, RUNNING]],
+    ids=["running", "one-exited"],
+)
+def test_a_running_pod_keeps_the_wait(
+    gets: list[PodInfo], home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    provider = FakeProvider(gets=gets)
+    opener = FakeOpener(*[NOT_YET] * 4, MODELS)
+
+    assert served(provider, opener) == 0
+
+    err = capsys.readouterr().err
+    assert "refused" not in err
+    assert "qwen3-4b answers on" in err
+    # One status read for each poll the model did not answer, after `up`'s.
+    assert len(provider.named("get")) == 1 + 4
+
+
 @pytest.mark.spec("serve:wait:state-per-model")
 def test_the_session_files_are_the_models_wherever_it_runs(
     home: Path, cwd: Path
@@ -264,6 +304,24 @@ def test_api_prints_the_endpoint_and_holds_until_the_end(
         assert "refused: the model has not answered for 60s" in err
     else:
         assert code == 128 + signal.SIGINT
+
+
+@pytest.mark.spec("serve:api:dead-pod-ends-the-hold")
+def test_a_dead_pod_ends_the_hold(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # `up`'s poll, then the hold's: EXITED on two polls in a row.
+    provider = FakeProvider(gets=[RUNNING, EXITED])
+    # The wait's answer, then the hold's first poll unanswered.
+    opener = FakeOpener(MODELS, NOT_YET)
+
+    assert served(provider, opener, api=True) == 1
+
+    err = capsys.readouterr().err
+    assert "refused: the pod stopped while serving" in err
+    assert "has not answered" not in err
+    assert len(opener.requests) == 2
+    assert provider.named("delete") == [("pod-1",)]
 
 
 @pytest.mark.spec("serve:api:key-required")

@@ -52,6 +52,21 @@ class Clock:
 CLOCK = Clock()
 
 
+class DeadPod:
+    """Two polls in a row reading a dead status; a failed read is not yet."""
+
+    def __init__(self) -> None:
+        """Start with no dead poll seen."""
+        self._last = False
+
+    def seen(self, info: PodInfo | None) -> bool:
+        """Return True when this poll and the one before both read a dead status."""
+        # A restart may show a dead status once, so only a second poll in a row ends it.
+        dead = info is not None and info.status in DEAD
+        twice, self._last = dead and self._last, dead
+        return twice
+
+
 def up(spec: Spec, provider: Provider, state: State) -> Record:
     """Place a pod, wait for it, verify its host key, and return its record.
 
@@ -267,25 +282,19 @@ def _create(
 
 
 def _wait(spec: Spec, provider: Provider, state: State, record: Record) -> Record:
-    dead = False
+    dead = DeadPod()
 
     def mapped() -> PodInfo | None:
-        nonlocal dead
         # A failed poll is "not yet", never an abort: an abort would skip the teardown.
         info = provider.get(record.id)
-        if info is None:
-            dead = False
-            return None
-        # A restart may show a dead status once, so only a second poll in a row ends it.
-        if info.status in DEAD and dead:
+        if dead.seen(info) and info is not None:
             _tear_down(
                 spec,
                 provider,
                 state,
                 f"pod {record.id} is {info.status}: the container is not running",
             )
-        dead = info.status in DEAD
-        return info if info.host and info.port else None
+        return info if info and info.host and info.port else None
 
     info = _poll(spec.timeout_s, mapped)
     if info is None:

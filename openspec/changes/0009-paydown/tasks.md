@@ -6,7 +6,7 @@ names.
 
 ## Progress
 
-- [ ] 1 — The wait
+- [x] 1 — The wait
 - [ ] 2 — The log
 - [ ] 3 — The boot
 - [ ] 4 — The drift
@@ -17,11 +17,11 @@ names.
 
 ## 1 — The wait
 
-- [ ] 1.1 **HALT CHECK** — none of this change's fixes exists yet, and every card it closes is still in the backlog.
+- [x] 1.1 **HALT CHECK** — none of this change's fixes exists yet, and every card it closes is still in the backlog.
   Verify: `grep -c -E 'class DeadPod|GPUNIT_NONCE|pod\.log' gpunit/lifecycle.py boot/boot.sh gpunit/serve/session.py | grep -v ':0$' | wc -l | tr -d ' '` prints `0`, and `grep -c -E '^- \*\*(0006·S1|0007·R6|0007·R7|0008·R5) ' .minions/backlog.md` prints `4`.
-- [ ] 1.2 Add `DeadPod` to `gpunit/lifecycle.py` and make `_wait`'s `mapped()` use it, per [D1](design.md#d1).
+- [x] 1.2 Add `DeadPod` to `gpunit/lifecycle.py` and make `_wait`'s `mapped()` use it, per [D1](design.md#d1).
   Verify: `grep -c '^class DeadPod' gpunit/lifecycle.py` prints `1`, and `uv run pytest -q tests/test_up.py` exits 0.
-- [ ] 1.3 In `gpunit/serve/session.py`, make `_wait` and `_hold` read the pod's status each poll and refuse on `DeadPod.seen`, per [D1](design.md#d1); in `tests/test_serve_session.py` bind `serve:wait:dead-pod-ends-the-wait`, `serve:wait:running-pod-waits` and `serve:api:dead-pod-ends-the-hold`.
+- [x] 1.3 In `gpunit/serve/session.py`, make `_wait` and `_hold` read the pod's status each poll and refuse on `DeadPod.seen`, per [D1](design.md#d1); in `tests/test_serve_session.py` bind `serve:wait:dead-pod-ends-the-wait`, `serve:wait:running-pod-waits` and `serve:api:dead-pod-ends-the-hold`.
   Verify: `grep -c -E 'the pod stopped while (the model loaded|serving)' gpunit/serve/session.py` prints `2`, and `grep -o -E 'serve:(wait:dead-pod-ends-the-wait|wait:running-pod-waits|api:dead-pod-ends-the-hold)' tests/test_serve_session.py | sort -u | wc -l | tr -d ' '` prints `3`.
 
 ## 2 — The log

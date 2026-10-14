@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A pod that stops while `serve` waits for the model, or holds the endpoint, ends the session: two polls in a row
+  reading a dead status refuse with `the pod stopped while the model loaded` or `… while serving`, and tear it down.
+  One `DeadPod` rule in `lifecycle.py` serves `up`'s wait and both of `serve`'s.
+
 ## [0.5.0] - 2026-10-13
 
 ### Added
