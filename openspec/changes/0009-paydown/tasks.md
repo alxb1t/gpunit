@@ -11,7 +11,7 @@ names.
 - [x] 3 — The boot
 - [x] 4 — The drift
 - [x] 5 — The proof
-- [ ] 6 — The handover
+- [x] 6 — The handover
 - [ ] 7 — ⚠️ **HUMAN** — the images
 - [ ] 8 — ⚠️ **HUMAN · METERED** — make live, make live-dead, make live-serve, make live-serve-dead
 
@@ -56,9 +56,9 @@ names.
 
 ## 6 — The handover
 
-- [ ] 6.1 In `README.md`, make step 2's `ADD` line name `v0.6.0` and say an older `boot.sh` is refused; in *Serve a model* name `pod.log`, the dead-pod refusal and boot's 60 s grace; name `make live-serve-dead` beside the other live runs.
+- [x] 6.1 In `README.md`, make step 2's `ADD` line name `v0.6.0` and say an older `boot.sh` is refused; in *Serve a model* name `pod.log`, the dead-pod refusal and boot's 60 s grace; name `make live-serve-dead` beside the other live runs.
   Verify: `grep -c 'gpunit/v0.6.0/boot/boot.sh' README.md` prints `1`, `grep -c 'pod.log' README.md` prints a number of at least `1`, and `grep -c 'live-serve-dead' README.md` prints a number of at least `1`.
-- [ ] 6.2 Add `make live-serve-dead` to `CLAUDE.md`'s invariant on the live runs.
+- [x] 6.2 Add `make live-serve-dead` to `CLAUDE.md`'s invariant on the live runs.
   Verify: `grep -c 'make live-serve-dead' CLAUDE.md` prints `1`.
 
 ## 7 — ⚠️ **HUMAN** — the images

@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `make live-serve-dead` runs `live/serve_dead.py`: `qwen3-4b` with an argument vLLM refuses, passing only when the
   dead-pod refusal, the crash's `pod:` lines and the delete within 15 s all show; its `check` is tested offline.
+- README's step 2 adds `boot.sh` from `v0.6.0` and says an older one is refused; *Serve a model* names the dead-pod
+  refusal, `pod.log` and boot's 60 s grace; the proof names `make live-serve-dead`, as `CLAUDE.md`'s invariant does.
 
 ### Changed
 
