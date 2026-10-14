@@ -7,7 +7,7 @@ names.
 ## Progress
 
 - [x] 1 — The wait
-- [ ] 2 — The log
+- [x] 2 — The log
 - [ ] 3 — The boot
 - [ ] 4 — The drift
 - [ ] 5 — The proof
@@ -26,9 +26,9 @@ names.
 
 ## 2 — The log
 
-- [ ] 2.1 In `gpunit/serve/session.py`, add `_Kept`, remove the last session's `pod.log`, read the log since the create in `_wait`'s tick and each `_hold` poll, and print the kept tail before a dead-pod refusal, per [D2](design.md#d2).
+- [x] 2.1 In `gpunit/serve/session.py`, add `_Kept`, remove the last session's `pod.log`, read the log since the create in `_wait`'s tick and each `_hold` poll, and print the kept tail before a dead-pod refusal, per [D2](design.md#d2).
   Verify: `grep -c '^class _Kept' gpunit/serve/session.py` prints `1`, and `grep -c "the pod's log is kept at" gpunit/serve/session.py` prints `1`.
-- [ ] 2.2 In `tests/test_serve_session.py`, move `test_a_model_that_never_answers_is_refused_and_torn_down` to the since-read, bind `serve:wait:log-kept`, and assert the `pod:` lines in the dead-pod tests of 1.3.
+- [x] 2.2 In `tests/test_serve_session.py`, move `test_a_model_that_never_answers_is_refused_and_torn_down` to the since-read, bind `serve:wait:log-kept`, and assert the `pod:` lines in the dead-pod tests of 1.3.
   Verify: `grep -c 'serve:wait:log-kept' tests/test_serve_session.py` prints `1`, and `uv run pytest -q tests/test_serve_session.py` exits 0.
 
 ## 3 — The boot

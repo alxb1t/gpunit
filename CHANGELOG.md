@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A pod that stops while `serve` waits for the model, or holds the endpoint, ends the session: two polls in a row
   reading a dead status refuse with `the pod stopped while the model loaded` or `… while serving`, and tear it down.
   One `DeadPod` rule in `lifecycle.py` serves `up`'s wait and both of `serve`'s.
+- `serve` keeps the pod's log at `~/.local/state/gpunit/serve/<model>/pod.log` (mode `0600`), read since the create
+  every 30 s, since RunPod drops it when the pod stops; a dead-pod refusal prints its last 30 lines and names the file.
 
 ## [0.5.0] - 2026-10-13
 
