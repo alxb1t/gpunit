@@ -108,14 +108,21 @@ class RunPod:
         self._datacenters[volume_id] = info.datacenter
         return info
 
-    def create(self, spec: Spec, gpu: str, pubkey: str, ceiling_s: int) -> str:
+    def create(
+        self, spec: Spec, gpu: str, pubkey: str, ceiling_s: int, *, nonce: str
+    ) -> str:
         """Return the new pod's id; raise `Refused` on a 400, else `Lost`."""
         card: dict[str, object] = {"id": gpu, "count": 1}
         if spec.ram_gb is not None:
             card["minRamPerGpu"] = spec.ram_gb
         if spec.cuda is not None:
             card["minCudaVersion"] = spec.cuda
-        env = {**spec.env, "PUBLIC_KEY": pubkey, "GPUNIT_CEILING": str(ceiling_s)}
+        env = {
+            **spec.env,
+            "PUBLIC_KEY": pubkey,
+            "GPUNIT_CEILING": str(ceiling_s),
+            "GPUNIT_NONCE": nonce,
+        }
         placement: dict[str, object] = {}
         if spec.volume is not None:
             # The protocol's create names no data centre: the volume read sets it.

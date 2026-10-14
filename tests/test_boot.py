@@ -15,6 +15,8 @@ BOOT = Path(__file__).parent.parent / "boot" / "boot.sh"
 KEY = "rpa_pod_key"
 POD = "pod-xyz"
 FINGERPRINT = "SHA256:fromTheStub+/0"
+NONCE = "0123456789abcdef0123456789abcdef"
+GRACE = "60"
 
 # Answers each call from $CURL_CODES, one line per call (200 when empty), and logs
 # its argv plus whether the header file held the key.
@@ -27,6 +29,7 @@ done
 auth=no-header
 grep -q "Authorization: Bearer $RUNPOD_API_KEY" <<<"$header" && auth=header-ok
 echo "$auth ${args[*]}" >> "$CURL_LOG"
+echo curl >> "$ORDER_LOG"
 code=$(head -n 1 "$CURL_CODES" 2>/dev/null)
 if [ -f "$CURL_CODES" ]; then
   tail -n +2 "$CURL_CODES" > "$CURL_CODES.next" && mv "$CURL_CODES.next" "$CURL_CODES"
@@ -37,6 +40,7 @@ printf '%s' "${code:-200}"
 # Logs each wait and returns at once; the ceiling's own wait holds when asked to.
 SLEEP = """#!/bin/bash
 echo "$1" >> "$SLEEP_LOG"
+echo "sleep $1" >> "$ORDER_LOG"
 if [ -n "${HOLD_CEILING:-}" ] && [ "$1" = "$GPUNIT_CEILING" ]; then
   exec /bin/sleep 600
 fi
@@ -47,6 +51,7 @@ exit 0
 # so each HostKey of its config (-f, else the image's) and each -o HostKey adds one.
 SSHD = """#!/bin/bash
 echo "$@" >> "$SSHD_LOG"
+[ -z "${SSHD_FAIL:-}" ] || exit 1
 config=$SSHD_IMAGE_CONFIG
 : > "$SSHD_SERVED"
 while [ $# -gt 0 ]; do
@@ -82,6 +87,8 @@ class Boot:
     err: str
     curl: list[str]
     sleeps: list[str]
+    # The curl calls and the waits, in the order they ran.
+    order: list[str]
     sshd: list[str]
     served: list[str]
     keygen: list[str]
@@ -108,6 +115,7 @@ def pod(tmp_path: Path, pod_bin: Path) -> dict[str, str]:
         "RUNPOD_POD_ID": POD,
         "PUBLIC_KEY": "ssh-ed25519 AAAAsession gpunit-isekai",
         "GPUNIT_CEILING": "7",
+        "GPUNIT_NONCE": NONCE,
         "HOLD_CEILING": "1",
         "TMPDIR": str(tmp_path),
         "SSHD_IMAGE_CONFIG": str(image_config),
@@ -117,6 +125,7 @@ def pod(tmp_path: Path, pod_bin: Path) -> dict[str, str]:
                 "CURL_LOG",
                 "CURL_CODES",
                 "SLEEP_LOG",
+                "ORDER_LOG",
                 "SSHD_LOG",
                 "SSHD_SERVED",
                 "KEYGEN_LOG",
@@ -158,10 +167,16 @@ def boot(env: dict[str, str], *command: str, merged: bool = False) -> Boot:
         err=err.read_text(encoding="utf-8"),
         curl=lines("CURL_LOG"),
         sleeps=lines("SLEEP_LOG"),
+        order=lines("ORDER_LOG"),
         sshd=lines("SSHD_LOG"),
         served=lines("SSHD_SERVED"),
         keygen=lines("KEYGEN_LOG"),
     )
+
+
+def after_the_ceiling(result: Boot) -> list[str]:
+    """Return the curl calls and the waits in order, but the ceiling's own wait."""
+    return [step for step in result.order if step != "sleep 7"]
 
 
 def refuses_without(tool: str, named: str, pod: dict[str, str], bin_dir: Path) -> None:
@@ -220,6 +235,19 @@ def test_a_missing_variable_refuses(
     assert result.curl == []
 
 
+@pytest.mark.spec("boot:refuse:no-nonce")
+def test_no_nonce_refuses(pod: dict[str, str]) -> None:
+    del pod["GPUNIT_NONCE"]
+
+    result = boot(pod, "touch", f"{pod['HOME']}/ran")
+
+    assert result.code == 1
+    assert "GPUNIT_NONCE is unset or empty" in result.err
+    assert "gpunit host key" not in result.out
+    assert not (Path(pod["HOME"]) / "ran").exists()
+    assert result.curl == []
+
+
 @pytest.mark.spec("boot:stop:ceiling")
 def test_the_ceiling_stops_the_pod(pod: dict[str, str]) -> None:
     del pod["HOLD_CEILING"]
@@ -230,6 +258,8 @@ def test_the_ceiling_stops_the_pod(pod: dict[str, str]) -> None:
 
     assert "the ceiling of 7s is reached" in result.err
     assert result.sleeps[0] == "7"
+    # No grace before the ceiling's stop; the command's end after it still waits.
+    assert result.order[:2] == ["sleep 7", "curl"]
     assert f"/pods/{POD}/action" in result.curl[0]
     assert '{"action":"stop"}' in result.curl[0]
 
@@ -239,6 +269,8 @@ def test_the_commands_end_stops_the_pod(pod: dict[str, str]) -> None:
     result = boot(pod, "true")
 
     assert result.code == 0
+    assert after_the_ceiling(result) == [f"sleep {GRACE}", "curl"]
+    assert "the command exited 0" in result.err
     [stop] = result.curl
     assert stop.startswith("header-ok ")
     assert f"https://api.runpod.io/v2/pods/{POD}/action" in stop
@@ -253,8 +285,28 @@ def test_a_failed_stop_retries_with_backoff(pod: dict[str, str]) -> None:
 
     assert result.code == 0
     assert len(result.curl) == 3
-    assert [wait for wait in result.sleeps if wait != "7"] == ["30", "60"]
+    # The grace comes before the first attempt; the stop's own waits come after it.
+    assert after_the_ceiling(result) == [
+        f"sleep {GRACE}",
+        "curl",
+        "sleep 30",
+        "curl",
+        "sleep 60",
+        "curl",
+    ]
     assert "the pod is stopping" in result.err
+
+
+@pytest.mark.spec("boot:stop:refusal-no-grace")
+def test_a_refusal_stops_without_the_grace(pod: dict[str, str]) -> None:
+    pod["SSHD_FAIL"] = "1"
+
+    result = boot(pod, "touch", f"{pod['HOME']}/ran")
+
+    assert result.code == 1
+    assert "refused: sshd did not start" in result.err
+    assert not (Path(pod["HOME"]) / "ran").exists()
+    assert after_the_ceiling(result) == ["curl"]
 
 
 @pytest.mark.spec("boot:stop:refused-key-named")
@@ -270,7 +322,14 @@ def test_a_refused_key_is_named(pod: dict[str, str]) -> None:
             f"the stop answered HTTP {code}: the key cannot stop this pod; "
             "delete it by hand" in result.err
         )
-    assert [wait for wait in result.sleeps if wait != "7"] == ["30", "60"]
+    assert after_the_ceiling(result) == [
+        f"sleep {GRACE}",
+        "curl",
+        "sleep 30",
+        "curl",
+        "sleep 60",
+        "curl",
+    ]
     assert "the pod is stopping" in result.err
 
 
@@ -283,8 +342,8 @@ def test_the_fingerprint_line(pod: dict[str, str]) -> None:
     printed = [
         line for line in result.out.splitlines() if line.startswith("gpunit host key")
     ]
-    assert printed == [f"gpunit host key: {FINGERPRINT}"]
-    assert re.fullmatch(r"gpunit host key: SHA256:[A-Za-z0-9+/]+", printed[0])
+    assert printed == [f"gpunit host key {NONCE}: {FINGERPRINT}"]
+    assert re.fullmatch(rf"gpunit host key {NONCE}: SHA256:[A-Za-z0-9+/]+", printed[0])
     # The served key is the one made on this boot, and it alone: never one the image
     # baked in, even when the image's sshd_config names its own HostKey lines.
     [made] = [line.split() for line in result.keygen if "-t ed25519" in line]
@@ -306,7 +365,7 @@ def test_gpunit_reads_the_served_key_from_boots_log(pod: dict[str, str]) -> None
     # (0006 design D1): rewording that line would leave every session unverified.
     result = boot(pod, "true", merged=True)
 
-    assert fingerprint(result.out.splitlines()) == FINGERPRINT
+    assert fingerprint(result.out.splitlines(), NONCE) == FINGERPRINT
 
 
 @pytest.mark.spec("boot:sshd:authorized-key")
@@ -339,3 +398,15 @@ def test_the_child_holds_no_key(pod: dict[str, str]) -> None:
     assert "RUNPOD_API_KEY" not in names
     [stop] = result.curl
     assert stop.startswith("header-ok ")
+
+
+@pytest.mark.spec("boot:child:no-nonce")
+def test_the_child_holds_no_nonce(pod: dict[str, str]) -> None:
+    result = boot(pod, "env")
+
+    assert result.code == 0
+    names = [line.split("=", 1)[0] for line in result.out.splitlines()]
+    assert "RUNPOD_POD_ID" in names
+    assert "GPUNIT_NONCE" not in names
+    # Boot's own key line still carries it.
+    assert f"gpunit host key {NONCE}: {FINGERPRINT}" in result.out

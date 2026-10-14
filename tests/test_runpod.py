@@ -24,7 +24,7 @@ from gpunit.provider import (
 )
 from gpunit.runpod import API, LOG_IDLE_S, RunPod, _NoRedirect
 from gpunit.spec import Spec
-from tests.fakes import Answer, FakeOpener, fixture, page, quiet
+from tests.fakes import NONCE, Answer, FakeOpener, fixture, page, quiet
 from tests.helpers import IMAGE
 
 KEY = "rpa_test_key"
@@ -73,7 +73,9 @@ def test_the_create_carries_the_volumes_datacenter() -> None:
     spec = dataclasses.replace(SPEC, volume="v1")
 
     assert provider.volume("v1") == VolumeInfo(datacenter="EU-RO-1", size_gb=100)
-    provider.create(spec, "RTX 4090", "ssh-ed25519 AAAA gpunit-isekai", 2700)
+    provider.create(
+        spec, "RTX 4090", "ssh-ed25519 AAAA gpunit-isekai", 2700, nonce=NONCE
+    )
 
     body = opener.sent()
     assert body["dataCenterIds"] == ["EU-RO-1"]
@@ -87,12 +89,15 @@ def test_the_pod_is_told_its_volume() -> None:
     )
     spec = dataclasses.replace(SPEC, volume="v1")
 
-    provider.create(spec, "RTX 4090", "ssh-ed25519 AAAA gpunit-isekai", 2700)
+    provider.create(
+        spec, "RTX 4090", "ssh-ed25519 AAAA gpunit-isekai", 2700, nonce=NONCE
+    )
 
     assert opener.sent()["env"] == {
         "MODE": "render",
         "GPUNIT_CEILING": "2700",
         "PUBLIC_KEY": "ssh-ed25519 AAAA gpunit-isekai",
+        "GPUNIT_NONCE": NONCE,
         "GPUNIT_VOLUME_ID": "v1",
         "GPUNIT_VOLUME_PATH": "/runpod-volume",
     }
@@ -102,7 +107,9 @@ def test_the_pod_is_told_its_volume() -> None:
 def test_the_create_is_secure_and_exposes_22_only() -> None:
     provider, opener = runpod((201, fixture("pod_created.json")))
 
-    pod_id = provider.create(SPEC, "RTX 4090", "ssh-ed25519 AAAA gpunit-isekai", 2700)
+    pod_id = provider.create(
+        SPEC, "RTX 4090", "ssh-ed25519 AAAA gpunit-isekai", 2700, nonce=NONCE
+    )
 
     assert pod_id == "pod-abc123"
     body = opener.sent()
@@ -116,12 +123,15 @@ def test_the_create_is_secure_and_exposes_22_only() -> None:
 def test_the_ceiling_and_the_key_win_over_the_spec_env() -> None:
     provider, opener = runpod((201, fixture("pod_created.json")))
 
-    provider.create(SPEC, "RTX 4090", "ssh-ed25519 AAAA gpunit-isekai", 2700)
+    provider.create(
+        SPEC, "RTX 4090", "ssh-ed25519 AAAA gpunit-isekai", 2700, nonce=NONCE
+    )
 
     assert opener.sent()["env"] == {
         "MODE": "render",
         "GPUNIT_CEILING": "2700",
         "PUBLIC_KEY": "ssh-ed25519 AAAA gpunit-isekai",
+        "GPUNIT_NONCE": NONCE,
     }
 
 
@@ -130,7 +140,7 @@ def test_a_400_create_is_refused_with_the_problem() -> None:
     provider, _ = runpod((400, fixture("problem.json")))
 
     with pytest.raises(Refused, match="Bad Request: There are no instances"):
-        provider.create(SPEC, "RTX 4090", "key", 2700)
+        provider.create(SPEC, "RTX 4090", "key", 2700, nonce=NONCE)
 
 
 @pytest.mark.spec("session:lost:5xx-exits-3")
@@ -143,7 +153,7 @@ def test_a_5xx_or_a_201_without_an_id_is_lost(answer: Answer) -> None:
     provider, _ = runpod(answer)
 
     with pytest.raises(Lost):
-        provider.create(SPEC, "RTX 4090", "key", 2700)
+        provider.create(SPEC, "RTX 4090", "key", 2700, nonce=NONCE)
 
 
 @pytest.mark.spec("session:lost:transport-exits-3")
@@ -152,7 +162,7 @@ def test_a_transport_failure_is_lost(fault: Exception) -> None:
     provider, _ = runpod(fault)
 
     with pytest.raises(Lost, match="got no answer"):
-        provider.create(SPEC, "RTX 4090", "key", 2700)
+        provider.create(SPEC, "RTX 4090", "key", 2700, nonce=NONCE)
 
 
 @pytest.mark.spec("session:wait:failed-poll-is-not-yet")
@@ -177,11 +187,15 @@ def test_the_logs_last_fingerprint_wins() -> None:
     lines = provider.log("pod-abc123", tail=5000)
 
     assert "tail=5000&source=container" in opener.requests[0].full_url
-    assert fingerprint(lines) == "SHA256:LastKeyWins+/111111111111111111111111111111"
     assert (
-        fingerprint(lines[:3]) == "SHA256:FirstKeyFromAnEarlierBoot0000000000000000000"
+        fingerprint(lines, NONCE)
+        == "SHA256:LastKeyWins+/111111111111111111111111111111"
     )
-    assert fingerprint(["echo gpunit host key: SHA256:abc"]) is None
+    assert (
+        fingerprint(lines[:3], NONCE)
+        == "SHA256:FirstKeyFromAnEarlierBoot0000000000000000000"
+    )
+    assert fingerprint(["echo gpunit host key: SHA256:abc"], NONCE) is None
 
 
 @pytest.mark.spec("session:hostkey:since-fallback")
@@ -192,7 +206,10 @@ def test_a_since_read_starts_there_and_sends_no_tail() -> None:
 
     query = urllib.parse.urlsplit(opener.requests[0].full_url).query
     assert query == "since=2026-10-07T00%3A00%3A00Z&source=container"
-    assert fingerprint(lines) == "SHA256:LastKeyWins+/111111111111111111111111111111"
+    assert (
+        fingerprint(lines, NONCE)
+        == "SHA256:LastKeyWins+/111111111111111111111111111111"
+    )
 
 
 @pytest.mark.spec("session:hostkey:quiet-stream-ends-read")
@@ -202,7 +219,10 @@ def test_a_quiet_stream_ends_the_read() -> None:
 
     lines = provider.log("pod-abc123", tail=5000)
 
-    assert fingerprint(lines) == "SHA256:LastKeyWins+/111111111111111111111111111111"
+    assert (
+        fingerprint(lines, NONCE)
+        == "SHA256:LastKeyWins+/111111111111111111111111111111"
+    )
     assert opener.timeouts == [LOG_IDLE_S]
 
 
@@ -234,7 +254,7 @@ def test_a_redirect_is_not_followed(monkeypatch: pytest.MonkeyPatch) -> None:
         {"RUNPOD_API_KEY": KEY}, opener=urllib.request.build_opener(unguarded)
     )
     with pytest.raises(Lost, match="HTTP 302"):
-        exposed.create(SPEC, "RTX 4090", "key", 2700)
+        exposed.create(SPEC, "RTX 4090", "key", 2700, nonce=NONCE)
     assert ("elsewhere.example", f"Bearer {KEY}") in unguarded.opened
 
     redirecting = Redirecting()
@@ -245,7 +265,7 @@ def test_a_redirect_is_not_followed(monkeypatch: pytest.MonkeyPatch) -> None:
     provider = RunPod({"RUNPOD_API_KEY": KEY})
 
     with pytest.raises(Lost, match="HTTP 302"):
-        provider.create(SPEC, "RTX 4090", "key", 2700)
+        provider.create(SPEC, "RTX 4090", "key", 2700, nonce=NONCE)
     assert redirecting.opened == [("api.runpod.io", f"Bearer {KEY}")]
     request = urllib.request.Request(API + "/pods")
     elsewhere = "https://elsewhere.example/pods"

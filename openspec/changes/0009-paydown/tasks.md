@@ -8,7 +8,7 @@ names.
 
 - [x] 1 — The wait
 - [x] 2 — The log
-- [ ] 3 — The boot
+- [x] 3 — The boot
 - [ ] 4 — The drift
 - [ ] 5 — The proof
 - [ ] 6 — The handover
@@ -33,11 +33,11 @@ names.
 
 ## 3 — The boot
 
-- [ ] 3.1 In `boot/boot.sh`, require `GPUNIT_NONCE`, print it in the key line, keep it from the command, and sleep `GRACE_S` after the command exits, per [D3](design.md#d3) and [D4](design.md#d4).
+- [x] 3.1 In `boot/boot.sh`, require `GPUNIT_NONCE`, print it in the key line, keep it from the command, and sleep `GRACE_S` after the command exits, per [D3](design.md#d3) and [D4](design.md#d4).
   Verify: `grep -c '^GRACE_S=60' boot/boot.sh` prints `1`, and `grep -c 'env -u RUNPOD_API_KEY -u GPUNIT_NONCE' boot/boot.sh` prints `1`.
-- [ ] 3.2 In `gpunit/provider.py`, `gpunit/runpod.py` and `gpunit/lifecycle.py`, add the nonce to `fingerprint`, `Provider.create`, `RunPod.create` and `up`, add `old_boot`, and refuse an older `boot.sh` in `_verify_host_key`, per [D3](design.md#d3).
+- [x] 3.2 In `gpunit/provider.py`, `gpunit/runpod.py` and `gpunit/lifecycle.py`, add the nonce to `fingerprint`, `Provider.create`, `RunPod.create` and `up`, add `old_boot`, and refuse an older `boot.sh` in `_verify_host_key`, per [D3](design.md#d3).
   Verify: `grep -c '^def old_boot' gpunit/provider.py` prints `1`, and `grep -c 'GPUNIT_NONCE' gpunit/runpod.py` prints `1`.
-- [ ] 3.3 Carry the nonce into `tests/fakes.py`, `tests/conftest.py` (`lifecycle.NONCE` replaced), `tests/fixtures/log.txt`, `tests/test_runpod.py` and `tests/test_boot.py`; in `tests/test_boot.py` keep the grace out of the stop's waits and bind `boot:refuse:no-nonce`, `boot:stop:refusal-no-grace` and `boot:child:no-nonce`; in `tests/test_hostkey.py` bind `session:hostkey:other-nonce-ignored`, `session:hostkey:nonce-per-pod` and `session:hostkey:old-boot-refused`.
+- [x] 3.3 Carry the nonce into `tests/fakes.py`, `tests/conftest.py` (`lifecycle.NONCE` replaced), `tests/test_cli.py` (`ON_THE_FAKES`), `tests/fixtures/log.txt`, `tests/test_runpod.py` and `tests/test_boot.py`; in `tests/test_boot.py` keep the grace out of the stop's waits and bind `boot:refuse:no-nonce`, `boot:stop:refusal-no-grace` and `boot:child:no-nonce`; in `tests/test_hostkey.py` bind `session:hostkey:other-nonce-ignored`, `session:hostkey:nonce-per-pod` and `session:hostkey:old-boot-refused`.
   Verify: `grep -o -E 'boot:(refuse:no-nonce|stop:refusal-no-grace|child:no-nonce)' tests/test_boot.py | sort -u | wc -l | tr -d ' '` prints `3`, `grep -o -E 'session:hostkey:(other-nonce-ignored|nonce-per-pod|old-boot-refused)' tests/test_hostkey.py | sort -u | wc -l | tr -d ' '` prints `3`, and `uv run pytest -q tests/test_boot.py tests/test_hostkey.py tests/test_runpod.py tests/test_up.py tests/test_library.py tests/test_run.py tests/test_serve_session.py` exits 0.
 
 ## 4 — The drift

@@ -1,7 +1,9 @@
 """Open, report and close one GPU session: `up`, `status`, `down`."""
 
+import functools
 import json
 import os
+import secrets
 import shutil
 import subprocess
 import time
@@ -19,6 +21,7 @@ from gpunit.provider import (
     Refused,
     Unknown,
     fingerprint,
+    old_boot,
     pod_name,
 )
 from gpunit.spec import Spec
@@ -50,6 +53,8 @@ class Clock:
 
 
 CLOCK = Clock()
+# Each pod's nonce for its host-key line; the tests replace it, as they do `CLOCK`.
+NONCE: Callable[[], str] = functools.partial(secrets.token_hex, 16)
 
 
 class DeadPod:
@@ -89,10 +94,11 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
     cards = _placeable(spec, provider)
 
     pubkey = state.keygen(pod_name(spec.project))
+    nonce = NONCE()
     # Before the create, so a log read `since` it holds the whole boot (0003 design D2).
     created = log.utc()
     state.mark_pending()
-    pod_id = _create(spec, provider, cards, pubkey)
+    pod_id = _create(spec, provider, cards, pubkey, nonce)
     if pod_id is None:
         state.clear_pending()
         log.refuse("no card in 'gpus' was placed")
@@ -102,7 +108,7 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
     log.say(f"pod {pod_id} created; waiting for SSH")
 
     record = _wait(spec, provider, state, record)
-    _verify_host_key(spec, provider, state, record)
+    _verify_host_key(spec, provider, state, record, nonce)
     log.say(f"session up: pod {record.id}, root@{record.host} -p {record.port}")
     return record
 
@@ -260,12 +266,12 @@ def _placeable(spec: Spec, provider: Provider) -> list[str]:
 
 
 def _create(
-    spec: Spec, provider: Provider, cards: list[str], pubkey: str
+    spec: Spec, provider: Provider, cards: list[str], pubkey: str, nonce: str
 ) -> str | None:
     for card in cards:
         log.say(f"creating on {card}")
         try:
-            pod_id = provider.create(spec, card, pubkey, spec.ceiling_s)
+            pod_id = provider.create(spec, card, pubkey, spec.ceiling_s, nonce=nonce)
         except Refused as refusal:
             log.say(str(refusal))
             continue
@@ -310,15 +316,27 @@ def _wait(spec: Spec, provider: Provider, state: State, record: Record) -> Recor
 
 
 def _verify_host_key(
-    spec: Spec, provider: Provider, state: State, record: Record
+    spec: Spec, provider: Provider, state: State, record: Record, nonce: str
 ) -> None:
     # The fingerprint comes over the authenticated API, never over the connection
     # it vouches for; nothing connects until the two agree.
     def read() -> str | None:
+        tail = provider.log(record.id, tail=LOG_TAIL)
+        if printed := fingerprint(tail, nonce):
+            return printed
         # A boot that logs heavily pushes the key line out of the tail.
-        return fingerprint(provider.log(record.id, tail=LOG_TAIL)) or fingerprint(
-            provider.log(record.id, tail=LOG_TAIL, since=record.created)
-        )
+        since = provider.log(record.id, tail=LOG_TAIL, since=record.created)
+        if printed := fingerprint(since, nonce):
+            return printed
+        if old_boot(tail) or old_boot(since):
+            _tear_down(
+                spec,
+                provider,
+                state,
+                "the image's boot.sh prints no session nonce; "
+                "ADD boot.sh from gpunit v0.6.0",
+            )
+        return None
 
     printed = _poll(LOG_WAIT_S, read)
     if printed is None:

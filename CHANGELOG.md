@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING for a consumer's image:** each pod gets a fresh `GPUNIT_NONCE`; `boot.sh` prints it in its key line,
+  `gpunit host key <nonce>: SHA256:…`, and keeps it from the command, so an echoed key line is never the key
+  (`0006·S1`). An older `boot.sh` is refused at once, naming `v0.6.0`.
+- `boot.sh` waits 60 s after the command exits before it stops the pod, so gpunit reads the exit line; the ceiling
+  and a refusal stop without it.
+
 ### Fixed
 
 - A pod that stops while `serve` waits for the model, or holds the endpoint, ends the session: two polls in a row

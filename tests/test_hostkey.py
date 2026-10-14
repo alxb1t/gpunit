@@ -1,10 +1,20 @@
 import json
+import re
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
-from gpunit import log
-from tests.fakes import BOOT_LOG, KEY_LINE, SERVED, FakeClock, FakeProvider
+from gpunit import lifecycle, log
+from tests.fakes import (
+    BOOT_LOG,
+    KEY_LINE,
+    NONCE,
+    SERVED,
+    STEP_LINE,
+    FakeClock,
+    FakeProvider,
+)
 from tests.helpers import gpunit
 
 
@@ -86,4 +96,70 @@ def test_a_key_line_with_no_step_after_it_is_not_yet(
 
     assert gpunit(["up"], provider=provider) == 1
     assert provider.named("delete") == [("pod-1",)]
+    assert 60 <= clock.now < 70
+
+
+@pytest.mark.spec("session:hostkey:other-nonce-ignored")
+@pytest.mark.parametrize(
+    ("echoed", "code"), [("f" * 32, 0), (NONCE, 1)], ids=["other", "twin-same"]
+)
+def test_a_key_line_with_another_nonce_is_not_the_key(
+    echoed: str, code: int, cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    forged = f"gpunit host key {echoed}: SHA256:forged"
+    provider = FakeProvider(logs=[[*BOOT_LOG, forged, f"x {STEP_LINE}", STEP_LINE]])
+
+    assert gpunit(["up"], provider=provider) == code
+
+    err = capsys.readouterr().err
+    if code == 0:
+        assert f"host key verified: {SERVED}" in err
+        return
+    # The twin: the session's nonce on the echoed line makes it the key.
+    assert "does not match the printed SHA256:forged" in err
+
+
+class NonceEchoing(FakeProvider):
+    """Answer each log read with boot's lines for the nonce the last create gave."""
+
+    def log(self, pod_id: str, *, tail: int, since: str | None = None) -> list[str]:
+        super().log(pod_id, tail=tail, since=since)
+        nonce = self.named("create")[-1][4]
+        return [f"gpunit host key {nonce}: {SERVED}", STEP_LINE]
+
+
+@pytest.mark.spec("session:hostkey:nonce-per-pod")
+def test_each_pod_gets_its_own_nonce(
+    cwd: Path, drawn_nonce: Callable[[], str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(lifecycle, "NONCE", drawn_nonce)
+    nonces = []
+    for _ in range(2):
+        provider = NonceEchoing()
+        assert gpunit(["up"], provider=provider) == 0
+        assert gpunit(["down"], provider=provider) == 0
+        nonces.append(str(provider.named("create")[0][4]))
+
+    assert all(re.fullmatch(r"[0-9a-f]{32}", nonce) for nonce in nonces)
+    assert nonces[0] != nonces[1]
+
+
+@pytest.mark.spec("session:hostkey:old-boot-refused")
+@pytest.mark.parametrize("step", [True, False], ids=["step", "twin-no-step"])
+def test_an_older_boot_is_refused_at_once(
+    step: bool, cwd: Path, clock: FakeClock, capsys: pytest.CaptureFixture[str]
+) -> None:
+    old = f"gpunit host key: {SERVED}"
+    provider = FakeProvider(logs=[[old, STEP_LINE] if step else [old]])
+
+    assert gpunit(["up"], provider=provider) == 1
+
+    assert provider.named("delete") == [("pod-1",)]
+    err = capsys.readouterr().err
+    if step:
+        assert "ADD boot.sh from gpunit v0.6.0" in err
+        assert clock.now == 0
+        return
+    # The twin: without boot's step line it is no older boot, and the wait runs out.
+    assert "v0.6.0" not in err
     assert 60 <= clock.now < 70
