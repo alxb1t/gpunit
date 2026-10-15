@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`0006·S1`). An older `boot.sh` is refused at once, naming `v0.6.0`.
 - `boot.sh` waits 60 s after the command exits before it stops the pod, so gpunit reads the exit line; the ceiling
   and a refusal stop without it.
+- `gpunit-vllm`, `gpunit-live` and `gpunit-live-dead` are rebuilt with this `boot.sh` and pinned by digest:
+  `gpunit-vllm:v0.6-rc1` from `build-serve-image` run 38717674106, the live images pushed by hand for `linux/amd64`.
 
 ### Fixed
 
