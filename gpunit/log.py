@@ -12,9 +12,9 @@ class Refusal(Exception):
     """A verb refused; `cli` turns it into exit 1."""
 
 
-def utc() -> str:
-    """Return the UTC time now, e.g. "2026-10-07T15:32:09Z"."""
-    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+def utc(after_s: int = 0) -> str:
+    """Return the UTC time `after_s` seconds from now, e.g. "2026-10-07T15:32:09Z"."""
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() + after_s))
 
 
 def _stderr(line: str) -> None:

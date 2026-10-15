@@ -6,6 +6,8 @@ import subprocess
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from gpunit import log
+
 DIR = ".gpunit"
 
 
@@ -36,6 +38,11 @@ class Window:
     datacenter: str
     size_gb: int
     ends: str
+
+    def ends_within(self, seconds: int) -> bool:
+        """Return True when the window ends `seconds` from now or sooner."""
+        # One UTC form, Z: these times order as strings do.
+        return log.utc(seconds) >= self.ends
 
 
 class State:

@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   lists and deletes a network volume, so a window volume can be made where the cards are (0010).
 - `gpunit.toml` takes `volume_gb`, `volume_ceiling` and `volume_datacenter`, refused without their pair, beside
   `volume`, or outside 10–4000 GB; `.gpunit/volume` records the window and the ledger names its volume and end.
+- `gpunit volume up` creates `gpunit-<project>` where the first card of `gpus` is in stock, after the price, or extends
+  a live one; `gpunit volume down` deletes it and sweeps any other of its name. A volume past its end is deleted first.
 
 ## [0.6.0] - 2026-10-15
 

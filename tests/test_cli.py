@@ -41,6 +41,23 @@ def test_run_without_a_command_exits_2_naming_the_form(
     assert "gpunit run -- <command>" in capsys.readouterr().err
 
 
+@pytest.mark.spec("cli:verbs:volume-without-action-exits-2")
+@pytest.mark.parametrize("argv", [["volume"], ["volume", "frobnicate"]])
+def test_volume_without_an_action_exits_2_naming_both(
+    argv: list[str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    write_spec(tmp_path)
+
+    assert gpunit(argv, provider=NO_REQUESTS) == 2
+    err = capsys.readouterr().err
+    assert "gpunit volume up" in err
+    assert "gpunit volume down" in err
+
+
 @pytest.mark.spec("cli:verbs:serve-without-ceiling-exits-2")
 @pytest.mark.parametrize(
     "argv",

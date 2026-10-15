@@ -91,7 +91,7 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
             provider.volume(spec.volume)
         except (Unknown, Lost) as fault:
             log.refuse(f"volume {spec.volume} could not be read: {fault}")
-    cards = _placeable(spec, provider)
+    cards = placeable(spec, provider)
 
     pubkey = state.keygen(pod_name(spec.project))
     nonce = NONCE()
@@ -216,6 +216,26 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
     return 0
 
 
+def sweep_window(state: State, provider: Provider) -> bool:
+    """Delete the window volume once its end has passed; return whether it had.
+
+    A delete that fails keeps the record, and warns.
+    """
+    window = state.window()
+    if window is None or not window.ends_within(0):
+        return False
+    code = provider.delete_volume(window.id)
+    if code == 204:
+        state.clear_window()
+        log.say(f"volume {window.id} passed its ceiling at {window.ends}; deleted")
+    else:
+        log.say(
+            f"warning: volume {window.id} passed its ceiling at {window.ends}; its "
+            f"delete answered HTTP {code}, so the record is kept"
+        )
+    return True
+
+
 def _warn_unignored(state: State) -> None:
     if shutil.which("git") is None:
         return
@@ -245,7 +265,8 @@ def _refuse_listed(spec: Spec, provider: Provider) -> None:
         )
 
 
-def _placeable(spec: Spec, provider: Provider) -> list[str]:
+def placeable(spec: Spec, provider: Provider) -> list[str]:
+    """Return the cards of `gpus` that meet `vram_gb` and `max_hourly`, in order."""
     cards = []
     for card in spec.gpus:
         try:

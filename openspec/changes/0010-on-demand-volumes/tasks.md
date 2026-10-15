@@ -8,7 +8,7 @@ names.
 
 - [x] 1 — The seam
 - [x] 2 — The spec and the record
-- [ ] 3 — The verbs
+- [x] 3 — The verbs
 - [ ] 4 — The session
 - [ ] 5 — Serve
 - [ ] 6 — Spend
@@ -32,9 +32,9 @@ names.
 
 ## 3 — The verbs
 
-- [ ] 3.1 Write `gpunit/volume.py` with `up` and `down`, per [D3](design.md#d3) and [D5](design.md#d5); in `gpunit/lifecycle.py` rename `_placeable` to `placeable` and add `sweep_window`, per [D7](design.md#d7); in `tests/test_volume.py` bind every `volume:up:`, `volume:extend:` and `volume:down:` scenario.
+- [x] 3.1 Write `gpunit/volume.py` with `up` and `down`, per [D3](design.md#d3) and [D5](design.md#d5); in `gpunit/lifecycle.py` rename `_placeable` to `placeable` and add `sweep_window`, per [D7](design.md#d7); in `tests/test_volume.py` bind every `volume:up:`, `volume:extend:` and `volume:down:` scenario.
   Verify: `grep -o -E 'volume:(up|extend|down):[a-z0-9-]+' tests/test_volume.py | sort -u | wc -l | tr -d ' '` prints `12`, and `uv run pytest -q tests/test_volume.py` exits 0.
-- [ ] 3.2 Add `volume up` and `volume down` on the spec to `gpunit/cli.py`, with the `USAGE` line, per [D8](design.md#d8); in `tests/test_cli.py` bind `cli:verbs:volume-without-action-exits-2`.
+- [x] 3.2 Add `volume up` and `volume down` on the spec to `gpunit/cli.py`, with the `USAGE` line, per [D8](design.md#d8); in `tests/test_cli.py` bind `cli:verbs:volume-without-action-exits-2`.
   Verify: `grep -c 'cli:verbs:volume-without-action-exits-2' tests/test_cli.py` prints `1`, and `uv run gpunit volume 2>&1 | grep -c 'volume up'` prints a number of at least `1`.
 
 ## 4 — The session

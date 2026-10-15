@@ -11,13 +11,14 @@ from gpunit import lifecycle, log, run
 from gpunit.provider import Lost, Provider
 from gpunit.runpod import RunPod
 from gpunit.serve import table
-from gpunit.spec import load_spec, parse_ceiling
+from gpunit.spec import Spec, load_spec, parse_ceiling
 from gpunit.state import State
 
 USAGE = (
     "gpunit {up,status,down,ssh} [--spec PATH] | gpunit run [--spec PATH] -- <command>"
     " | gpunit serve <model> --ceiling 2h [--api] | gpunit down --serve <model>"
     " | gpunit spend [--days N] [--json]"
+    " | gpunit volume up [--spec PATH] [--yes] | gpunit volume down [--spec PATH]"
 )
 
 FAILED, USAGE_FAULT = 1, 2
@@ -52,6 +53,13 @@ def _parser() -> _Parser:
     serve.add_argument("--max-hourly", type=float)
     serve.add_argument("--yes", action="store_true")
     serve.add_argument("--think", action="store_true")
+    volume = verbs.add_parser("volume")
+    actions = volume.add_subparsers(dest="action", required=True, parser_class=_Parser)
+    for action in ("up", "down"):
+        sub = actions.add_parser(action)
+        sub.add_argument("--spec", type=Path, default=Path("gpunit.toml"))
+        if action == "up":
+            sub.add_argument("--yes", action="store_true")
     report = verbs.add_parser("spend")
     report.add_argument("--days", type=_days, default=DAYS)
     report.add_argument("--json", action="store_true")
@@ -138,6 +146,8 @@ def _run(argv: list[str], provider: Provider | None) -> int:
 
             return spend.spend(lazy(), args.days, as_json=args.json)
         spec = load_spec(args.spec)
+        if args.verb == "volume":
+            return _volume(args, spec, lazy(), state)
         match args.verb:
             case "up":
                 lifecycle.up(spec, lazy(), state)
@@ -174,6 +184,17 @@ def _serve(args: argparse.Namespace, provider: Callable[[], Provider]) -> int:
         think=args.think,
         provider=provider(),
     )
+
+
+def _volume(
+    args: argparse.Namespace, spec: Spec, provider: Provider, state: State
+) -> int:
+    # Here, not at the top: `decimal` would slow every other verb's start.
+    from gpunit import volume
+
+    if args.action == "up":
+        return volume.up(spec, provider, state, yes=args.yes)
+    return volume.down(spec, provider, state)
 
 
 def _known(model: str) -> None:
