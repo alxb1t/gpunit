@@ -1,5 +1,6 @@
 import dataclasses
 import io
+import json
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -418,3 +419,127 @@ def test_an_unreadable_billing_is_lost(answer: Answer, read: str, key: bytes) ->
 
     with pytest.raises(Lost, match="billing read"):
         getattr(provider, read)(*WEEK)
+
+
+def volume_page(volumes: list[dict[str, str]], cursor: str | None) -> bytes:
+    more = {"nextCursor": cursor, "hasNextPage": cursor is not None}
+    return json.dumps({"networkVolumes": volumes, "pagination": more}).encode()
+
+
+@pytest.mark.spec("volume:up:datacenter-from-stock")
+def test_stock_reads_the_secure_pod_stock_and_drops_none() -> None:
+    provider, opener = runpod((200, fixture("gpu_stock.json")))
+
+    assert provider.stock("NVIDIA A40") == [("EU-RO-1", "MEDIUM"), ("CA-MTL-4", "HIGH")]
+    url = urllib.parse.urlsplit(opener.requests[0].full_url)
+    assert url.path == "/v2/catalog/gpus/NVIDIA%20A40"
+    assert urllib.parse.parse_qs(url.query) == {
+        "include": ["AVAILABILITY"],
+        "product": ["POD"],
+        "cloud": ["SECURE"],
+    }
+
+
+@pytest.mark.spec("volume:up:datacenter-from-stock")
+def test_a_card_out_of_stock_everywhere_has_no_data_centre() -> None:
+    provider, _ = runpod((200, fixture("gpu.json")))
+
+    assert provider.stock("NVIDIA GeForce RTX 4090") == []
+
+
+@pytest.mark.spec("volume:up:datacenter-from-stock")
+@pytest.mark.parametrize(
+    ("answer", "fault"),
+    [((404, fixture("problem.json")), Unknown), ((500, b"oops"), Lost)],
+    ids=["404", "500"],
+)
+def test_an_unreadable_stock_is_unknown_or_lost(
+    answer: Answer, fault: type[Exception]
+) -> None:
+    provider, _ = runpod(answer)
+
+    with pytest.raises(fault):
+        provider.stock("NVIDIA A40")
+
+
+@pytest.mark.spec("volume:up:datacenter-from-stock")
+def test_the_standard_data_centres_are_read() -> None:
+    provider, opener = runpod((200, fixture("datacenters.json")), (500, b"oops"))
+
+    assert provider.volume_datacenters() == {"EU-RO-1", "CA-MTL-4"}
+    assert opener.requests[0].full_url.endswith(
+        "/catalog/datacenters?networkVolumeTypes=STANDARD"
+    )
+    with pytest.raises(Lost, match="data centre read"):
+        provider.volume_datacenters()
+
+
+@pytest.mark.spec("volume:up:datacenter-from-stock")
+def test_the_volume_create_names_the_standard_tier() -> None:
+    provider, opener = runpod((201, fixture("volume_created.json")))
+
+    assert provider.create_volume("gpunit-isekai", 60, "EU-RO-1") == "vol-abc123"
+    assert opener.requests[0].get_method() == "POST"
+    assert opener.requests[0].full_url.endswith("/network-volumes")
+    assert opener.sent() == {
+        "name": "gpunit-isekai",
+        "size": 60,
+        "dataCenter": "EU-RO-1",
+        "type": "STANDARD",
+    }
+
+
+@pytest.mark.spec("volume:up:datacenter-from-stock")
+@pytest.mark.parametrize("status", [400, 422])
+def test_a_refused_volume_create_is_refused(status: int) -> None:
+    provider, _ = runpod((status, fixture("problem.json")))
+
+    with pytest.raises(Refused, match="no instances"):
+        provider.create_volume("gpunit-isekai", 60, "EU-RO-1")
+
+
+@pytest.mark.spec("volume:up:lost-create-exits-3")
+@pytest.mark.parametrize(
+    "answer",
+    [(503, b"upstream unavailable"), (201, b"{}"), urllib.error.URLError("down")],
+    ids=["503", "201-no-id", "transport"],
+)
+def test_a_volume_create_without_an_id_is_lost(answer: Answer) -> None:
+    provider, _ = runpod(answer)
+
+    with pytest.raises(Lost, match="volume create"):
+        provider.create_volume("gpunit-isekai", 60, "EU-RO-1")
+
+
+@pytest.mark.spec("volume:down:sweeps-by-name")
+def test_the_volume_listing_walks_the_cursor_and_keeps_the_name() -> None:
+    ours = {"id": "v1", "name": "gpunit-isekai", "dataCenter": "EU-RO-1"}
+    other = {"id": "v2", "name": "gpunit-isekai-old", "dataCenter": "EU-RO-1"}
+    again = {"id": "v3", "name": "gpunit-isekai", "dataCenter": "CA-MTL-4"}
+    provider, opener = runpod(
+        (200, volume_page([ours, other], "c1")), (200, volume_page([again], None))
+    )
+
+    assert provider.volumes("gpunit-isekai") == ["v1", "v3"]
+    assert opener.requests[0].full_url.endswith("/network-volumes?limit=1000")
+    assert "cursor=c1" in opener.requests[1].full_url
+
+
+@pytest.mark.spec("volume:down:sweeps-by-name")
+def test_an_unreadable_volume_listing_is_lost() -> None:
+    provider, _ = runpod((200, volume_page([], "c1")), (200, volume_page([], "c1")))
+
+    with pytest.raises(Lost, match="volume listing answered cursor c1 twice"):
+        provider.volumes("gpunit-isekai")
+    provider, _ = runpod((500, fixture("problem.json")))
+    with pytest.raises(Lost, match="volume listing returned HTTP 500"):
+        provider.volumes("gpunit-isekai")
+
+
+@pytest.mark.spec("volume:down:sweeps-by-name")
+def test_delete_volume_returns_the_status_and_0_without_an_answer() -> None:
+    provider, opener = runpod((204, b""), (409, fixture("problem.json")), OSError())
+
+    assert [provider.delete_volume("v1") for _ in range(3)] == [204, 409, 0]
+    assert opener.requests[0].get_method() == "DELETE"
+    assert opener.requests[0].full_url.endswith("/network-volumes/v1")

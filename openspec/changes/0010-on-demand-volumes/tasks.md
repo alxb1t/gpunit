@@ -6,7 +6,7 @@ names.
 
 ## Progress
 
-- [ ] 1 — The seam
+- [x] 1 — The seam
 - [ ] 2 — The spec and the record
 - [ ] 3 — The verbs
 - [ ] 4 — The session
@@ -18,9 +18,9 @@ names.
 
 ## 1 — The seam
 
-- [ ] 1.1 **HALT CHECK** — none of this change exists yet, and every card it closes is still in the backlog.
+- [x] 1.1 **HALT CHECK** — none of this change exists yet, and every card it closes is still in the backlog.
   Verify: `grep -c -E 'def create_volume|volume_gb|sweep_window' gpunit/provider.py gpunit/spec.py gpunit/lifecycle.py | grep -v ':0$' | wc -l | tr -d ' '` prints `0`, `test -e gpunit/volume.py; echo $?` prints `1`, and `grep -c -E '^- \*\*(0009·L1|0009·R6|0009·S3) ' .minions/backlog.md` prints `3`.
-- [ ] 1.2 Add `stock`, `volume_datacenters`, `create_volume`, `volumes` and `delete_volume` to `Provider` in `gpunit/provider.py`, `RunPod` in `gpunit/runpod.py` and `FakeProvider` in `tests/fakes.py`, per [D1](design.md#d1); in `tests/test_runpod.py` bind the reads under `volume:up:datacenter-from-stock`, the lost create under `volume:up:lost-create-exits-3`, and the listing and delete under `volume:down:sweeps-by-name`.
+- [x] 1.2 Add `stock`, `volume_datacenters`, `create_volume`, `volumes` and `delete_volume` to `Provider` in `gpunit/provider.py`, `RunPod` in `gpunit/runpod.py` and `FakeProvider` in `tests/fakes.py`, per [D1](design.md#d1); in `tests/test_runpod.py` bind the reads under `volume:up:datacenter-from-stock`, the lost create under `volume:up:lost-create-exits-3`, and the listing and delete under `volume:down:sweeps-by-name`.
   Verify: `grep -c -E 'def (stock|volume_datacenters|create_volume|volumes|delete_volume)\(' gpunit/runpod.py` prints `5`, and `uv run pytest -q tests/test_runpod.py` exits 0.
 
 ## 2 — The spec and the record

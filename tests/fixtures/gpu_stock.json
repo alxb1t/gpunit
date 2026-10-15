@@ -1,0 +1,17 @@
+{
+  "id": "NVIDIA A40",
+  "name": "A40",
+  "pool": "AMPERE_48",
+  "manufacturer": "NVIDIA",
+  "memory": 48,
+  "secure": true,
+  "community": true,
+  "price": {"secure": 0.4, "community": 0.35},
+  "maxCount": {"secure": 8, "community": 8},
+  "availability": "MEDIUM",
+  "dataCenters": [
+    {"id": "EU-RO-1", "name": "EU-RO-1", "availability": "MEDIUM"},
+    {"id": "US-KS-2", "name": "US-KS-2", "availability": "NONE"},
+    {"id": "CA-MTL-4", "name": "CA-MTL-4", "availability": "HIGH"}
+  ]
+}
