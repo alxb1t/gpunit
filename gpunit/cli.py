@@ -18,7 +18,8 @@ USAGE = (
     "gpunit {up,status,down,ssh} [--spec PATH] | gpunit run [--spec PATH] -- <command>"
     " | gpunit serve <model> --ceiling 2h [--api] | gpunit down --serve <model>"
     " | gpunit spend [--days N] [--json]"
-    " | gpunit volume up [--spec PATH] [--yes] | gpunit volume down [--spec PATH]"
+    " | gpunit volume up [--spec PATH | --serve <model> --ceiling 4h] [--yes]"
+    " | gpunit volume down [--spec PATH | --serve <model>]"
 )
 
 FAILED, USAGE_FAULT = 1, 2
@@ -58,7 +59,9 @@ def _parser() -> _Parser:
     for action in ("up", "down"):
         sub = actions.add_parser(action)
         sub.add_argument("--spec", type=Path, default=Path("gpunit.toml"))
+        sub.add_argument("--serve", dest="model", metavar="MODEL")
         if action == "up":
+            sub.add_argument("--ceiling", type=_ceiling)
             sub.add_argument("--yes", action="store_true")
     report = verbs.add_parser("spend")
     report.add_argument("--days", type=_days, default=DAYS)
@@ -103,7 +106,12 @@ def parse(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
         raise Usage("gpunit run -- <command> needs a command")
     if args.verb != "run" and command is not None:
         raise Usage(f"gpunit {args.verb} takes no command after --")
-    # `serve` and `down --serve` name a model, whose spec is its table row;
+    if getattr(args, "action", None) == "up":
+        if args.model is not None and args.ceiling is None:
+            raise Usage("gpunit volume up --serve <model> needs --ceiling")
+        if args.model is None and args.ceiling is not None:
+            raise Usage("--ceiling goes with --serve; a spec sets volume_ceiling")
+    # `serve` and `--serve` name a model, whose spec is its table row;
     # `spend` has no `--spec`: it reads only the billing and the ledger.
     args.model = getattr(args, "model", None)
     if args.model is not None or not hasattr(args, "spec"):
@@ -174,6 +182,12 @@ def _serve(args: argparse.Namespace, provider: Callable[[], Provider]) -> int:
 
     if args.verb == "down":
         return session.down(args.model, provider())
+    if args.verb == "volume":
+        if args.action == "up":
+            return session.volume_up(
+                args.model, args.ceiling, yes=args.yes, provider=provider()
+            )
+        return session.volume_down(args.model, provider())
     return session.serve(
         args.model,
         args.ceiling,

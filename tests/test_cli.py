@@ -58,6 +58,30 @@ def test_volume_without_an_action_exits_2_naming_both(
     assert "gpunit volume down" in err
 
 
+@pytest.mark.spec("cli:verbs:volume-serve-without-ceiling-exits-2")
+@pytest.mark.parametrize(
+    ("argv", "named"),
+    [
+        (["volume", "up", "--serve", "qwen3-4b"], "needs --ceiling"),
+        (["volume", "up", "--serve", "qwen3-4b", "--ceiling", "1"], "--ceiling"),
+        (["volume", "up", "--ceiling", "1h"], "--ceiling goes with --serve"),
+    ],
+    ids=["missing", "no-unit", "without-serve"],
+)
+def test_a_models_volume_without_a_ceiling_exits_2(
+    argv: list[str],
+    named: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    write_spec(tmp_path)
+
+    assert gpunit(argv, provider=NO_REQUESTS) == 2
+    assert named in capsys.readouterr().err
+
+
 @pytest.mark.spec("cli:verbs:serve-without-ceiling-exits-2")
 @pytest.mark.parametrize(
     "argv",

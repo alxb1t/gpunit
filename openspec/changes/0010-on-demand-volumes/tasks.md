@@ -10,7 +10,7 @@ names.
 - [x] 2 — The spec and the record
 - [x] 3 — The verbs
 - [x] 4 — The session
-- [ ] 5 — Serve
+- [x] 5 — Serve
 - [ ] 6 — Spend
 - [ ] 7 — The live runs and the handover
 - [ ] 8 — ⚠️ **HUMAN** — the images
@@ -46,7 +46,7 @@ names.
 
 ## 5 — Serve
 
-- [ ] 5.1 Add `volume up --serve <row> --ceiling` and `volume down --serve <row>` to `gpunit/cli.py`, and mount a recorded window volume in `gpunit/serve/session.py`'s `serve`, per [D8](design.md#d8); in `tests/test_serve_session.py` bind `serve:volume:window-mounted` and `serve:volume:never-created`, and in `tests/test_cli.py` bind `cli:verbs:volume-serve-without-ceiling-exits-2`.
+- [x] 5.1 Add `volume up --serve <row> --ceiling` and `volume down --serve <row>` to `gpunit/cli.py`, and mount a recorded window volume in `gpunit/serve/session.py`'s `serve`, per [D8](design.md#d8); in `tests/test_serve_session.py` bind `serve:volume:window-mounted` and `serve:volume:never-created`, and in `tests/test_cli.py` bind `cli:verbs:volume-serve-without-ceiling-exits-2`.
   Verify: `grep -o -E 'serve:volume:(window-mounted|never-created)' tests/test_serve_session.py | sort -u | wc -l | tr -d ' '` prints `2`, and `grep -c 'cli:verbs:volume-serve-without-ceiling-exits-2' tests/test_cli.py` prints `1`.
 
 ## 6 — Spend

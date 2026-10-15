@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a live one; `gpunit volume down` deletes it and sweeps any other of its name. A volume past its end is deleted first.
 - A spec with `volume_gb` mounts the window's volume in `up`, `run` and `serve`, and refuses with none recorded or a
   session that would outlive it; `up`, `down` and `status` delete an overdue volume first; `status` names the volume.
+- `gpunit volume up --serve <model> --ceiling 4h` makes the row's window volume, of its `disk_gb`, and `serve` mounts
+  it; `gpunit volume down --serve <model>` deletes it. `serve` never creates a volume.
 
 ## [0.6.0] - 2026-10-15
 
