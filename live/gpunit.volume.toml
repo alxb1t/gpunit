@@ -1,0 +1,12 @@
+# The window `make live-volume` opens: a 10 GB volume for 30m, and two pods that mount it in turn.
+project = "live-volume"
+# Pushed by hand for linux/amd64; a rebuild moves the digest.
+image = "ghcr.io/alxb1t/gpunit-live@sha256:defd497b569eed55e7a634b8834624121edcf46041888ec5529c8ddee4e3c466"
+# The cheapest secure-cloud cards in stock, tried in order; stock moves by the hour.
+gpus = ["NVIDIA RTX A4500", "NVIDIA RTX A5000", "NVIDIA A40", "NVIDIA RTX A6000"]
+vram_gb = 16
+max_hourly = 0.60
+ceiling = "10m"
+disk_gb = 10
+volume_gb = 10
+volume_ceiling = "30m"

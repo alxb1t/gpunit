@@ -12,7 +12,7 @@ names.
 - [x] 4 — The session
 - [x] 5 — Serve
 - [x] 6 — Spend
-- [ ] 7 — The live runs and the handover
+- [x] 7 — The live runs and the handover
 - [ ] 8 — ⚠️ **HUMAN** — the images
 - [ ] 9 — ⚠️ **HUMAN · METERED** — make live-volume, make live-serve, make live-serve-dead, make live-dead
 
@@ -56,9 +56,9 @@ names.
 
 ## 7 — The live runs and the handover
 
-- [ ] 7.1 Write `live/gpunit.volume.toml` and the `Makefile`'s `live-volume`; run `live-serve` and `live-serve-dead` inside a window; make `live-dead` print its reason; per [D10](design.md#d10).
+- [x] 7.1 Write `live/gpunit.volume.toml` and the `Makefile`'s `live-volume`; run `live-serve` and `live-serve-dead` inside a window; make `live-dead` print its reason; per [D10](design.md#d10).
   Verify: `make -n live-volume | grep -c 'volume up'` prints a number of at least `1`, `make -n live-serve | grep -c 'volume down --serve'` prints a number of at least `1`, and `make -n live-dead | grep -c 'reason:'` prints a number of at least `1`.
-- [ ] 7.2 In `README.md`, add the window's keys to the spec sample, a *Working window* section, the volume verbs and the exit `3` row's volume; in `CLAUDE.md`, name `volume.py` and `make live-volume`; per [D12](design.md#d12).
+- [x] 7.2 In `README.md`, add the window's keys to the spec sample, a *Working window* section, the volume verbs and the exit `3` row's volume; in `CLAUDE.md`, name `volume.py` and `make live-volume`; per [D12](design.md#d12).
   Verify: `grep -c '^## Working window' README.md` prints `1`, `grep -c 'volume_ceiling' README.md` prints a number of at least `1`, and `grep -c 'make live-volume' CLAUDE.md` prints `1`.
 
 ## 8 — ⚠️ **HUMAN** — the images

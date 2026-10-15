@@ -20,9 +20,10 @@ CLI is recorded, not pinned: `@fission-ai/openspec@1.11.0`, resolved on `PATH`.
 
 - **`gpunit/`** — the package: `cli.py` (verbs, exit codes), `spec.py` (`gpunit.toml`), `state.py` (`.gpunit/`
   and `~/.local/state/gpunit`), `provider.py` (the `Provider` seam), `runpod.py` (RunPod's REST v2), `lifecycle.py`
-  (`up · status · down · ssh`), `library.py` (the public session: signals, tunnel, teardown), `run.py` (`run`, on
-  the library), `log.py` (gpunit's lines, to stderr or a sink), `ledger.py` (each pod's project, under the home
-  directory), `spend.py` (`spend`: the billing by project).
+  (`up · status · down · ssh`), `volume.py` (`volume up · down`: the window volume), `library.py` (the public
+  session: signals, tunnel, teardown), `run.py` (`run`, on the library), `log.py` (gpunit's lines, to stderr or a
+  sink), `ledger.py` (each pod's and window volume's project, under the home directory), `spend.py` (`spend`: the
+  billing by project).
 - **`gpunit/serve/`** — `gpunit serve`: `models.toml` (the model table and the image's digest), `table.py` (a row's
   `Spec`), `session.py` (the price, the wait, the `--api` hold), `chat.py` (the streamed chat).
 - **`boot/boot.sh`** — the pod's entrypoint: the ceiling, sshd, the fingerprint, the command.
@@ -42,8 +43,8 @@ CLI is recorded, not pinned: `@fission-ai/openspec@1.11.0`, resolved on `PATH`.
   (`test_gpu_reads_the_memory_and_the_secure_price`, `test_the_commands_end_stops_the_pod`).
 - **The ceiling is required:** no default, no pod without it (`test_no_ceiling_no_pod`).
 - **A 404 is never gone:** `down` keeps the record (`test_a_404_keeps_the_record`).
-- **`make live`, `make live-serve`, `make live-dead` and `make live-serve-dead` are never in CI:** they rent a real
-  pod; the gate fakes every provider answer.
+- **`make live`, `make live-volume`, `make live-serve`, `make live-dead` and `make live-serve-dead` are never in CI:**
+  they rent a real pod or volume; the gate fakes every provider answer.
 - **A patch closes cards and fixes; it adds no verb, `gpunit.toml` key or exit code.**
 
 ## Guardrails (hold for every role)
