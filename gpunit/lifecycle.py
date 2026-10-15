@@ -77,6 +77,7 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
 
     Refuse when it cannot; raise `Lost` when a create's answer did not arrive.
     """
+    overdue = sweep_window(state, provider)
     missing = [tool for tool in SSH_TOOLS if shutil.which(tool) is None]
     if missing:
         log.refuse(f"not on PATH: {', '.join(missing)}; install OpenSSH")
@@ -85,6 +86,8 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
         log.refuse(f"a pod is already recorded in {state.pod}; run gpunit down")
     if state.pending.exists():
         log.refuse(f"a create may have left a pod ({state.pending}); run gpunit down")
+    if spec.volume_gb is not None:
+        spec = _in_window(spec, state, overdue)
     _refuse_listed(spec, provider)
     if spec.volume is not None:
         try:
@@ -150,29 +153,27 @@ def ssh(
 def status(provider: Callable[[], Provider], state: State, *, as_json: bool) -> int:
     """Print the recorded session to stdout, in words or as one JSON object.
 
-    `provider` is built only when a record exists: no record needs no key.
+    `provider` is built only when a record exists, or a window volume is overdue: no
+    record needs no key.
     """
+    window = state.window()
+    if window is not None and window.ends_within(0):
+        sweep_window(state, provider())
+        window = state.window()
     record = state.read()
     if record is None:
         print("null" if as_json else "no session is recorded")
-        return 0
-    info = provider().get(record.id)
-    report = {
-        "id": record.id,
-        "image": record.image,
-        "host": record.host,
-        "port": record.port,
-        "status": info.status if info else "UNKNOWN",
-    }
-    if as_json:
-        print(json.dumps(report))
     else:
-        print(" ".join(f"{key}={value}" for key, value in report.items()))
+        _report(provider().get(record.id), record, as_json)
+    if window is not None and not as_json:
+        ends = "overdue" if window.ends_within(0) else window.ends
+        print(f"volume={window.id} datacenter={window.datacenter} ends={ends}")
     return 0
 
 
 def down(spec: Spec, provider: Provider, state: State) -> int:
     """Delete the recorded pod, sweep every listed one; return 0, or 1 on a fault."""
+    sweep_window(state, provider)
     failed = False
     record = state.read()
     if record is not None:
@@ -234,6 +235,33 @@ def sweep_window(state: State, provider: Provider) -> bool:
             f"delete answered HTTP {code}, so the record is kept"
         )
     return True
+
+
+def _report(info: PodInfo | None, record: Record, as_json: bool) -> None:
+    report = {
+        "id": record.id,
+        "image": record.image,
+        "host": record.host,
+        "port": record.port,
+        "status": info.status if info else "UNKNOWN",
+    }
+    if as_json:
+        print(json.dumps(report))
+    else:
+        print(" ".join(f"{key}={value}" for key, value in report.items()))
+
+
+def _in_window(spec: Spec, state: State, overdue: bool) -> Spec:
+    """Return `spec` mounting the window volume; refuse a session that outlives it."""
+    window = state.window()
+    if overdue or window is None:
+        log.refuse("no window volume is up; run gpunit volume up")
+    if window.ends_within(spec.ceiling_s + spec.timeout_s):
+        log.refuse(
+            f"the volume ends at {window.ends}; shorten the ceiling or run gpunit "
+            "volume up"
+        )
+    return replace(spec, volume=window.id)
 
 
 def _warn_unignored(state: State) -> None:

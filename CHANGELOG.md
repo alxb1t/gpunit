@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `volume`, or outside 10–4000 GB; `.gpunit/volume` records the window and the ledger names its volume and end.
 - `gpunit volume up` creates `gpunit-<project>` where the first card of `gpus` is in stock, after the price, or extends
   a live one; `gpunit volume down` deletes it and sweeps any other of its name. A volume past its end is deleted first.
+- A spec with `volume_gb` mounts the window's volume in `up`, `run` and `serve`, and refuses with none recorded or a
+  session that would outlive it; `up`, `down` and `status` delete an overdue volume first; `status` names the volume.
 
 ## [0.6.0] - 2026-10-15
 

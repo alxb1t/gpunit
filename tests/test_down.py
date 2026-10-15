@@ -2,8 +2,9 @@ from pathlib import Path
 
 import pytest
 
+from gpunit import log
 from gpunit.provider import Lost
-from gpunit.state import State
+from gpunit.state import State, Window
 from tests.fakes import RECORD, FakeProvider
 from tests.helpers import gpunit
 
@@ -95,3 +96,14 @@ def test_the_keypair_leaves_with_the_pod(cwd: Path) -> None:
     assert gpunit(["down"], provider=FakeProvider()) == 0
     assert not state.key.exists()
     assert not state.key_pub.exists()
+
+
+@pytest.mark.spec("volume:ceiling:overdue-deleted")
+def test_down_deletes_an_overdue_volume_first(cwd: Path) -> None:
+    state = recorded(cwd)
+    state.write_window(Window("v1", "EU-RO-1", 60, log.utc(-60)))
+    provider = FakeProvider()
+
+    assert gpunit(["down"], provider=provider) == 0
+    assert provider.calls[0] == ("delete_volume", ("v1",))
+    assert state.window() is None

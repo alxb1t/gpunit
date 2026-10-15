@@ -9,7 +9,7 @@ names.
 - [x] 1 — The seam
 - [x] 2 — The spec and the record
 - [x] 3 — The verbs
-- [ ] 4 — The session
+- [x] 4 — The session
 - [ ] 5 — Serve
 - [ ] 6 — Spend
 - [ ] 7 — The live runs and the handover
@@ -39,9 +39,9 @@ names.
 
 ## 4 — The session
 
-- [ ] 4.1 In `gpunit/lifecycle.py`, mount the window volume in `up` and call `sweep_window` first in `up`, `down` and `status`, per [D6](design.md#d6) and [D7](design.md#d7); in `tests/test_up.py` bind `session:volume:window-mounted`, `session:volume:window-missing-refuses`, `session:volume:outlives-window-refuses` and `volume:ceiling:session-refuses`.
+- [x] 4.1 In `gpunit/lifecycle.py`, mount the window volume in `up` and call `sweep_window` first in `up`, `down` and `status`, per [D6](design.md#d6) and [D7](design.md#d7); in `tests/test_up.py` bind `session:volume:window-mounted`, `session:volume:window-missing-refuses`, `session:volume:outlives-window-refuses` and `volume:ceiling:session-refuses`.
   Verify: `grep -o -E '(session:volume:window-[a-z-]+|session:volume:outlives-window-refuses|volume:ceiling:session-refuses)' tests/test_up.py | sort -u | wc -l | tr -d ' '` prints `4`, and `uv run pytest -q tests/test_up.py` exits 0.
-- [ ] 4.2 Print the window volume's line in `status`, per [D7](design.md#d7); in `tests/test_status.py` bind `volume:status:named` and `volume:ceiling:overdue-deleted`.
+- [x] 4.2 Print the window volume's line in `status`, per [D7](design.md#d7); in `tests/test_status.py` bind `volume:status:named` and `volume:ceiling:overdue-deleted`.
   Verify: `grep -o -E 'volume:(status:named|ceiling:overdue-deleted)' tests/test_status.py | sort -u | wc -l | tr -d ' '` prints `2`, and `uv run pytest -q tests/test_status.py` exits 0.
 
 ## 5 — Serve
