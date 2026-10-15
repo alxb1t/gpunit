@@ -55,7 +55,7 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    on the pod you would not trust with the key.
 
    ```sh
-   uv add --dev git+https://github.com/alxb1t/gpunit@v0.5.0
+   uv add --dev git+https://github.com/alxb1t/gpunit@v0.6.0
    echo .gpunit/ >> .gitignore
    export RUNPOD_API_KEY=...
    uv run gpunit run -- python3 render.py
@@ -151,7 +151,8 @@ A warp is ...
   stopped the pod.
 - **The local port** `<port>` is a free one, picked before the price is asked.
 - **`--api`** prints two lines to stdout, then holds the session until Ctrl-C, or until the server has not
-  answered for 60s, as when the ceiling has stopped the pod:
+  answered for 60s, as when the ceiling has stopped the pod or vLLM has crashed; that refusal prints `pod.log`'s
+  last 30 lines too:
 
   ```sh
   OPENAI_BASE_URL=http://127.0.0.1:<port>/v1

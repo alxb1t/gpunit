@@ -63,18 +63,26 @@ def serve(
         place = home(name)
         place.mkdir(mode=0o700, parents=True, exist_ok=True)
         state = State(place)
-        with library._open(spec, provider, state, None) as opened:
-            # After `up`'s guards: a refused run keeps the last session's file.
-            kept = _Kept(place / "pod.log")
-            record = state.read()
-            created = record.created if record else None
-            base = f"http://127.0.0.1:{opened.port(table.PORT)}/v1"
-            _wait(base, key, opened.pod_id, provider, opener, created, kept)
-            log.say(f"{row.served} answers on {base}")
-            if api:
-                _hold(base, key, opened.pod_id, provider, opener, created, kept)
-            else:
-                chat.run(base, key, row.served, think, read, opener=opener)
+        kept: _Kept | None = None
+        try:
+            with library._open(spec, provider, state, None) as opened:
+                # After `up`'s guards: a run refused before its create keeps the
+                # last session's file.
+                kept = _Kept(place / "pod.log")
+                record = state.read()
+                created = record.created if record else None
+                base = f"http://127.0.0.1:{opened.port(table.PORT)}/v1"
+                _wait(base, key, opened.pod_id, provider, opener, created, kept)
+                log.say(f"{row.served} answers on {base}")
+                if api:
+                    _hold(base, key, opened.pod_id, provider, opener, created, kept)
+                else:
+                    chat.run(base, key, row.served, think, read, opener=opener)
+        finally:
+            # A pod was created and refused before the session opened: the last
+            # session's file is not its log.
+            if kept is None and state.began:
+                (place / "pod.log").unlink(missing_ok=True)
         return 0
 
     return outcome(body)
@@ -220,7 +228,8 @@ def _hold(
         if _answers(base, key, opener):
             answered = now
         elif now - answered >= QUIET_S:
-            log.refuse(f"the model has not answered for {QUIET_S}s")
+            # A crash in the hold ends here: boot's grace keeps the pod RUNNING.
+            _stopped(kept, f"the model has not answered for {QUIET_S}s")
 
 
 def _stopped(kept: _Kept, reason: str) -> NoReturn:

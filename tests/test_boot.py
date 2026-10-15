@@ -233,6 +233,7 @@ def test_a_missing_variable_refuses(
 
 
 @pytest.mark.spec("boot:refuse:no-nonce")
+@pytest.mark.spec("boot:stop:refusal-no-grace")
 def test_no_nonce_refuses(pod: dict[str, str]) -> None:
     del pod["GPUNIT_NONCE"]
 
@@ -242,7 +243,11 @@ def test_no_nonce_refuses(pod: dict[str, str]) -> None:
     assert "GPUNIT_NONCE is unset or empty" in result.err
     assert "gpunit host key" not in result.out
     assert not (Path(pod["HOME"]) / "ran").exists()
-    assert result.curl == []
+    # Checked once the ceiling is armed: an older gpunit's pod stops, not restarts.
+    assert after_the_ceiling(result) == ["curl"]
+    [stop] = result.curl
+    assert stop.startswith("header-ok ")
+    assert f"/pods/{POD}/action" in stop
 
 
 @pytest.mark.spec("boot:stop:ceiling")

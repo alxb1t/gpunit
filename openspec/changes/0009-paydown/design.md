@@ -89,15 +89,15 @@ seen:  no      · no     · no      · no     · yes  ─▶ refuse, tear down
 
 ### D2
 
-`serve`'s body removes `home(name) / "pod.log"` once the session is open, after `up`'s guards, so a refused run keeps
-the last session's file; it reads `created` from `State(home(name)).read()` then too. A `_Kept` holder in `gpunit/serve/session.py` keeps the path and the line count:
+`serve`'s body removes `home(name) / "pod.log"` once the session is open, after `up`'s guards, or once `up` refuses
+after its create began, so only a run refused before its create keeps the last session's file; it reads `created` from `State(home(name)).read()` then too. A `_Kept` holder in `gpunit/serve/session.py` keeps the path and the line count:
 
 - **`take(lines)`** writes `lines` to `pod.log` when they are at least as many as it holds, opening it with
   `os.open(path, O_WRONLY | O_CREAT | O_TRUNC, 0o600)`; a shorter or empty read changes nothing.
 - **`tail(n)`** returns the file's last `n` lines.
 
 `_wait`'s progress tick becomes `lines = provider.log(pod_id, tail=LOG_TAIL, since=created)`, then `take(lines)`, then
-the `loading:` line from `lines[-1]` as today. `_hold` does the same on each of its polls. Before a dead-pod refusal,
+the `loading:` line from `lines[-1]` as today. `_hold` does the same on each of its polls. Before a dead-pod refusal, and the hold's quiet one,
 each of `tail(30)` is said as `pod: <line>`, then `the pod's log is kept at <path>`. `KEEP_TAIL = 30`.
 
 A since-read holds the whole log since the create, so the newest read is the fullest; a read cut by `LOG_READ_S` is
@@ -108,14 +108,15 @@ shorter, and `take` keeps the longer one. The file is per model, like the sessio
 - **gpunit:** `lifecycle.NONCE` is a `Callable[[], str]`, `lambda: secrets.token_hex(16)`; the tests replace it, as
   they replace `CLOCK`. `up` draws one before `_create`, and `Provider.create` gains a keyword `nonce: str`, which
   `RunPod.create` puts in the pod's `env` as `GPUNIT_NONCE`.
-- **`boot.sh`:** `GPUNIT_NONCE` joins the required variables; the key line becomes
+- **`boot.sh`:** `GPUNIT_NONCE` is required once the ceiling and `trap stop EXIT` are armed, so its refusal stops
+  the pod an older gpunit made; the key line becomes
   `echo "gpunit host key $GPUNIT_NONCE: <fingerprint>"`; the command runs as
   `env -u RUNPOD_API_KEY -u GPUNIT_NONCE "$@" &`.
 - **`fingerprint(lines, nonce)`:** `_HOST_KEY` becomes `^gpunit host key ([0-9a-f]{32}): (SHA256:[A-Za-z0-9+/]+)\s*$`;
   a key line counts only when its nonce equals `nonce`, and the step line still accepts it, as `0006` D1 settled.
 - **An older `boot.sh`:** `old_boot(lines)` in `provider.py` is true when a line matching
-  `^gpunit host key: SHA256:[A-Za-z0-9+/]+\s*$` has a step line after it. `_verify_host_key`'s `read` calls it when
-  `fingerprint` finds nothing, and tears down at once with
+  `^gpunit host key: SHA256:[A-Za-z0-9+/]+\s*$` has a step line after it. `_verify_host_key`'s `read` calls it on the log
+  since the create, whose key line is boot's own, when `fingerprint` finds nothing in either read, and tears down at once with
   `the image's boot.sh prints no session nonce; ADD boot.sh from gpunit v0.6.0`.
 
 ```
@@ -177,7 +178,7 @@ None.
 - **A since-read cut by `LOG_READ_S` holds the log's start, not its end** → vLLM's boot log is hundreds of lines
   (`live/serve_last_run.txt`), well inside one read; `make live-serve-dead` checks the exit line arrives.
 - **In the hold, the quiet bound (60 s) can refuse during boot's grace, before `EXITED`** → the session still closes,
-  and `pod.log` still holds the crash.
+  `pod.log` still holds the crash, and the quiet refusal prints its last lines.
 - **A consumer on an older `boot.sh` cannot open a session on `v0.6.0`** → the refusal names the fix; README's step 2
   names `v0.6.0`.
 - **The grace bills 60 s more for each crashed command** → ~$0.01 on an A40; gpunit deletes a pod it watches before

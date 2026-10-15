@@ -88,6 +88,23 @@ def test_a_key_line_the_command_echoes_is_not_the_key(
     assert f"host key verified: {SERVED}" in capsys.readouterr().err
 
 
+@pytest.mark.spec("session:hostkey:echoed-line-is-ignored")
+@pytest.mark.spec("session:hostkey:since-fallback")
+def test_an_old_key_line_echoed_into_the_tail_is_no_older_boot(
+    cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Boot's own lines have left the tail; a command's echo of an older boot's is in it.
+    echoed = ["gpunit host key: SHA256:forged", "x step: the command"]
+    provider = FakeProvider(logs=[echoed], since_logs=[[*BOOT_LOG, *echoed]])
+
+    assert gpunit(["up"], provider=provider) == 0
+
+    err = capsys.readouterr().err
+    assert "v0.6.0" not in err
+    assert f"host key verified: {SERVED}" in err
+    assert provider.named("delete") == []
+
+
 @pytest.mark.spec("session:hostkey:key-without-step-waits")
 def test_a_key_line_with_no_step_after_it_is_not_yet(
     cwd: Path, clock: FakeClock
@@ -150,7 +167,9 @@ def test_an_older_boot_is_refused_at_once(
     step: bool, cwd: Path, clock: FakeClock, capsys: pytest.CaptureFixture[str]
 ) -> None:
     old = f"gpunit host key: {SERVED}"
-    provider = FakeProvider(logs=[[old, STEP_LINE] if step else [old]])
+    lines = [old, STEP_LINE] if step else [old]
+    # Judged on the log since the create, which holds boot's own lines.
+    provider = FakeProvider(logs=[lines], since_logs=[lines])
 
     assert gpunit(["up"], provider=provider) == 1
 

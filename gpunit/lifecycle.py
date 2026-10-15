@@ -326,14 +326,16 @@ def _verify_host_key(
             lines = provider.log(record.id, tail=LOG_TAIL, since=since)
             if printed := fingerprint(lines, nonce):
                 return printed
-            if old_boot(lines):
-                _tear_down(
-                    spec,
-                    provider,
-                    state,
-                    "the image's boot.sh prints no session nonce; "
-                    "ADD boot.sh from gpunit v0.6.0",
-                )
+        # Judged on the log since the create alone, whose key line is boot's own: the
+        # tail can hold only a command's echo of an older one.
+        if old_boot(lines):
+            _tear_down(
+                spec,
+                provider,
+                state,
+                "the image's boot.sh prints no session nonce; "
+                "ADD boot.sh from gpunit v0.6.0",
+            )
         return None
 
     printed = _poll(LOG_WAIT_S, read)

@@ -44,7 +44,7 @@ command -v sshd >/dev/null || refuse "sshd is not on PATH; install openssh-serve
 # Without curl every stop fails, and the ceiling would retry while the pod bills.
 command -v curl >/dev/null || refuse "curl is not on PATH; install curl in the image"
 command -v env >/dev/null || refuse "env is not on PATH; install coreutils in the image"
-for name in RUNPOD_API_KEY RUNPOD_POD_ID PUBLIC_KEY GPUNIT_CEILING GPUNIT_NONCE; do
+for name in RUNPOD_API_KEY RUNPOD_POD_ID PUBLIC_KEY GPUNIT_CEILING; do
   [ -n "${!name:-}" ] || refuse "$name is unset or empty"
 done
 [[ "$GPUNIT_CEILING" =~ ^[0-9]+$ ]] || refuse "GPUNIT_CEILING is not a number of seconds"
@@ -59,6 +59,8 @@ say "step: the ceiling, ${GPUNIT_CEILING}s"
   stop
 ) &
 trap stop EXIT
+# Checked once armed: an older gpunit sends no nonce, and its pod must stop, not restart.
+[ -n "${GPUNIT_NONCE:-}" ] || refuse "GPUNIT_NONCE is unset or empty"
 
 # 3. sshd: the session's key alone, and a host key made on this pod at each boot,
 #    in a new directory: never one the image baked in, as openssh-server's install does.

@@ -288,6 +288,26 @@ def test_a_refused_serve_keeps_the_last_pods_log(
     )
 
 
+@pytest.mark.spec("serve:wait:log-kept")
+def test_a_pod_that_dies_before_ssh_removes_the_last_pods_log(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    lines = [f"vllm {n}" for n in range(5)]
+    crashed = FakeProvider(gets=[RUNNING] * 8 + [EXITED], since_logs=[lines])
+    assert served(crashed, FakeOpener(*[NOT_YET] * 9)) == 1
+    assert kept_path().exists()
+    capsys.readouterr()
+
+    # The next pod is created, then reads EXITED twice in `up`'s wait for SSH.
+    provider = FakeProvider(gets=[EXITED])
+    assert served(provider, FakeOpener(MODELS)) == 1
+
+    assert "is EXITED" in capsys.readouterr().err
+    assert len(provider.named("create")) == 1
+    assert provider.named("delete") == [("pod-1",)]
+    assert not kept_path().exists()
+
+
 @pytest.mark.spec("serve:wait:state-per-model")
 def test_the_session_files_are_the_models_wherever_it_runs(
     home: Path, cwd: Path
@@ -384,6 +404,23 @@ def test_a_dead_pod_ends_the_hold(
     assert provider.named("delete") == [("pod-1",)]
     assert said_pod(err) == ["vllm up", "vllm crashed"]
     assert f"the pod's log is kept at {kept_path()}" in err
+
+
+@pytest.mark.spec("serve:api:prints-the-endpoint")
+def test_a_quiet_hold_prints_the_kept_log(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # vLLM crashed in the hold; boot's grace keeps the pod RUNNING past the quiet bound.
+    provider = FakeProvider(since_logs=[["vllm up", "vllm out of memory"]])
+    opener = FakeOpener(MODELS, MODELS, NOT_YET, NOT_YET)
+
+    assert served(provider, opener, api=True) == 1
+
+    err = capsys.readouterr().err
+    assert "refused: the model has not answered for 60s" in err
+    assert said_pod(err) == ["vllm up", "vllm out of memory"]
+    assert f"the pod's log is kept at {kept_path()}" in err
+    assert provider.named("delete") == [("pod-1",)]
 
 
 @pytest.mark.spec("serve:api:key-required")
