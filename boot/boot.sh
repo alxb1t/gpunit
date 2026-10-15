@@ -10,6 +10,8 @@ set -uo pipefail
 API="https://api.runpod.io/v2"
 RETRY_S=30
 MAX_RETRY_S=300
+# The command's exit line must reach gpunit's log read, every 30s, before the stop.
+GRACE_S=60
 
 say() { echo "$(date -u +%FT%TZ) $*" >&2; }
 refuse() { say "refused: $*"; exit 1; }
@@ -57,6 +59,8 @@ say "step: the ceiling, ${GPUNIT_CEILING}s"
   stop
 ) &
 trap stop EXIT
+# Checked once armed: an older gpunit sends no nonce, and its pod must stop, not restart.
+[ -n "${GPUNIT_NONCE:-}" ] || refuse "GPUNIT_NONCE is unset or empty"
 
 # 3. sshd: the session's key alone, and a host key made on this pod at each boot,
 #    in a new directory: never one the image baked in, as openssh-server's install does.
@@ -86,13 +90,14 @@ EOF
 "$(command -v sshd)" -f "$SSHD_DIR/sshd_config" || refuse "sshd did not start"
 
 # 4. Print: the line the laptop checks the scanned key against, over the API's log.
-echo "gpunit host key: $(ssh-keygen -lf "$HOST_KEY.pub" | awk '{print $2}')"
+#    The session's nonce marks it boot's: the command cannot know it (0009 design D3).
+echo "gpunit host key $GPUNIT_NONCE: $(ssh-keygen -lf "$HOST_KEY.pub" | awk '{print $2}')"
 
 # 5. Run: the command as a child, so a SIGTERM reaches it and its code is ours.
-#    The stop key is boot's: the command does not inherit it, though a root command can
-#    still read it from boot's /proc. env execs, so $! is the command.
+#    The stop key and the nonce are boot's: the command does not inherit them, though a
+#    root command can still read them from boot's /proc. env execs, so $! is the command.
 say "step: the command"
-env -u RUNPOD_API_KEY "$@" &
+env -u RUNPOD_API_KEY -u GPUNIT_NONCE "$@" &
 child=$!
 trap 'kill -TERM "$child" 2>/dev/null' TERM
 wait "$child"
@@ -103,4 +108,6 @@ while kill -0 "$child" 2>/dev/null; do
   code=$?
 done
 say "the command exited $code"
+# The ceiling and a refusal stop without it: neither reaches this line.
+sleep "$GRACE_S"
 exit "$code"

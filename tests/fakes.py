@@ -22,7 +22,9 @@ RECORD = Record("pod-1", IMAGE, RUNNING.host, RUNNING.port, "2026-10-07T00:00:00
 CARD = GpuInfo(vram_gb=24, hourly=0.69)
 # What the stub `ssh-keygen -lf` answers for the scanned key (tests/conftest.py).
 SERVED = "SHA256:served"
-KEY_LINE = f"gpunit host key: {SERVED}"
+# The session's nonce in every test that does not draw its own (tests/conftest.py).
+NONCE = "0123456789abcdef0123456789abcdef"
+KEY_LINE = f"gpunit host key {NONCE}: {SERVED}"
 # Boot prints it once the key line is out, just before the command starts.
 STEP_LINE = "2026-10-07T00:00:05Z step: the command"
 BOOT_LOG = [KEY_LINE, STEP_LINE]
@@ -91,9 +93,11 @@ class FakeProvider:
         self.calls.append(("volume", (volume_id,)))
         return _raise_or(self.volumes[volume_id])
 
-    def create(self, spec: Spec, gpu: str, pubkey: str, ceiling_s: int) -> str:
+    def create(
+        self, spec: Spec, gpu: str, pubkey: str, ceiling_s: int, *, nonce: str
+    ) -> str:
         """Answer the next create in the script."""
-        self.calls.append(("create", (spec, gpu, pubkey, ceiling_s)))
+        self.calls.append(("create", (spec, gpu, pubkey, ceiling_s, nonce)))
         return _raise_or(_next(self.creates))
 
     def get(self, pod_id: str) -> PodInfo | None:

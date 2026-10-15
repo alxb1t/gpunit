@@ -1,6 +1,7 @@
 """Serve a row on a gpunit session: agree the price, open, wait for the model."""
 
 import http.client
+import os
 import secrets
 import socket
 import sys
@@ -8,6 +9,7 @@ import urllib.request
 from collections.abc import Callable
 from decimal import ROUND_UP, Decimal
 from pathlib import Path
+from typing import NoReturn
 
 from gpunit import library, lifecycle, log
 from gpunit.provider import Lost, Provider, Unknown
@@ -24,6 +26,7 @@ LOG_TAIL = 50
 HOLD_S = 30
 # Two missed polls: a pod the ceiling stopped answers nothing again.
 QUIET_S = 60
+KEEP_TAIL = 30
 
 
 def home(name: str) -> Path:
@@ -59,14 +62,27 @@ def serve(
         _agree(spec, provider, yes, ask)
         place = home(name)
         place.mkdir(mode=0o700, parents=True, exist_ok=True)
-        with library._open(spec, provider, State(place), None) as opened:
-            base = f"http://127.0.0.1:{opened.port(table.PORT)}/v1"
-            _wait(base, key, opened.pod_id, provider, opener)
-            log.say(f"{row.served} answers on {base}")
-            if api:
-                _hold(base, key, opener)
-            else:
-                chat.run(base, key, row.served, think, read, opener=opener)
+        state = State(place)
+        kept: _Kept | None = None
+        try:
+            with library._open(spec, provider, state, None) as opened:
+                # After `up`'s guards: a run refused before its create keeps the
+                # last session's file.
+                kept = _Kept(place / "pod.log")
+                record = state.read()
+                created = record.created if record else None
+                base = f"http://127.0.0.1:{opened.port(table.PORT)}/v1"
+                _wait(base, key, opened.pod_id, provider, opener, created, kept)
+                log.say(f"{row.served} answers on {base}")
+                if api:
+                    _hold(base, key, opened.pod_id, provider, opener, created, kept)
+                else:
+                    chat.run(base, key, row.served, think, read, opener=opener)
+        finally:
+            # A pod was created and refused before the session opened: the last
+            # session's file is not its log.
+            if kept is None and state.began:
+                (place / "pod.log").unlink(missing_ok=True)
         return 0
 
     return outcome(body)
@@ -134,41 +150,94 @@ def _agree(
         log.refuse("not rented")
 
 
+class _Kept:
+    """The pod's log on the laptop: the longest read since the create."""
+
+    def __init__(self, path: Path) -> None:
+        """Hold nothing: remove the last session's file at `path`."""
+        self.path = path
+        self._count = 0
+        path.unlink(missing_ok=True)
+
+    def take(self, lines: list[str]) -> None:
+        """Write `lines` when they are at least as many as held; else keep the file."""
+        # A read cut by its time bound is shorter, and holds less: 0009 design D2.
+        if not lines or len(lines) < self._count:
+            return
+        fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as kept:
+            kept.writelines(f"{line}\n" for line in lines)
+        self._count = len(lines)
+
+    def tail(self, n: int) -> list[str]:
+        """Return the file's last `n` lines; none when nothing was kept."""
+        if not self.path.exists():
+            return []
+        return self.path.read_text(encoding="utf-8").splitlines()[-n:]
+
+
 def _wait(
     base: str,
     key: str,
     pod_id: str,
     provider: Provider,
     opener: urllib.request.OpenerDirector,
+    created: str | None,
+    kept: _Kept,
 ) -> None:
     clock = lifecycle.CLOCK
     start = clock.monotonic()
     progress = start + PROGRESS_S
+    dead = lifecycle.DeadPod()
     while not _answers(base, key, opener):
         now = clock.monotonic()
         if now - start >= WAIT_S:
             log.refuse(f"the model did not load within {WAIT_S}s")
         if now >= progress:
-            lines = provider.log(pod_id, tail=LOG_TAIL)
+            lines = provider.log(pod_id, tail=LOG_TAIL, since=created)
+            kept.take(lines)
             if lines:
                 log.say(f"loading: {lines[-1]}")
             progress = now + PROGRESS_S
+        if dead.seen(provider.get(pod_id)):
+            _stopped(kept, "the pod stopped while the model loaded")
         clock.sleep(POLL_S)
 
 
-def _hold(base: str, key: str, opener: urllib.request.OpenerDirector) -> None:
+def _hold(
+    base: str,
+    key: str,
+    pod_id: str,
+    provider: Provider,
+    opener: urllib.request.OpenerDirector,
+    created: str | None,
+    kept: _Kept,
+) -> None:
     print(f"OPENAI_BASE_URL={base}", flush=True)
     print(f"OPENAI_API_KEY={key}", flush=True)
     log.say("serving until interrupted or the ceiling; Ctrl-C ends the session")
     clock = lifecycle.CLOCK
     answered = clock.monotonic()
+    dead = lifecycle.DeadPod()
     while True:
         clock.sleep(HOLD_S)
         now = clock.monotonic()
+        kept.take(provider.log(pod_id, tail=LOG_TAIL, since=created))
+        if dead.seen(provider.get(pod_id)):
+            _stopped(kept, "the pod stopped while serving")
         if _answers(base, key, opener):
             answered = now
         elif now - answered >= QUIET_S:
-            log.refuse(f"the model has not answered for {QUIET_S}s")
+            # A crash in the hold ends here: boot's grace keeps the pod RUNNING.
+            _stopped(kept, f"the model has not answered for {QUIET_S}s")
+
+
+def _stopped(kept: _Kept, reason: str) -> NoReturn:
+    # The pod's own log is gone once it stops; the kept copy says why it did.
+    for line in kept.tail(KEEP_TAIL):
+        log.say(f"pod: {line}")
+    log.say(f"the pod's log is kept at {kept.path}")
+    log.refuse(reason)
 
 
 def _answers(base: str, key: str, opener: urllib.request.OpenerDirector) -> bool:

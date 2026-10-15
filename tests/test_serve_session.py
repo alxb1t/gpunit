@@ -9,11 +9,12 @@ from typing import NoReturn
 
 import pytest
 
-from gpunit.provider import Provider
+from gpunit import log
+from gpunit.provider import PodInfo, Provider
 from gpunit.serve import session, table
 from gpunit.spec import Spec
 from tests.fakes import (
-    BOOT_LOG,
+    RUNNING,
     Answer,
     FakeOpener,
     FakeProvider,
@@ -22,6 +23,9 @@ from tests.fakes import (
 
 MODELS = (200, b'{"object": "list", "data": [{"id": "qwen3-4b"}]}')
 NOT_YET = urllib.error.URLError(ConnectionRefusedError(61, "Connection refused"))
+EXITED = PodInfo(status="EXITED", host=None, port=None)
+# What `log.utc` answers in a test that patches it: the record's `created`.
+CREATED = "2026-10-14T00:00:00Z"
 
 
 @pytest.fixture
@@ -70,6 +74,14 @@ def created_spec(provider: FakeProvider) -> Spec:
 def local_port(provider: FakeProvider) -> int:
     [port] = created_spec(provider).ports
     return port.local
+
+
+def kept_path() -> Path:
+    return session.home("qwen3-4b") / "pod.log"
+
+
+def said_pod(err: str) -> list[str]:
+    return [line.split(" pod: ", 1)[1] for line in err.splitlines() if " pod: " in line]
 
 
 @pytest.mark.spec("serve:price:no-by-default")
@@ -175,9 +187,10 @@ def test_the_model_is_awaited_through_the_tunnel_with_the_key(
 
 @pytest.mark.spec("serve:wait:bound-tears-down")
 def test_a_model_that_never_answers_is_refused_and_torn_down(
-    home: Path, capsys: pytest.CaptureFixture[str]
+    home: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    provider = FakeProvider(logs=[BOOT_LOG] * 3 + [["50%"]])
+    monkeypatch.setattr(log, "utc", lambda: CREATED)
+    provider = FakeProvider(since_logs=[["10%"], ["10%", "50%"]])
     # One answer a poll: 1200s at 5s, and the first.
     opener = FakeOpener(*[NOT_YET] * (1200 // 5 + 1))
 
@@ -188,7 +201,111 @@ def test_a_model_that_never_answers_is_refused_and_torn_down(
     assert "loading: 50%" in err
     assert "answers on" not in err
     assert provider.named("delete") == [("pod-1",)]
-    assert ("pod-1", 50, None) in provider.named("log")
+    # Every read the wait makes is the log since the create.
+    assert ("pod-1", 50, CREATED) in provider.named("log")
+    assert ("pod-1", 50, None) not in provider.named("log")
+
+
+@pytest.mark.spec("serve:wait:dead-pod-ends-the-wait")
+def test_a_dead_pod_ends_the_wait_and_closes_the_session(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    lines = [f"vllm {n}" for n in range(35)]
+    # `up`'s poll, the wait's to the log's read at 30s, then EXITED on every poll.
+    provider = FakeProvider(gets=[RUNNING] * 8 + [EXITED], since_logs=[lines])
+    opener = FakeOpener(*[NOT_YET] * 9)
+
+    assert served(provider, opener) == 1
+
+    err = capsys.readouterr().err
+    assert "refused: the pod stopped while the model loaded" in err
+    assert "did not load within" not in err
+    assert len(opener.requests) == 9
+    assert provider.named("delete") == [("pod-1",)]
+    assert said_pod(err) == lines[-30:]
+    assert f"the pod's log is kept at {kept_path()}" in err
+
+
+@pytest.mark.spec("serve:wait:running-pod-waits")
+@pytest.mark.parametrize(
+    "gets",
+    [[RUNNING], [RUNNING, RUNNING, EXITED, RUNNING]],
+    ids=["running", "one-exited"],
+)
+def test_a_running_pod_keeps_the_wait(
+    gets: list[PodInfo], home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    provider = FakeProvider(gets=gets)
+    opener = FakeOpener(*[NOT_YET] * 4, MODELS)
+
+    assert served(provider, opener) == 0
+
+    err = capsys.readouterr().err
+    assert "refused" not in err
+    assert "qwen3-4b answers on" in err
+    # One status read for each poll the model did not answer, after `up`'s.
+    assert len(provider.named("get")) == 1 + 4
+
+
+@pytest.mark.spec("serve:wait:log-kept")
+def test_the_pods_log_is_kept_and_the_next_session_starts_without_it(
+    home: Path,
+) -> None:
+    # Reads at 30s and 60s, the second shorter; the model answers at 65s.
+    provider = FakeProvider(since_logs=[["a", "b", "c"], ["a"]])
+    opener = FakeOpener(*[NOT_YET] * 13, MODELS)
+
+    assert served(provider, opener) == 0
+
+    kept = kept_path()
+    assert kept.read_text(encoding="utf-8") == "a\nb\nc\n"
+    assert kept.stat().st_mode & 0o777 == 0o600
+    assert len([call for call in provider.named("log") if call[2] is not None]) == 2
+
+    assert served(FakeProvider(), FakeOpener(MODELS)) == 0
+    assert not kept.exists()
+
+
+@pytest.mark.spec("serve:wait:log-kept")
+def test_a_refused_serve_keeps_the_last_pods_log(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    lines = [f"vllm {n}" for n in range(5)]
+    # The pod dies in the wait and its teardown fails: the record stays.
+    crashed = FakeProvider(
+        gets=[RUNNING] * 8 + [EXITED], since_logs=[lines], deletes={"pod-1": 500}
+    )
+    assert served(crashed, FakeOpener(*[NOT_YET] * 9)) == 1
+    capsys.readouterr()
+
+    provider = FakeProvider()
+    assert served(provider, FakeOpener(MODELS)) == 1
+
+    assert "a pod is already recorded" in capsys.readouterr().err
+    assert provider.named("create") == []
+    assert kept_path().read_text(encoding="utf-8") == "".join(
+        f"{line}\n" for line in lines
+    )
+
+
+@pytest.mark.spec("serve:wait:log-kept")
+def test_a_pod_that_dies_before_ssh_removes_the_last_pods_log(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    lines = [f"vllm {n}" for n in range(5)]
+    crashed = FakeProvider(gets=[RUNNING] * 8 + [EXITED], since_logs=[lines])
+    assert served(crashed, FakeOpener(*[NOT_YET] * 9)) == 1
+    assert kept_path().exists()
+    capsys.readouterr()
+
+    # The next pod is created, then reads EXITED twice in `up`'s wait for SSH.
+    provider = FakeProvider(gets=[EXITED])
+    assert served(provider, FakeOpener(MODELS)) == 1
+
+    assert "is EXITED" in capsys.readouterr().err
+    assert len(provider.named("create")) == 1
+    assert provider.named("delete") == [("pod-1",)]
+    assert not kept_path().exists()
 
 
 @pytest.mark.spec("serve:wait:state-per-model")
@@ -264,6 +381,46 @@ def test_api_prints_the_endpoint_and_holds_until_the_end(
         assert "refused: the model has not answered for 60s" in err
     else:
         assert code == 128 + signal.SIGINT
+
+
+@pytest.mark.spec("serve:api:dead-pod-ends-the-hold")
+def test_a_dead_pod_ends_the_hold(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # `up`'s poll, then the hold's: EXITED on two polls in a row. The second log
+    # read comes back empty, as a stopped pod's does.
+    provider = FakeProvider(
+        gets=[RUNNING, EXITED], since_logs=[["vllm up", "vllm crashed"], []]
+    )
+    # The wait's answer, then the hold's first poll unanswered.
+    opener = FakeOpener(MODELS, NOT_YET)
+
+    assert served(provider, opener, api=True) == 1
+
+    err = capsys.readouterr().err
+    assert "refused: the pod stopped while serving" in err
+    assert "has not answered" not in err
+    assert len(opener.requests) == 2
+    assert provider.named("delete") == [("pod-1",)]
+    assert said_pod(err) == ["vllm up", "vllm crashed"]
+    assert f"the pod's log is kept at {kept_path()}" in err
+
+
+@pytest.mark.spec("serve:api:prints-the-endpoint")
+def test_a_quiet_hold_prints_the_kept_log(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # vLLM crashed in the hold; boot's grace keeps the pod RUNNING past the quiet bound.
+    provider = FakeProvider(since_logs=[["vllm up", "vllm out of memory"]])
+    opener = FakeOpener(MODELS, MODELS, NOT_YET, NOT_YET)
+
+    assert served(provider, opener, api=True) == 1
+
+    err = capsys.readouterr().err
+    assert "refused: the model has not answered for 60s" in err
+    assert said_pod(err) == ["vllm up", "vllm out of memory"]
+    assert f"the pod's log is kept at {kept_path()}" in err
+    assert provider.named("delete") == [("pod-1",)]
 
 
 @pytest.mark.spec("serve:api:key-required")

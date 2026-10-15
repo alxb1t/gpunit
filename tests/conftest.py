@@ -2,12 +2,13 @@
 
 import os
 import socket
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
 from gpunit import library, lifecycle
-from tests.fakes import SERVED, FakeClock
+from tests.fakes import NONCE, SERVED, FakeClock
 from tests.helpers import install_stubs, write_spec
 
 # Writes the keypair `-f` names; `-lf -` answers $GPUNIT_TEST_SERVED for any key.
@@ -51,6 +52,15 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     place = tmp_path / "home"
     monkeypatch.setenv("HOME", str(place))
     return place
+
+
+@pytest.fixture(autouse=True)
+def drawn_nonce(monkeypatch: pytest.MonkeyPatch) -> Callable[[], str]:
+    # Every session's nonce is `NONCE`, so the fakes' key line matches it; the real
+    # draw is returned for the test of it.
+    drawn = lifecycle.NONCE
+    monkeypatch.setattr(lifecycle, "NONCE", lambda: NONCE)
+    return drawn
 
 
 @pytest.fixture

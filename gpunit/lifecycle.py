@@ -1,7 +1,9 @@
 """Open, report and close one GPU session: `up`, `status`, `down`."""
 
+import functools
 import json
 import os
+import secrets
 import shutil
 import subprocess
 import time
@@ -19,6 +21,7 @@ from gpunit.provider import (
     Refused,
     Unknown,
     fingerprint,
+    old_boot,
     pod_name,
 )
 from gpunit.spec import Spec
@@ -50,6 +53,23 @@ class Clock:
 
 
 CLOCK = Clock()
+# Each pod's nonce for its host-key line; the tests replace it, as they do `CLOCK`.
+NONCE: Callable[[], str] = functools.partial(secrets.token_hex, 16)
+
+
+class DeadPod:
+    """Two polls in a row reading a dead status; a failed read is not yet."""
+
+    def __init__(self) -> None:
+        """Start with no dead poll seen."""
+        self._last = False
+
+    def seen(self, info: PodInfo | None) -> bool:
+        """Return True when this poll and the one before both read a dead status."""
+        # A restart may show a dead status once, so only a second poll in a row ends it.
+        dead = info is not None and info.status in DEAD
+        twice, self._last = dead and self._last, dead
+        return twice
 
 
 def up(spec: Spec, provider: Provider, state: State) -> Record:
@@ -74,10 +94,11 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
     cards = _placeable(spec, provider)
 
     pubkey = state.keygen(pod_name(spec.project))
+    nonce = NONCE()
     # Before the create, so a log read `since` it holds the whole boot (0003 design D2).
     created = log.utc()
     state.mark_pending()
-    pod_id = _create(spec, provider, cards, pubkey)
+    pod_id = _create(spec, provider, cards, pubkey, nonce)
     if pod_id is None:
         state.clear_pending()
         log.refuse("no card in 'gpus' was placed")
@@ -87,7 +108,7 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
     log.say(f"pod {pod_id} created; waiting for SSH")
 
     record = _wait(spec, provider, state, record)
-    _verify_host_key(spec, provider, state, record)
+    _verify_host_key(spec, provider, state, record, nonce)
     log.say(f"session up: pod {record.id}, root@{record.host} -p {record.port}")
     return record
 
@@ -245,12 +266,12 @@ def _placeable(spec: Spec, provider: Provider) -> list[str]:
 
 
 def _create(
-    spec: Spec, provider: Provider, cards: list[str], pubkey: str
+    spec: Spec, provider: Provider, cards: list[str], pubkey: str, nonce: str
 ) -> str | None:
     for card in cards:
         log.say(f"creating on {card}")
         try:
-            pod_id = provider.create(spec, card, pubkey, spec.ceiling_s)
+            pod_id = provider.create(spec, card, pubkey, spec.ceiling_s, nonce=nonce)
         except Refused as refusal:
             log.say(str(refusal))
             continue
@@ -267,25 +288,19 @@ def _create(
 
 
 def _wait(spec: Spec, provider: Provider, state: State, record: Record) -> Record:
-    dead = False
+    dead = DeadPod()
 
     def mapped() -> PodInfo | None:
-        nonlocal dead
         # A failed poll is "not yet", never an abort: an abort would skip the teardown.
         info = provider.get(record.id)
-        if info is None:
-            dead = False
-            return None
-        # A restart may show a dead status once, so only a second poll in a row ends it.
-        if info.status in DEAD and dead:
+        if dead.seen(info) and info is not None:
             _tear_down(
                 spec,
                 provider,
                 state,
                 f"pod {record.id} is {info.status}: the container is not running",
             )
-        dead = info.status in DEAD
-        return info if info.host and info.port else None
+        return info if info and info.host and info.port else None
 
     info = _poll(spec.timeout_s, mapped)
     if info is None:
@@ -301,15 +316,27 @@ def _wait(spec: Spec, provider: Provider, state: State, record: Record) -> Recor
 
 
 def _verify_host_key(
-    spec: Spec, provider: Provider, state: State, record: Record
+    spec: Spec, provider: Provider, state: State, record: Record, nonce: str
 ) -> None:
     # The fingerprint comes over the authenticated API, never over the connection
     # it vouches for; nothing connects until the two agree.
     def read() -> str | None:
         # A boot that logs heavily pushes the key line out of the tail.
-        return fingerprint(provider.log(record.id, tail=LOG_TAIL)) or fingerprint(
-            provider.log(record.id, tail=LOG_TAIL, since=record.created)
-        )
+        for since in (None, record.created):
+            lines = provider.log(record.id, tail=LOG_TAIL, since=since)
+            if printed := fingerprint(lines, nonce):
+                return printed
+        # Judged on the log since the create alone, whose key line is boot's own: the
+        # tail can hold only a command's echo of an older one.
+        if old_boot(lines):
+            _tear_down(
+                spec,
+                provider,
+                state,
+                "the image's boot.sh prints no session nonce; "
+                "ADD boot.sh from gpunit v0.6.0",
+            )
+        return None
 
     printed = _poll(LOG_WAIT_S, read)
     if printed is None:

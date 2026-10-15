@@ -40,13 +40,14 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    image, and BuildKit for the checksum; on an older Docker, copy the file in.
 
    ```dockerfile
-   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.5.0/boot/boot.sh /opt/gpunit/boot.sh
+   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.6.0/boot/boot.sh /opt/gpunit/boot.sh
    RUN chmod +x /opt/gpunit/boot.sh
    ENTRYPOINT ["/opt/gpunit/boot.sh", "--"]
    CMD ["python3", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
    ```
 
-   `<digest>` is the file's sha256 at the tag: `curl -sL <the URL above> | shasum -a 256`.
+   `<digest>` is the file's sha256 at the tag: `curl -sL <the URL above> | shasum -a 256`. An older `boot.sh` is
+   refused: its host-key line carries no session nonce, so `up` tears the pod down and names `v0.6.0`.
 
 3. **Install and run.** The key comes from the environment alone; gpunit reads no `.env`. The command's
    environment on the pod does not carry `RUNPOD_API_KEY`: boot keeps it to stop the pod. The command runs as
@@ -54,7 +55,7 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    on the pod you would not trust with the key.
 
    ```sh
-   uv add --dev git+https://github.com/alxb1t/gpunit@v0.5.0
+   uv add --dev git+https://github.com/alxb1t/gpunit@v0.6.0
    echo .gpunit/ >> .gitignore
    export RUNPOD_API_KEY=...
    uv run gpunit run -- python3 render.py
@@ -141,12 +142,17 @@ A warp is ...
 - **The wait is minutes.** The first boot pulls vLLM's image and downloads the weights; the pull and the load each
   have 1200s, a `loading:` line from the pod's log comes every 30s, and past 1200s the session is torn down.
   `--volume <id>` keeps the weights on a network volume across sessions.
+- **A pod that stops ends the session.** Two status reads in a row of a stopped pod, in the wait or the `--api`
+  hold, refuse with `the pod stopped while the model loaded` or `… while serving`, and tear it down. The pod's log
+  is kept every 30s at `~/.local/state/gpunit/serve/<model>/pod.log`; the refusal prints its last 30 lines.
+  `boot.sh` waits 60s after vLLM exits before it stops the pod, so the crash reaches `pod.log`.
 - **The chat** streams each answer and keeps the conversation in memory. Thinking is off unless `--think`.
   `/exit` or the end of input ends the session; so does a server that stops answering, as when the ceiling has
   stopped the pod.
 - **The local port** `<port>` is a free one, picked before the price is asked.
 - **`--api`** prints two lines to stdout, then holds the session until Ctrl-C, or until the server has not
-  answered for 60s, as when the ceiling has stopped the pod:
+  answered for 60s, as when the ceiling has stopped the pod or vLLM has crashed; that refusal prints `pod.log`'s
+  last 30 lines too:
 
   ```sh
   OPENAI_BASE_URL=http://127.0.0.1:<port>/v1
@@ -220,7 +226,7 @@ Each verb reads `gpunit.toml` from the working directory, or the file `--spec <p
 |---|---|
 | `0` | done; for `run`, the command's own code passes through |
 | `1` | refused or failed; the teardown failed |
-| `2` | usage: an unknown verb, a missing command, an unreadable spec path, `serve` without `--ceiling`, an unknown model, `spend --days` under 1 |
+| `2` | usage: an unknown verb, a missing command, an unreadable spec path, `serve` without `--ceiling`, an unknown model, `spend --days` under 1 or over 3660 |
 | `3` | a create's answer was lost; a pod may exist and bill — run `gpunit down` |
 | `128+n` | signal `n` stopped `run` or `serve`, or killed `run`'s command, and the teardown succeeded; a failed teardown is still `1` |
 
@@ -250,3 +256,7 @@ provider answer.
 [live/tool_call.py](live/tool_call.py), then a chat of one prompt. `MODEL` defaults to `qwen3-4b`.
 
 `make live-dead` boots an image whose container exits at once, and shows `up` tearing it down within seconds.
+
+`make live-serve-dead` serves `qwen3-4b` with an argument vLLM refuses, through
+[live/serve_dead.py](live/serve_dead.py): it passes when the dead-pod refusal, the crash's lines from `pod.log` and
+the delete within 15s all show.

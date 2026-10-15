@@ -37,7 +37,8 @@ SHALL NOT stop or alter the session or the teardown.
 The system SHALL, on `spend`, read the pods' and the network volumes' billing from the provider for the window; SHALL
 give each pod its project from the ledger, the first line for an id winning; and SHALL print one line per project with
 its pod count and amount, one line for the pods the ledger does not name, one line per volume, and a total, each
-amount the provider's own and never an estimate. Storage SHALL never be attributed to a project.
+amount the provider's own and never an estimate. Storage SHALL never be attributed to a project. A billing or a ledger
+that cannot be read SHALL be an error, never a table.
 
 #### Scenario: pods are summed by project
 - **Key:** `spend:report:by-project`
@@ -73,6 +74,11 @@ amount the provider's own and never an estimate. Storage SHALL never be attribut
 - **Key:** `spend:report:unreadable-billing-fails`
 - **WHEN** the provider's billing answers 500
 - **THEN** `spend` prints no table, says the billing could not be read, and exits `1`
+
+#### Scenario: an unreadable ledger is an error, not a table
+- **Key:** `spend:report:unreadable-ledger-fails`
+- **WHEN** the ledger cannot be read — bytes that are not UTF-8, a directory in its place, or no home directory
+- **THEN** `spend` prints no table, says the ledger could not be read, and exits `1`
 
 ### Requirement: The window is whole UTC days
 

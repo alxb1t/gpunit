@@ -6,8 +6,11 @@ from typing import Protocol
 
 from gpunit.spec import Spec
 
-# Only a whole line counts, so nothing logged later can echo a key line in.
-_HOST_KEY = re.compile(r"^gpunit host key: (SHA256:[A-Za-z0-9+/]+)\s*$")
+# Only a whole line counts, so nothing logged later can echo a key line in. The nonce
+# is the session's, so a command's echo cannot match it: 0009 design D3.
+_HOST_KEY = re.compile(r"^gpunit host key ([0-9a-f]{32}): (SHA256:[A-Za-z0-9+/]+)\s*$")
+# What a boot.sh older than v0.6.0 prints: the key line with no nonce.
+_OLD_KEY = re.compile(r"^gpunit host key: SHA256:[A-Za-z0-9+/]+\s*$")
 # Boot says this after its key line, before the command starts; see 0006 design D1.
 _BOOT_STEP = re.compile(r"^\S+ step: the command\s*$")
 
@@ -24,19 +27,34 @@ def pod_name(project: str) -> str:
 DELETED = (200, 204)
 
 
-def fingerprint(lines: list[str]) -> str | None:
-    """Return the last fingerprint boot printed before its command started, or None.
+def fingerprint(lines: list[str], nonce: str) -> str | None:
+    """Return the last fingerprint printed with `nonce` before boot's command, or None.
 
-    e.g. ["gpunit host key: SHA256:abc", "<UTC> step: the command"] → "SHA256:abc"
+    e.g. ["gpunit host key <nonce>: SHA256:abc", "<UTC> step: the command"]
+        → "SHA256:abc"
     """
     # The last boot wins: a restarted container prints a new key.
     pending = accepted = None
     for line in lines:
-        if match := _HOST_KEY.match(line):
-            pending = match[1]
+        if (match := _HOST_KEY.match(line)) and match[1] == nonce:
+            pending = match[2]
         elif _BOOT_STEP.match(line):
             accepted = pending
     return accepted
+
+
+def old_boot(lines: list[str]) -> bool:
+    """Return True when a key line with no nonce has boot's step line after it.
+
+    e.g. ["gpunit host key: SHA256:abc", "<UTC> step: the command"] → True
+    """
+    keyed = False
+    for line in lines:
+        if _OLD_KEY.match(line):
+            keyed = True
+        elif keyed and _BOOT_STEP.match(line):
+            return True
+    return False
 
 
 @dataclass(frozen=True)
@@ -109,7 +127,9 @@ class Provider(Protocol):
         """Return the volume; raise `Unknown` on a 404, else `Lost`."""
         ...
 
-    def create(self, spec: Spec, gpu: str, pubkey: str, ceiling_s: int) -> str:
+    def create(
+        self, spec: Spec, gpu: str, pubkey: str, ceiling_s: int, *, nonce: str
+    ) -> str:
         """Return the new pod's id; raise `Refused` on a 400, else `Lost`."""
         ...
 

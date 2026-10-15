@@ -173,10 +173,12 @@ def test_a_dead_pipe_the_null_device_cannot_replace_is_swallowed(
     assert not (cwd / ".gpunit" / "pod").exists()
 
 
-# The CLI on the fakes, in a process of its own: no key, no network.
+# The CLI on the fakes, in a process of its own: no key, no network. The nonce is
+# fixed as tests/conftest.py fixes it, so the fakes' key line matches.
 ON_THE_FAKES = """
-from gpunit import cli
-from tests.fakes import FakeProvider
+from gpunit import cli, lifecycle
+from tests.fakes import NONCE, FakeProvider
+lifecycle.NONCE = lambda: NONCE
 cli.main(["run", "--", "true"], provider=FakeProvider())
 """
 

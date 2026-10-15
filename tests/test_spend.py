@@ -153,7 +153,7 @@ def _no_home() -> NoReturn:
     raise RuntimeError("Could not determine home directory.")
 
 
-@pytest.mark.spec("spend:report:unreadable-billing-fails")
+@pytest.mark.spec("spend:report:unreadable-ledger-fails")
 @pytest.mark.parametrize("fault", ["not-utf8", "a-directory", "no-home"])
 def test_an_unreadable_ledger_is_an_error_not_a_table(
     fault: str, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch

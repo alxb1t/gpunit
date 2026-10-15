@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-15
+
+### Added
+
+- `make live-serve-dead` runs `live/serve_dead.py`: `qwen3-4b` with an argument vLLM refuses, passing only when the
+  dead-pod refusal, the crash's `pod:` lines and the delete within 15 s all show; its `check` is tested offline.
+- README's step 2 adds `boot.sh` from `v0.6.0` and says an older one is refused; *Serve a model* names the dead-pod
+  refusal, `pod.log` and boot's 60 s grace; the proof names `make live-serve-dead`, as `CLAUDE.md`'s invariant does.
+
+### Changed
+
+- **BREAKING for a consumer's image:** each pod gets a fresh `GPUNIT_NONCE`; `boot.sh` prints it in its key line,
+  `gpunit host key <nonce>: SHA256:…`, and keeps it from the command, so an echoed key line is never the key
+  (`0006·S1`). An older `boot.sh` is refused at once, naming `v0.6.0`, judged on the log since the create alone, so
+  a command's echo in the tail cannot trigger it; `boot.sh` checks the nonce after the ceiling is armed, so an older
+  gpunit's pod stops. README's install pin moves to `v0.6.0` with step 2.
+- `boot.sh` waits 60 s after the command exits before it stops the pod, so gpunit reads the exit line; the ceiling
+  and a refusal stop without it.
+- `gpunit-vllm`, `gpunit-live` and `gpunit-live-dead` are rebuilt with this `boot.sh` and pinned by digest:
+  `gpunit-vllm:v0.6-rc1` from `build-serve-image` run 38717674106, the live images pushed by hand for `linux/amd64`.
+- `live/last_run.txt`: `make live` verifies the host key through the nonce; `make live-dead` tears its pod down on the
+  120 s deadline rather than the dead-pod rule, recorded as such. The serve runs move to the next version.
+
+### Fixed
+
+- A pod that stops while `serve` waits for the model, or holds the endpoint, ends the session: two polls in a row
+  reading a dead status refuse with `the pod stopped while the model loaded` or `… while serving`, and tear it down.
+  One `DeadPod` rule in `lifecycle.py` serves `up`'s wait and both of `serve`'s.
+- `serve` keeps the pod's log at `~/.local/state/gpunit/serve/<model>/pod.log` (mode `0600`), read since the create
+  every 30 s, since RunPod drops it when the pod stops; a dead-pod refusal, or the `--api` hold's quiet one, prints its
+  last 30 lines and names the file. The last session's file is removed once a new pod's create begins, so a `serve`
+  refused before it leaves the file in place.
+- README's exit row for `2` names `spend --days` over 3660; the unreadable-ledger test carries its own scenario key,
+  and `spend`'s docstring names the ledger (`0007·R6`, `0007·R7`).
+
 ## [0.5.0] - 2026-10-13
 
 ### Added

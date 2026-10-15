@@ -179,3 +179,67 @@ Mon Oct 12 16:13:42 2026
 2026-10-12T16:13:43Z pod 243neb7e3e8zvc deleted
 no session is recorded
 The account's pod listing (RunPod's REST v2, read after both runs) was empty: no pod is left.
+
+2026-10-15 — make live, 0009-paydown
+
+The key line carries the session's nonce: `host key verified` reads it from boot.sh v0.6.0 in gpunit-live@sha256:defd497b.
+
+NVIDIA RTX A4500: $0.25/h
+NVIDIA RTX A5000: $0.27/h
+NVIDIA A40: $0.59/h
+NVIDIA RTX A6000: $0.59/h
+at most $0.17 for 600s and a 420s wait for SSH
+uv run gpunit run --spec live/gpunit.toml -- sh -c '$GPUNIT_SSH nvidia-smi'
+2026-10-15T10:26:51Z creating on NVIDIA RTX A4500
+2026-10-15T10:26:52Z create on 'NVIDIA RTX A4500' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-15T10:26:52Z creating on NVIDIA RTX A5000
+2026-10-15T10:26:52Z create on 'NVIDIA RTX A5000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-15T10:26:52Z creating on NVIDIA A40
+2026-10-15T10:26:54Z pod tqfjgwme0dtfvr created; waiting for SSH
+2026-10-15T10:27:16Z host key verified: SHA256:Dc3C7YNIYYUDc3RuD9oMGqlw8Os6IP8jTWLChMG8eFg
+2026-10-15T10:27:16Z session up: pod tqfjgwme0dtfvr, root@194.68.245.191 -p 22106
+Thu Oct 15 10:27:17 2026
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 570.211.01             Driver Version: 570.211.01     CUDA Version: 12.8     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A40                     On  |   00000000:D6:00.0 Off |                    0 |
+|  0%   37C    P8             34W /  300W |       0MiB /  46068MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+2026-10-15T10:27:18Z pod tqfjgwme0dtfvr deleted
+uv run gpunit status --spec live/gpunit.toml
+no session is recorded
+
+2026-10-15 — make live-dead, 0009-paydown
+
+`up` exited 1 and the pod was deleted, but on the 120s deadline, not the dead-pod rule: the container never read
+EXITED. This run does not prove session:wait:dead-pod-tears-down; backlog 0009·L1. An earlier run the same day ended
+in 16s only because the image was private and RunPod could not pull it.
+
+NVIDIA RTX A4500: $0.25/h
+NVIDIA RTX A5000: $0.27/h
+NVIDIA A40: $0.59/h
+NVIDIA RTX A6000: $0.59/h
+at most $0.07 for 300s and a 120s wait for SSH
+2026-10-15T10:48:40Z creating on NVIDIA RTX A4500
+2026-10-15T10:48:40Z create on 'NVIDIA RTX A4500' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-15T10:48:40Z creating on NVIDIA RTX A5000
+2026-10-15T10:48:42Z pod 0gunoltmq8y6sx created; waiting for SSH
+2026-10-15T10:50:44Z pod 0gunoltmq8y6sx got no host and port 22 within 120s; tearing the pod down
+2026-10-15T10:50:45Z pod 0gunoltmq8y6sx deleted
+2026-10-15T10:50:45Z refused: pod 0gunoltmq8y6sx got no host and port 22 within 120s
+up exited 1 after 128s
+no session is recorded
+The account's pod listing (RunPod's REST v2, read after the runs) was empty: no pod is left.
