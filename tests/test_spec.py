@@ -133,3 +133,76 @@ def test_a_gpunit_variable_in_env_is_refused(
         assert f"env {key!r}" in capsys.readouterr().err
     else:
         assert load_spec(path).env == {key: "/data"}
+
+
+@pytest.mark.spec("spec:file:volume-keys")
+def test_the_window_volumes_keys_load(tmp_path: Path) -> None:
+    window = 'volume_gb = 60\nvolume_ceiling = "4h"\nvolume_datacenter = "EU-RO-1"\n'
+    spec = load_spec(write_spec(tmp_path, VALID + window))
+
+    assert (spec.volume_gb, spec.volume_ceiling_s, spec.volume_datacenter) == (
+        60,
+        14400,
+        "EU-RO-1",
+    )
+    assert spec.volume is None
+
+
+@pytest.mark.spec("spec:file:volume-gb-needs-ceiling")
+@pytest.mark.parametrize(
+    ("keys", "named"),
+    [
+        ("volume_gb = 60\n", "'volume_gb' needs 'volume_ceiling'"),
+        ('volume_ceiling = "4h"\n', "'volume_ceiling' needs 'volume_gb'"),
+        ('volume_datacenter = "EU-RO-1"\n', "'volume_datacenter' needs 'volume_gb'"),
+        ('volume_gb = 60\nvolume_ceiling = "4"\n', "'volume_ceiling' must be"),
+    ],
+    ids=["no-ceiling", "ceiling-alone", "datacenter-alone", "bad-ceiling"],
+)
+def test_a_window_key_without_its_pair_is_refused(
+    keys: str,
+    named: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    write_spec(tmp_path, VALID + keys)
+
+    assert gpunit(["up"], provider=NO_REQUESTS) == 1
+    assert named in capsys.readouterr().err
+
+
+@pytest.mark.spec("spec:file:volume-and-volume-gb-refused")
+def test_a_kept_volume_and_a_window_volume_are_refused_together(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    write_spec(
+        tmp_path, VALID + 'volume = "v1"\nvolume_gb = 60\nvolume_ceiling = "4h"\n'
+    )
+
+    assert gpunit(["up"], provider=NO_REQUESTS) == 1
+    assert "'volume' and 'volume_gb' cannot both be set" in capsys.readouterr().err
+
+
+@pytest.mark.spec("spec:file:volume-gb-out-of-range")
+@pytest.mark.parametrize(
+    ("size", "refused"),
+    [(5, True), (5000, True), (9, True), (4001, True), (10, False), (4000, False)],
+)
+def test_a_volume_size_out_of_range_is_refused(
+    size: int,
+    refused: bool,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    path = write_spec(tmp_path, VALID + f'volume_gb = {size}\nvolume_ceiling = "4h"\n')
+
+    if refused:
+        assert gpunit(["up"], provider=NO_REQUESTS) == 1
+        assert "'volume_gb' must be from 10 to 4000" in capsys.readouterr().err
+    else:
+        assert load_spec(path).volume_gb == size

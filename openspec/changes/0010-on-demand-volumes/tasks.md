@@ -7,7 +7,7 @@ names.
 ## Progress
 
 - [x] 1 — The seam
-- [ ] 2 — The spec and the record
+- [x] 2 — The spec and the record
 - [ ] 3 — The verbs
 - [ ] 4 — The session
 - [ ] 5 — Serve
@@ -25,9 +25,9 @@ names.
 
 ## 2 — The spec and the record
 
-- [ ] 2.1 Add `volume_gb`, `volume_ceiling` and `volume_datacenter` to `gpunit/spec.py` with their refusals, per [D2](design.md#d2); in `tests/test_spec.py` bind `spec:file:volume-keys`, `spec:file:volume-gb-needs-ceiling`, `spec:file:volume-and-volume-gb-refused` and `spec:file:volume-gb-out-of-range`.
+- [x] 2.1 Add `volume_gb`, `volume_ceiling` and `volume_datacenter` to `gpunit/spec.py` with their refusals, per [D2](design.md#d2); in `tests/test_spec.py` bind `spec:file:volume-keys`, `spec:file:volume-gb-needs-ceiling`, `spec:file:volume-and-volume-gb-refused` and `spec:file:volume-gb-out-of-range`.
   Verify: `grep -o -E 'spec:file:volume-[a-z-]+' tests/test_spec.py | sort -u | wc -l | tr -d ' '` prints `4`, and `uv run pytest -q tests/test_spec.py` exits 0.
-- [ ] 2.2 Add `Window` and the volume files to `gpunit/state.py` per [D4](design.md#d4), and `record_volume` and `volumes` to `gpunit/ledger.py` per [D9](design.md#d9); in `tests/test_ledger.py` bind `spend:ledger:volume-is-recorded`, and in `tests/test_state.py` test the window's round trip.
+- [x] 2.2 Add `Window` and the volume files to `gpunit/state.py` per [D4](design.md#d4), and `record_volume` and `volumes` to `gpunit/ledger.py` per [D9](design.md#d9); in `tests/test_ledger.py` bind `spend:ledger:volume-is-recorded`, and in `tests/test_state.py` test the window's round trip.
   Verify: `grep -c '^class Window' gpunit/state.py` prints `1`, `grep -c '^def record_volume' gpunit/ledger.py` prints `1`, and `uv run pytest -q tests/test_ledger.py tests/test_state.py` exits 0.
 
 ## 3 — The verbs

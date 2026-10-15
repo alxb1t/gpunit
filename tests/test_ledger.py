@@ -131,3 +131,36 @@ def test_the_first_line_for_an_id_wins() -> None:
 @pytest.mark.spec("spend:report:unattributed")
 def test_a_missing_ledger_is_empty() -> None:
     assert ledger.read() == {}
+
+
+@pytest.mark.spec("spend:ledger:volume-is-recorded")
+def test_a_window_volume_is_recorded_with_its_end() -> None:
+    ledger.record("isekai", "pod-9", "NVIDIA A40", IMAGE)
+    ledger.record_volume("isekai", "v1", "2026-10-15T14:30:00Z")
+    ledger.record_volume("isekai", "v1", "2026-10-15T18:30:00Z")
+
+    *_, created, extended = lines()
+    for line in (created, extended):
+        assert sorted(line) == ["at", "ends", "id", "kind", "project"]
+        assert UTC.fullmatch(str(line["at"]))
+    assert ledger.volumes() == {
+        "v1": ledger.VolumeEntry(
+            "v1", "isekai", "volume", "2026-10-15T18:30:00Z", str(extended["at"])
+        )
+    }
+    # A pod's reader skips a volume's line; a volume's reader skips a pod's.
+    assert list(ledger.read()) == ["pod-9"]
+
+
+@pytest.mark.spec("spend:ledger:volume-is-recorded")
+def test_a_line_that_is_not_a_volumes_is_skipped() -> None:
+    ledger.path().parent.mkdir(parents=True)
+    volume = {"id": "v1", "project": "isekai", "kind": "volume", "ends": "e", "at": "t"}
+    pod_kind = {**volume, "id": "v2", "kind": "pod"}
+    no_end = {**volume, "id": "v3", "ends": None}
+    ledger.path().write_text(
+        "\n".join(json.dumps(line) for line in (volume, pod_kind, no_end)) + "\n",
+        encoding="utf-8",
+    )
+
+    assert list(ledger.volumes()) == ["v1"]
