@@ -1,4 +1,4 @@
-"""Report what the provider billed over whole UTC days, each pod under its project."""
+"""Report what the provider billed over whole UTC days, under each pod's project."""
 
 import json
 from collections import defaultdict
@@ -17,7 +17,7 @@ CENT = Decimal("0.01")
 
 @dataclass(frozen=True)
 class Line:
-    """One project's pods: its name, its pod count and its amount."""
+    """One project: its name, its pod count, and its pods' and volumes' amount."""
 
     name: str
     pods: int
@@ -71,9 +71,20 @@ def spend(provider: Provider, days: int, *, as_json: bool) -> int:
         # A table of zeros would read as a free week (0007 design D3).
         log.refuse(f"the billing could not be read: {fault}")
     owners = {pod_id: entry.project for pod_id, entry in ledger.read().items()}
-    report = build(first, last, pods, volumes, owners)
+    windows = ledger.volumes()
+    volume_owners = {volume_id: entry.project for volume_id, entry in windows.items()}
+    report = build(first, last, pods, volumes, owners, volume_owners)
     print(json.dumps(to_json(report)) if as_json else render(report))
     log.say(STILL_BILLING)
+    today = _midnight(last)
+    billed_today = {cost.volume_id for cost in volumes if cost.start >= today}
+    for volume_id in sorted(billed_today & set(windows)):
+        # Before today's midnight: a volume deleted at its end today still bills today.
+        if windows[volume_id].ends < today:
+            log.say(
+                f"volume {volume_id} ({windows[volume_id].project}) passed its ceiling "
+                "and still bills; run gpunit volume down"
+            )
     return 0
 
 
@@ -83,19 +94,28 @@ def build(
     pods: list[PodCost],
     volumes: list[VolumeCost],
     owners: dict[str, str],
+    volume_owners: dict[str, str] | None = None,
 ) -> Report:
-    """Return the report: each pod summed under its project, each volume on its own."""
+    """Return the report: pods and window volumes by project, other volumes alone."""
     by_pod = _summed((cost.pod_id, cost.amount) for cost in pods)
     by_volume = _summed((cost.volume_id, cost.amount) for cost in volumes)
     by_project: dict[str, list[Decimal]] = defaultdict(list)
     for pod_id, amount in by_pod.items():
         by_project[owners.get(pod_id, UNATTRIBUTED)].append(amount)
+    stored: dict[str, Decimal] = defaultdict(Decimal)
+    storage: list[tuple[str, Decimal]] = []
+    volume_owners = volume_owners or {}
+    for volume_id, amount in by_volume.items():
+        if volume_id in volume_owners:
+            stored[volume_owners[volume_id]] += amount
+        else:
+            storage.append((volume_id, amount))
     lines = {
-        name: Line(name, len(sums), sum(sums, Decimal()))
-        for name, sums in by_project.items()
+        name: Line(name, len(by_project[name]), sum(by_project[name], stored[name]))
+        for name in by_project.keys() | stored.keys()
     }
     stray = lines.pop(UNATTRIBUTED, Line(UNATTRIBUTED, 0, Decimal()))
-    storage = sorted(by_volume.items(), key=lambda item: (-item[1], item[0]))
+    storage.sort(key=lambda item: (-item[1], item[0]))
     return Report(first, last, _ranked(lines.values()), stray, storage)
 
 

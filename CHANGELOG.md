@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   session that would outlive it; `up`, `down` and `status` delete an overdue volume first; `status` names the volume.
 - `gpunit volume up --serve <model> --ceiling 4h` makes the row's window volume, of its `disk_gb`, and `serve` mounts
   it; `gpunit volume down --serve <model>` deletes it. `serve` never creates a volume.
+- `spend` bills a window volume under its project, a project with no pod showing `0 pods`, and names on stderr one
+  that ended before today and still bills today, with `gpunit volume down`.
 
 ## [0.6.0] - 2026-10-15
 

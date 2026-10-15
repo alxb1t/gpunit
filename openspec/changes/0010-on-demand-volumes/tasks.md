@@ -11,7 +11,7 @@ names.
 - [x] 3 — The verbs
 - [x] 4 — The session
 - [x] 5 — Serve
-- [ ] 6 — Spend
+- [x] 6 — Spend
 - [ ] 7 — The live runs and the handover
 - [ ] 8 — ⚠️ **HUMAN** — the images
 - [ ] 9 — ⚠️ **HUMAN · METERED** — make live-volume, make live-serve, make live-serve-dead, make live-dead
@@ -51,7 +51,7 @@ names.
 
 ## 6 — Spend
 
-- [ ] 6.1 In `gpunit/spend.py`, bill a window volume under its project and name an overdue one, per [D9](design.md#d9); in `tests/test_spend.py` bind `spend:report:window-volume-under-project` and `spend:report:overdue-volume-named`.
+- [x] 6.1 In `gpunit/spend.py`, bill a window volume under its project and name an overdue one, per [D9](design.md#d9); in `tests/test_spend.py` bind `spend:report:window-volume-under-project` and `spend:report:overdue-volume-named`.
   Verify: `grep -o -E 'spend:report:(window-volume-under-project|overdue-volume-named)' tests/test_spend.py | sort -u | wc -l | tr -d ' '` prints `2`, and `uv run pytest -q tests/test_spend.py` exits 0.
 
 ## 7 — The live runs and the handover
