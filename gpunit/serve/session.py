@@ -62,9 +62,10 @@ def serve(
         _agree(spec, provider, yes, ask)
         place = home(name)
         place.mkdir(mode=0o700, parents=True, exist_ok=True)
-        kept = _Kept(place / "pod.log")
         state = State(place)
         with library._open(spec, provider, state, None) as opened:
+            # After `up`'s guards: a refused run keeps the last session's file.
+            kept = _Kept(place / "pod.log")
             record = state.read()
             created = record.created if record else None
             base = f"http://127.0.0.1:{opened.port(table.PORT)}/v1"

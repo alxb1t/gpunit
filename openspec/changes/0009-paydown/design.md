@@ -89,8 +89,8 @@ seen:  no      · no     · no      · no     · yes  ─▶ refuse, tear down
 
 ### D2
 
-`serve`'s body removes `home(name) / "pod.log"` before it opens, and reads `created` from `State(home(name)).read()`
-once the session is up. A `_Kept` holder in `gpunit/serve/session.py` keeps the path and the line count:
+`serve`'s body removes `home(name) / "pod.log"` once the session is open, after `up`'s guards, so a refused run keeps
+the last session's file; it reads `created` from `State(home(name)).read()` then too. A `_Kept` holder in `gpunit/serve/session.py` keeps the path and the line count:
 
 - **`take(lines)`** writes `lines` to `pod.log` when they are at least as many as it holds, opening it with
   `os.open(path, O_WRONLY | O_CREAT | O_TRUNC, 0o600)`; a shorter or empty read changes nothing.

@@ -266,6 +266,28 @@ def test_the_pods_log_is_kept_and_the_next_session_starts_without_it(
     assert not kept.exists()
 
 
+@pytest.mark.spec("serve:wait:log-kept")
+def test_a_refused_serve_keeps_the_last_pods_log(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    lines = [f"vllm {n}" for n in range(5)]
+    # The pod dies in the wait and its teardown fails: the record stays.
+    crashed = FakeProvider(
+        gets=[RUNNING] * 8 + [EXITED], since_logs=[lines], deletes={"pod-1": 500}
+    )
+    assert served(crashed, FakeOpener(*[NOT_YET] * 9)) == 1
+    capsys.readouterr()
+
+    provider = FakeProvider()
+    assert served(provider, FakeOpener(MODELS)) == 1
+
+    assert "a pod is already recorded" in capsys.readouterr().err
+    assert provider.named("create") == []
+    assert kept_path().read_text(encoding="utf-8") == "".join(
+        f"{line}\n" for line in lines
+    )
+
+
 @pytest.mark.spec("serve:wait:state-per-model")
 def test_the_session_files_are_the_models_wherever_it_runs(
     home: Path, cwd: Path

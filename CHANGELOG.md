@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   One `DeadPod` rule in `lifecycle.py` serves `up`'s wait and both of `serve`'s.
 - `serve` keeps the pod's log at `~/.local/state/gpunit/serve/<model>/pod.log` (mode `0600`), read since the create
   every 30 s, since RunPod drops it when the pod stops; a dead-pod refusal prints its last 30 lines and names the file.
+  The last session's file is removed only once a new session opens, so a refused `serve` leaves it in place.
 - README's exit row for `2` names `spend --days` over 3660; the unreadable-ledger test carries its own scenario key,
   and `spend`'s docstring names the ledger (`0007·R6`, `0007·R7`).
 
