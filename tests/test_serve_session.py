@@ -76,8 +76,8 @@ def local_port(provider: FakeProvider) -> int:
     return port.local
 
 
-def kept_path(home: Path) -> Path:
-    return home / ".local" / "state" / "gpunit" / "serve" / "qwen3-4b" / "pod.log"
+def kept_path() -> Path:
+    return session.home("qwen3-4b") / "pod.log"
 
 
 def said_pod(err: str) -> list[str]:
@@ -223,7 +223,7 @@ def test_a_dead_pod_ends_the_wait_and_closes_the_session(
     assert len(opener.requests) == 9
     assert provider.named("delete") == [("pod-1",)]
     assert said_pod(err) == lines[-30:]
-    assert f"the pod's log is kept at {kept_path(home)}" in err
+    assert f"the pod's log is kept at {kept_path()}" in err
 
 
 @pytest.mark.spec("serve:wait:running-pod-waits")
@@ -257,7 +257,7 @@ def test_the_pods_log_is_kept_and_the_next_session_starts_without_it(
 
     assert served(provider, opener) == 0
 
-    kept = kept_path(home)
+    kept = kept_path()
     assert kept.read_text(encoding="utf-8") == "a\nb\nc\n"
     assert kept.stat().st_mode & 0o777 == 0o600
     assert len([call for call in provider.named("log") if call[2] is not None]) == 2
@@ -361,7 +361,7 @@ def test_a_dead_pod_ends_the_hold(
     assert len(opener.requests) == 2
     assert provider.named("delete") == [("pod-1",)]
     assert said_pod(err) == ["vllm up", "vllm crashed"]
-    assert f"the pod's log is kept at {kept_path(home)}" in err
+    assert f"the pod's log is kept at {kept_path()}" in err
 
 
 @pytest.mark.spec("serve:api:key-required")

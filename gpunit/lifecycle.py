@@ -321,21 +321,19 @@ def _verify_host_key(
     # The fingerprint comes over the authenticated API, never over the connection
     # it vouches for; nothing connects until the two agree.
     def read() -> str | None:
-        tail = provider.log(record.id, tail=LOG_TAIL)
-        if printed := fingerprint(tail, nonce):
-            return printed
         # A boot that logs heavily pushes the key line out of the tail.
-        since = provider.log(record.id, tail=LOG_TAIL, since=record.created)
-        if printed := fingerprint(since, nonce):
-            return printed
-        if old_boot(tail) or old_boot(since):
-            _tear_down(
-                spec,
-                provider,
-                state,
-                "the image's boot.sh prints no session nonce; "
-                "ADD boot.sh from gpunit v0.6.0",
-            )
+        for since in (None, record.created):
+            lines = provider.log(record.id, tail=LOG_TAIL, since=since)
+            if printed := fingerprint(lines, nonce):
+                return printed
+            if old_boot(lines):
+                _tear_down(
+                    spec,
+                    provider,
+                    state,
+                    "the image's boot.sh prints no session nonce; "
+                    "ADD boot.sh from gpunit v0.6.0",
+                )
         return None
 
     printed = _poll(LOG_WAIT_S, read)

@@ -16,6 +16,7 @@ KEY = "rpa_pod_key"
 POD = "pod-xyz"
 FINGERPRINT = "SHA256:fromTheStub+/0"
 NONCE = "0123456789abcdef0123456789abcdef"
+CEILING = "7"
 GRACE = "60"
 
 # Answers each call from $CURL_CODES, one line per call (200 when empty), and logs
@@ -39,7 +40,6 @@ printf '%s' "${code:-200}"
 
 # Logs each wait and returns at once; the ceiling's own wait holds when asked to.
 SLEEP = """#!/bin/bash
-echo "$1" >> "$SLEEP_LOG"
 echo "sleep $1" >> "$ORDER_LOG"
 if [ -n "${HOLD_CEILING:-}" ] && [ "$1" = "$GPUNIT_CEILING" ]; then
   exec /bin/sleep 600
@@ -86,7 +86,6 @@ class Boot:
     out: str
     err: str
     curl: list[str]
-    sleeps: list[str]
     # The curl calls and the waits, in the order they ran.
     order: list[str]
     sshd: list[str]
@@ -114,7 +113,7 @@ def pod(tmp_path: Path, pod_bin: Path) -> dict[str, str]:
         "RUNPOD_API_KEY": KEY,
         "RUNPOD_POD_ID": POD,
         "PUBLIC_KEY": "ssh-ed25519 AAAAsession gpunit-isekai",
-        "GPUNIT_CEILING": "7",
+        "GPUNIT_CEILING": CEILING,
         "GPUNIT_NONCE": NONCE,
         "HOLD_CEILING": "1",
         "TMPDIR": str(tmp_path),
@@ -124,7 +123,6 @@ def pod(tmp_path: Path, pod_bin: Path) -> dict[str, str]:
             for name in (
                 "CURL_LOG",
                 "CURL_CODES",
-                "SLEEP_LOG",
                 "ORDER_LOG",
                 "SSHD_LOG",
                 "SSHD_SERVED",
@@ -166,7 +164,6 @@ def boot(env: dict[str, str], *command: str, merged: bool = False) -> Boot:
         out=out.read_text(encoding="utf-8"),
         err=err.read_text(encoding="utf-8"),
         curl=lines("CURL_LOG"),
-        sleeps=lines("SLEEP_LOG"),
         order=lines("ORDER_LOG"),
         sshd=lines("SSHD_LOG"),
         served=lines("SSHD_SERVED"),
@@ -176,7 +173,7 @@ def boot(env: dict[str, str], *command: str, merged: bool = False) -> Boot:
 
 def after_the_ceiling(result: Boot) -> list[str]:
     """Return the curl calls and the waits in order, but the ceiling's own wait."""
-    return [step for step in result.order if step != "sleep 7"]
+    return [step for step in result.order if step != f"sleep {CEILING}"]
 
 
 def refuses_without(tool: str, named: str, pod: dict[str, str], bin_dir: Path) -> None:
@@ -257,9 +254,8 @@ def test_the_ceiling_stops_the_pod(pod: dict[str, str]) -> None:
     result = boot(pod, "bash", "-c", wait)
 
     assert "the ceiling of 7s is reached" in result.err
-    assert result.sleeps[0] == "7"
     # No grace before the ceiling's stop; the command's end after it still waits.
-    assert result.order[:2] == ["sleep 7", "curl"]
+    assert result.order[:2] == [f"sleep {CEILING}", "curl"]
     assert f"/pods/{POD}/action" in result.curl[0]
     assert '{"action":"stop"}' in result.curl[0]
 

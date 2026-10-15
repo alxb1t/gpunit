@@ -63,7 +63,6 @@ def serve(
         place = home(name)
         place.mkdir(mode=0o700, parents=True, exist_ok=True)
         kept = _Kept(place / "pod.log")
-        kept.path.unlink(missing_ok=True)
         state = State(place)
         with library._open(spec, provider, state, None) as opened:
             record = state.read()
@@ -146,9 +145,10 @@ class _Kept:
     """The pod's log on the laptop: the longest read since the create."""
 
     def __init__(self, path: Path) -> None:
-        """Hold nothing yet; `path` is written on the first read with lines."""
+        """Hold nothing: remove the last session's file at `path`."""
         self.path = path
         self._count = 0
+        path.unlink(missing_ok=True)
 
     def take(self, lines: list[str]) -> None:
         """Write `lines` when they are at least as many as held; else keep the file."""
