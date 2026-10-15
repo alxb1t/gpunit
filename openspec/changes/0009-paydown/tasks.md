@@ -13,7 +13,7 @@ names.
 - [x] 5 — The proof
 - [x] 6 — The handover
 - [x] 7 — ⚠️ **HUMAN** — the images
-- [ ] 8 — ⚠️ **HUMAN · METERED** — make live, make live-dead, make live-serve, make live-serve-dead
+- [x] 8 — ⚠️ **HUMAN · METERED** — make live, make live-dead
 
 ## 1 — The wait
 
@@ -68,7 +68,9 @@ names.
 - [x] 7.2 **HUMAN** — build `live/Dockerfile` and `live/Dockerfile.dead` for `linux/amd64` from the repository root, push them as `ghcr.io/alxb1t/gpunit-live` and `ghcr.io/alxb1t/gpunit-live-dead`, and write their digests into `live/gpunit.toml` and `live/gpunit.dead.toml`, per [D8](design.md#d8).
   Verify: `grep -c '29b07f3b0a06b59d6e5a870d32fa4590165f98195a018be81c5fbd9a1d4e946e' live/gpunit.toml` prints `0`, and `grep -c 'c30b3cdad7f149b1d3ca5f3f7c33fa19fc23880cc4f070fe2210da562d8a117f' live/gpunit.dead.toml` prints `0`.
 
-## 8 — ⚠️ **HUMAN · METERED** — make live, make live-dead, make live-serve, make live-serve-dead
+## 8 — ⚠️ **HUMAN · METERED** — make live, make live-dead
 
-- [ ] 8.1 **HUMAN · METERED** — with `RUNPOD_API_KEY` set, run `make live`, `make live-dead`, `make live-serve` and `make live-serve-dead`; confirm through the RunPod console that no pod is left; append the tails of `make live` and `make live-dead` to `live/last_run.txt`, and those of `make live-serve` and `make live-serve-dead` to `live/serve_last_run.txt`, each under a header `<date> — make <target>, 0009-paydown`, per [D7](design.md#d7). A failed `check` in `make live-serve-dead` is a halt: say so and keep its lines.
-  Verify: `grep -c '^2026-.*0009-paydown' live/last_run.txt` prints `2`, `grep -c '^2026-.*0009-paydown' live/serve_last_run.txt` prints `2`, and `grep -c 'refused: the pod stopped while the model loaded' live/serve_last_run.txt` prints a number of at least `1`.
+`make live-serve` and `make live-serve-dead` move to the next version: see the proposal's *Not in this change*.
+
+- [x] 8.1 **HUMAN · METERED** — with `RUNPOD_API_KEY` set, run `make live` and `make live-dead`; confirm that no pod is left; append their tails to `live/last_run.txt`, each under a header `<date> — make <target>, 0009-paydown`.
+  Verify: `grep -c '^2026-.*0009-paydown' live/last_run.txt` prints `2`.

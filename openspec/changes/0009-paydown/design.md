@@ -183,6 +183,9 @@ None.
 - **The grace bills 60 s more for each crashed command** → ~$0.01 on an A40; gpunit deletes a pod it watches before
   the stop anyway.
 - **A command can learn the nonce from boot's `/proc`** → a command that hostile is trusted with the key already.
+- **[D1](#d1) in `serve` and [D4](#d4) ship unproven on a real pod** → `make live-serve-dead` was written but not
+  run: a fresh host pulled `gpunit-vllm` for over 15 minutes with no SSH. It runs in the next version, on a volume.
+  Until then the offline tests are the only proof that the crash reaches `pod.log` inside the grace.
 
 ## Migration Plan
 
@@ -192,4 +195,5 @@ the same step as the gpunit pin.
 ## Verdict
 
 Feasible: the dead-pod rule exists and moves; the log, the nonce and the grace are a few lines each, each with a test;
-the one unknown — that the crash's lines reach the laptop inside the grace — is proven live before release.
+the one unknown — that the crash's lines reach the laptop inside the grace — is left to `make live-serve-dead` in the
+next version (see *Risks*).

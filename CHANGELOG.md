@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a refusal stop without it.
 - `gpunit-vllm`, `gpunit-live` and `gpunit-live-dead` are rebuilt with this `boot.sh` and pinned by digest:
   `gpunit-vllm:v0.6-rc1` from `build-serve-image` run 38717674106, the live images pushed by hand for `linux/amd64`.
+- `live/last_run.txt`: `make live` verifies the host key through the nonce; `make live-dead` tears its pod down on the
+  120 s deadline rather than the dead-pod rule, recorded as such. The serve runs move to the next version.
 
 ### Fixed
 

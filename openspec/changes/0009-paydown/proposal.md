@@ -79,8 +79,8 @@ None.
   tears the pod down. isekai and Synthetic Portraits update their `ADD` when they move to `v0.6.0`.
 - **Images:** `gpunit-vllm`, `gpunit-live` and `gpunit-live-dead` are rebuilt and their digests pinned.
 - **Dependencies:** none ([Dependencies](design.md#dependencies)).
-- **Spend:** a crashed command bills 60 s more before its stop, ~$0.01 on an A40. The live runs — `make live`,
-  `make live-dead`, `make live-serve` and `make live-serve-dead` — cost about $0.20 by hand ([D7](design.md#d7)).
+- **Spend:** a crashed command bills 60 s more before its stop, ~$0.01 on an A40. The live runs, `make live` and
+  `make live-dead`, cost a few cents by hand.
 
 ## Not in this change
 
@@ -89,4 +89,7 @@ None.
 - **A status check in `gpunit run`'s command phase** — its SSH session ends with the pod.
 - **The bound refusal printing the kept log** — trigger: a wait that ends at its bound with no cause in sight.
 - **A new live run of `qwen3.8-27b`** — only `boot.sh` changed in its image.
+- **The serve runs, `make live-serve` and `make live-serve-dead`** — a fresh host pulled `gpunit-vllm` for over 15
+  minutes with no SSH and nothing to see. Trigger: a network volume that holds the image's weights, in the next
+  version. [D1](design.md#d1) and [D4](design.md#d4) are proven offline only until then.
 - **The consumers' repos** — they move to `v0.6.0` in their own versions.
