@@ -15,7 +15,7 @@ names.
 - [x] 7 — The live runs and the handover
 - [x] 8 — ⚠️ **HUMAN** — the images
 - [x] 9 — The serve image's volume
-- [ ] 10 — ⚠️ **HUMAN** — the serve image, again
+- [x] 10 — ⚠️ **HUMAN** — the serve image, again
 - [ ] 11 — ⚠️ **HUMAN · METERED** — make live-volume, make live-serve, make live-serve-dead, make live-dead
 
 ## 1 — The seam
@@ -79,7 +79,7 @@ names.
 
 ## 10 — ⚠️ **HUMAN** — the serve image, again
 
-- [ ] 10.1 **HUMAN** — push the branch, run `.github/workflows/build-serve-image.yml` on it with the tag `v0.7-rc2`, and write its digest into `gpunit/serve/models.toml`'s `image` line, per [D13](design.md#d13).
+- [x] 10.1 **HUMAN** — push the branch, run `.github/workflows/build-serve-image.yml` on it with the tag `v0.7-rc2`, and write its digest into `gpunit/serve/models.toml`'s `image` line, per [D13](design.md#d13).
   Verify: `grep -c '0c29f7146bd9a6c9d0c094ea838e90db2e5035f0263cc817153ccd1cec6f7411' gpunit/serve/models.toml` prints `0`.
 
 ## 11 — ⚠️ **HUMAN · METERED** — make live-volume, make live-serve, make live-serve-dead, make live-dead

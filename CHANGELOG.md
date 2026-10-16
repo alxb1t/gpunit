@@ -28,7 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `gpunit-vllm`, `gpunit-live` and `gpunit-live-dead` carry the released `boot.sh` and are re-pinned by digest:
-  `gpunit-vllm:v0.7-rc1` from `build-serve-image` run 38869240150, the live images pushed by hand for `linux/amd64`.
+  `gpunit-vllm:v0.7-rc2` from `build-serve-image` run 38893906654, with the `CMD` fixed below; the live images pushed
+  by hand for `linux/amd64`.
   `v0.6.0`'s digests carried the `boot.sh` of `057ce89`, from before `681e23c` (`0009·R6`, `0009·S3`).
 - The serve image starts vLLM with a volume mounted: its `CMD` set `HF_HOME` inside `${…:+…}`, whose `;` is a word,
   so `sh` ran one `export` over vLLM's arguments and exited `2`. `serve --volume` broke the same way since `v0.3`.
