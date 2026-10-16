@@ -1,7 +1,7 @@
 # The session `make live-dead` opens: a container that exits at once, so `up` tears it down.
 project = "live-dead"
 # Pushed by hand for linux/amd64; a rebuild moves the digest.
-image = "ghcr.io/alxb1t/gpunit-live-dead@sha256:d801300ce252333a3a455a91ea0d5d7cde331d6f85c1a21f8799f7f5d8682d65"
+image = "ghcr.io/alxb1t/gpunit-live-dead@sha256:1cc99d82a4f47bbbfb2d4e832fb3b46be8208cd72c1609b8e13a9c3ebbe0aa71"
 # The cheapest secure-cloud cards in stock, tried in order; stock moves by the hour.
 gpus = ["NVIDIA RTX A4500", "NVIDIA RTX A5000", "NVIDIA A40", "NVIDIA RTX A6000"]
 vram_gb = 16

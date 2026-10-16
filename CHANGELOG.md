@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `make live-serve-dead` run inside the row's window; `make live-dead` passes on `up`'s exit `1` and prints `reason:`.
   README's *Working window* and `CLAUDE.md` name the volume verbs and `make live-volume`.
 
+### Fixed
+
+- `gpunit-vllm`, `gpunit-live` and `gpunit-live-dead` carry the released `boot.sh` and are re-pinned by digest:
+  `gpunit-vllm:v0.7-rc1` from `build-serve-image` run 38869240150, the live images pushed by hand for `linux/amd64`.
+  `v0.6.0`'s digests carried the `boot.sh` of `057ce89`, from before `681e23c` (`0009·R6`, `0009·S3`).
+
 ## [0.6.0] - 2026-10-15
 
 ### Added

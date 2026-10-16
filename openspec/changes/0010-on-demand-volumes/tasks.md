@@ -13,7 +13,7 @@ names.
 - [x] 5 — Serve
 - [x] 6 — Spend
 - [x] 7 — The live runs and the handover
-- [ ] 8 — ⚠️ **HUMAN** — the images
+- [x] 8 — ⚠️ **HUMAN** — the images
 - [ ] 9 — ⚠️ **HUMAN · METERED** — make live-volume, make live-serve, make live-serve-dead, make live-dead
 
 ## 1 — The seam
@@ -63,9 +63,9 @@ names.
 
 ## 8 — ⚠️ **HUMAN** — the images
 
-- [ ] 8.1 **HUMAN** — run `.github/workflows/build-serve-image.yml` with the tag `v0.7-rc1`, and write its digest into `gpunit/serve/models.toml`'s `image` line, per [D11](design.md#d11).
+- [x] 8.1 **HUMAN** — run `.github/workflows/build-serve-image.yml` with the tag `v0.7-rc1`, and write its digest into `gpunit/serve/models.toml`'s `image` line, per [D11](design.md#d11).
   Verify: `grep -c '155fc05ac7f62d873d2dd33daf940c78ae0ace7150265963c5689c23766d7613' gpunit/serve/models.toml` prints `0`.
-- [ ] 8.2 **HUMAN** — build `live/Dockerfile` and `live/Dockerfile.dead` for `linux/amd64` from the repository root, push them as `ghcr.io/alxb1t/gpunit-live` and `ghcr.io/alxb1t/gpunit-live-dead`, and write their digests into `live/gpunit.toml`, `live/gpunit.volume.toml` and `live/gpunit.dead.toml`, per [D11](design.md#d11).
+- [x] 8.2 **HUMAN** — build `live/Dockerfile` and `live/Dockerfile.dead` for `linux/amd64` from the repository root, push them as `ghcr.io/alxb1t/gpunit-live` and `ghcr.io/alxb1t/gpunit-live-dead`, and write their digests into `live/gpunit.toml`, `live/gpunit.volume.toml` and `live/gpunit.dead.toml`, per [D11](design.md#d11).
   Verify: `grep -c 'defd497b569eed55e7a634b8834624121edcf46041888ec5529c8ddee4e3c466' live/gpunit.toml live/gpunit.volume.toml | grep -v ':0$' | wc -l | tr -d ' '` prints `0`, and `grep -c 'd801300ce252333a3a455a91ea0d5d7cde331d6f85c1a21f8799f7f5d8682d65' live/gpunit.dead.toml` prints `0`.
 
 ## 9 — ⚠️ **HUMAN · METERED** — make live-volume, make live-serve, make live-serve-dead, make live-dead
