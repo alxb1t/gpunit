@@ -14,7 +14,9 @@ names.
 - [x] 6 — Spend
 - [x] 7 — The live runs and the handover
 - [x] 8 — ⚠️ **HUMAN** — the images
-- [ ] 9 — ⚠️ **HUMAN · METERED** — make live-volume, make live-serve, make live-serve-dead, make live-dead
+- [ ] 9 — The serve image's volume
+- [ ] 10 — ⚠️ **HUMAN** — the serve image, again
+- [ ] 11 — ⚠️ **HUMAN · METERED** — make live-volume, make live-serve, make live-serve-dead, make live-dead
 
 ## 1 — The seam
 
@@ -68,7 +70,19 @@ names.
 - [x] 8.2 **HUMAN** — build `live/Dockerfile` and `live/Dockerfile.dead` for `linux/amd64` from the repository root, push them as `ghcr.io/alxb1t/gpunit-live` and `ghcr.io/alxb1t/gpunit-live-dead`, and write their digests into `live/gpunit.toml`, `live/gpunit.volume.toml` and `live/gpunit.dead.toml`, per [D11](design.md#d11).
   Verify: `grep -c 'defd497b569eed55e7a634b8834624121edcf46041888ec5529c8ddee4e3c466' live/gpunit.toml live/gpunit.volume.toml | grep -v ':0$' | wc -l | tr -d ' '` prints `0`, and `grep -c 'd801300ce252333a3a455a91ea0d5d7cde331d6f85c1a21f8799f7f5d8682d65' live/gpunit.dead.toml` prints `0`.
 
-## 9 — ⚠️ **HUMAN · METERED** — make live-volume, make live-serve, make live-serve-dead, make live-dead
+## 9 — The serve image's volume
 
-- [ ] 9.1 **HUMAN · METERED** — with `RUNPOD_API_KEY` set, run `make live-volume`, `make live-serve`, `make live-serve-dead` and `make live-dead`; confirm through the RunPod console that no pod and no `gpunit-` volume is left; append the tails of `make live-volume` and `make live-dead` to `live/last_run.txt`, and those of `make live-serve` and `make live-serve-dead` to `live/serve_last_run.txt`, each under a header `<date> — make <target>, 0010-on-demand-volumes`, per [D10](design.md#d10). A failed target is a halt: say so and keep its lines.
+- [ ] 9.1 In `serve/Dockerfile`, set `HF_HOME` in the `CMD` with an `if`, per [D13](design.md#d13); in `tests/test_serve_image.py`, run the `CMD` under `sh` with a stub `vllm`, with and without `GPUNIT_VOLUME_PATH`, under `serve:volume:weights-on-the-volume`.
+  Verify: `grep -c 'GPUNIT_VOLUME_PATH:+' serve/Dockerfile` prints `0`, and `uv run pytest -q tests/test_serve_image.py` exits 0.
+- [ ] 9.2 In `live/gpunit.volume.toml`, follow the cheap cards with `NVIDIA RTX PRO 4500 Blackwell` and `NVIDIA GeForce RTX 4090`, and raise `max_hourly` to `0.90`: a window needs a card in stock where standard volumes are, per [D10](design.md#d10).
+  Verify: `grep -c 'NVIDIA GeForce RTX 4090' live/gpunit.volume.toml` prints `1`.
+
+## 10 — ⚠️ **HUMAN** — the serve image, again
+
+- [ ] 10.1 **HUMAN** — push the branch, run `.github/workflows/build-serve-image.yml` on it with the tag `v0.7-rc2`, and write its digest into `gpunit/serve/models.toml`'s `image` line, per [D13](design.md#d13).
+  Verify: `grep -c '0c29f7146bd9a6c9d0c094ea838e90db2e5035f0263cc817153ccd1cec6f7411' gpunit/serve/models.toml` prints `0`.
+
+## 11 — ⚠️ **HUMAN · METERED** — make live-volume, make live-serve, make live-serve-dead, make live-dead
+
+- [ ] 11.1 **HUMAN · METERED** — with `RUNPOD_API_KEY` set, run `make live-volume`, `make live-serve`, `make live-serve-dead` and `make live-dead`; confirm through the RunPod console that no pod and no `gpunit-` volume is left; append the tails of `make live-volume` and `make live-dead` to `live/last_run.txt`, and those of `make live-serve` and `make live-serve-dead` to `live/serve_last_run.txt`, each under a header `<date> — make <target>, 0010-on-demand-volumes`, per [D10](design.md#d10). A failed target is a halt: say so and keep its lines.
   Verify: `grep -c '^2026-.*0010-on-demand-volumes' live/last_run.txt` prints `2`, `grep -c '^2026-.*0010-on-demand-volumes' live/serve_last_run.txt` prints `2`, and `grep -c 'refused: the pod stopped while the model loaded' live/serve_last_run.txt` prints a number of at least `1`.

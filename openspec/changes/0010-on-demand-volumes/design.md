@@ -57,6 +57,7 @@ being deleted; `status --json` naming the volume.
 | [D10](#d10) | `make live-volume`; `live-serve` and `live-serve-dead` inside a window; `live-dead` asserts its reason | `v0.6`'s acceptance, in the window it now runs in | a dead image that reaches `EXITED` |
 | [D11](#d11) | `gpunit-vllm`, `gpunit-live` and `gpunit-live-dead` rebuilt from `boot.sh` at HEAD, before the live runs | `0009·R6`, `0009·S3` | editing `v0.6.0`'s released entry |
 | [D12](#d12) | README's *Working window*, the verbs, the exit `3` row; `CLAUDE.md`'s layout and live runs | the consumers' versions read it | — |
+| [D13](#d13) | `serve/Dockerfile`'s `CMD` sets `HF_HOME` with an `if`, tested by running it under `sh`; `gpunit-vllm` rebuilt as `v0.7-rc2` | the `${…:+…}` form breaks every mounted volume | carding it past this change |
 
 ### D1
 
@@ -133,7 +134,7 @@ was overdue; `up` then refuses naming `gpunit volume up` when `spec.volume_gb` i
 `cli`: `volume` takes `up` or `down`; with `--serve <row>`, `up` requires `--ceiling`, and the spec is the row's spec
 with `volume_gb = row.disk_gb` and `volume_ceiling_s` the ceiling, the state `State(home(row))`. `serve`: when
 `volume` is None and `State(home(name)).window()` exists, `spec = replace(spec, volume_gb=row.disk_gb)`, so D6 mounts
-it; with no window, nothing changes. The image already sets `HF_HOME` on `GPUNIT_VOLUME_PATH`.
+it; with no window, nothing changes. The image keeps the weights on `GPUNIT_VOLUME_PATH`, per [D13](#d13).
 
 ### D9
 
@@ -170,6 +171,16 @@ README: `volume_gb`, `volume_ceiling`, `volume_datacenter` in the spec sample; a
 order for a project and for `serve`, the ceiling rule, and the residual: a volume no command reaches bills
 $0.07/GB a month; `volume up` and `volume down` in *The verbs*; the exit `3` row names a volume's create.
 `CLAUDE.md`: `volume.py` in the layout; `make live-volume` among the live runs never in CI.
+
+### D13
+
+Found by `make live-serve` on 2026-10-16, after the cut: the `CMD`'s
+`${GPUNIT_VOLUME_PATH:+export HF_HOME="…";} exec vllm serve …` keeps the `;` as a word, so with a volume mounted `sh`
+runs one `export` over vLLM's arguments, which refuses `Qwen/Qwen3-4B` as a name and exits `2` before vLLM starts.
+It dates from `93c9081`; `serve --volume` broke the same way. The `CMD` becomes
+`if [ -n "${GPUNIT_VOLUME_PATH:-}" ]; then export HF_HOME="$GPUNIT_VOLUME_PATH/huggingface"; fi; exec vllm serve …`.
+`tests/test_serve_image.py` runs the `CMD` from the Dockerfile under `sh` with a stub `vllm`, with and without the
+volume. `gpunit-vllm` is rebuilt through the workflow with the tag `v0.7-rc2` and re-pinned in `gpunit/serve/models.toml`.
 
 ## Dependencies
 

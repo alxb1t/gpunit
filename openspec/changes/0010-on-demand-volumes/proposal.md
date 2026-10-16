@@ -46,6 +46,7 @@ images carry `boot.sh` from before `681e23c` (`0009·R6`, `0009·S3`).
 - **The live runs:** `make live-volume`; `make live-serve` and `make live-serve-dead` inside a window; `make live-dead`
   reaches boot's stop ([D10](design.md#d10), `0009·L1`).
 - **The images rebuilt** from `boot.sh` at HEAD and re-pinned ([D11](design.md#d11), `0009·R6`, `0009·S3`).
+- **The serve image keeps the weights on a mounted volume:** its `CMD` broke on any volume ([D13](design.md#d13)).
 
 ## Capabilities
 
@@ -71,7 +72,7 @@ images carry `boot.sh` from before `681e23c` (`0009·R6`, `0009·S3`).
 
 - **Files:** `gpunit/provider.py`, `gpunit/runpod.py`, `gpunit/spec.py`, `gpunit/state.py`, `gpunit/ledger.py`,
   `gpunit/volume.py` (new), `gpunit/lifecycle.py`, `gpunit/cli.py`, `gpunit/serve/session.py`, `gpunit/spend.py`,
-  `gpunit/serve/models.toml`, `live/gpunit.volume.toml` (new), `live/gpunit.toml`, `live/gpunit.dead.toml`,
+  `gpunit/serve/models.toml`, `serve/Dockerfile`, `live/gpunit.volume.toml` (new), `live/gpunit.toml`, `live/gpunit.dead.toml`,
   `live/Dockerfile.dead`, `live/last_run.txt`, `live/serve_last_run.txt`, `Makefile`, `README.md`, `CLAUDE.md`, and
   the tests.
 - **The `Provider` seam:** a card's data centres in stock, the data centres with standard volumes, and a volume's
