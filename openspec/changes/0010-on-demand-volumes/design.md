@@ -58,6 +58,7 @@ being deleted; `status --json` naming the volume.
 | [D11](#d11) | `gpunit-vllm`, `gpunit-live` and `gpunit-live-dead` rebuilt from `boot.sh` at HEAD, before the live runs | `0009·R6`, `0009·S3` | editing `v0.6.0`'s released entry |
 | [D12](#d12) | README's *Working window*, the verbs, the exit `3` row; `CLAUDE.md`'s layout and live runs | the consumers' versions read it | — |
 | [D13](#d13) | `serve/Dockerfile`'s `CMD` sets `HF_HOME` with an `if`, tested by running it under `sh`; `gpunit-vllm` rebuilt as `v0.7-rc2` | the `${…:+…}` form breaks every mounted volume | carding it past this change |
+| [D14](#d14) | `RunPod.log` with `since` reads the last 5000 lines and keeps those stamped from that second on | RunPod's `since` stream sends no past line | callers moved to tail reads; `Last-Event-ID` |
 
 ### D1
 
@@ -181,6 +182,24 @@ It dates from `93c9081`; `serve --volume` broke the same way. The `CMD` becomes
 `if [ -n "${GPUNIT_VOLUME_PATH:-}" ]; then export HF_HOME="$GPUNIT_VOLUME_PATH/huggingface"; fi; exec vllm serve …`.
 `tests/test_serve_image.py` runs the `CMD` from the Dockerfile under `sh` with a stub `vllm`, with and without the
 volume. `gpunit-vllm` is rebuilt through the workflow with the tag `v0.7-rc2` and re-pinned in `gpunit/serve/models.toml`.
+
+### D14
+
+Found by a probe pod on 2026-10-16, after `make live-serve-dead` kept no `pod:` line. On one live pod, the
+`.minions/` probe read the container log each way:
+
+| read | status | first byte | lines |
+|---|---|---|---|
+| `tail=50&source=container` | 200 | 0.55 s | 4 |
+| `since=<created>&source=container` | 200 | 15.74 s, `: heartbeat` | 0 |
+| `since=<created>`, no `source` | 200 | 15.48 s, `: heartbeat` | 0 |
+| `since=<an hour before>&source=container` | 200 | 15.52 s, `: heartbeat` | 0 |
+
+RunPod's docs say `since` drives the backfill; live, it sends none. So every `since` read gpunit made was empty: the
+host-key fallback, the older-`boot.sh` judgment and `serve`'s `pod.log`. `RunPod.log` keeps the `Provider` contract
+— with `since`, the lines from then on — by sending `tail=5000&source=container` and keeping each event whose `ts`,
+to the second, is at or after `since`; an event with no `ts` is kept. The callers and the specs do not change. The
+cost: a log longer than 5000 lines since the create is read from its last 5000.
 
 ## Dependencies
 

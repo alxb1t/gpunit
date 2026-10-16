@@ -16,7 +16,8 @@ names.
 - [x] 8 — ⚠️ **HUMAN** — the images
 - [x] 9 — The serve image's volume
 - [x] 10 — ⚠️ **HUMAN** — the serve image, again
-- [ ] 11 — ⚠️ **HUMAN · METERED** — make live-volume, make live-serve, make live-serve-dead, make live-dead
+- [ ] 11 — The log since the create
+- [ ] 12 — ⚠️ **HUMAN · METERED** — make live-volume, make live-serve, make live-serve-dead, make live-dead
 
 ## 1 — The seam
 
@@ -82,7 +83,12 @@ names.
 - [x] 10.1 **HUMAN** — push the branch, run `.github/workflows/build-serve-image.yml` on it with the tag `v0.7-rc2`, and write its digest into `gpunit/serve/models.toml`'s `image` line, per [D13](design.md#d13).
   Verify: `grep -c '0c29f7146bd9a6c9d0c094ea838e90db2e5035f0263cc817153ccd1cec6f7411' gpunit/serve/models.toml` prints `0`.
 
-## 11 — ⚠️ **HUMAN · METERED** — make live-volume, make live-serve, make live-serve-dead, make live-dead
+## 11 — The log since the create
 
-- [ ] 11.1 **HUMAN · METERED** — with `RUNPOD_API_KEY` set, run `make live-volume`, `make live-serve`, `make live-serve-dead` and `make live-dead`; confirm through the RunPod console that no pod and no `gpunit-` volume is left; append the tails of `make live-volume` and `make live-dead` to `live/last_run.txt`, and those of `make live-serve` and `make live-serve-dead` to `live/serve_last_run.txt`, each under a header `<date> — make <target>, 0010-on-demand-volumes`, per [D10](design.md#d10). A failed target is a halt: say so and keep its lines.
+- [ ] 11.1 In `gpunit/runpod.py`, make `RunPod.log` with `since` send `tail=5000` and keep the events stamped from `since`'s second on, per [D14](design.md#d14); in `tests/test_runpod.py`, rebind `session:hostkey:since-fallback` to that read, with a twin event stamped before `since`.
+  Verify: `grep -c '{"since": since}' gpunit/runpod.py` prints `0`, and `uv run pytest -q tests/test_runpod.py` exits 0.
+
+## 12 — ⚠️ **HUMAN · METERED** — make live-volume, make live-serve, make live-serve-dead, make live-dead
+
+- [ ] 12.1 **HUMAN · METERED** — with `RUNPOD_API_KEY` set, run `make live-volume`, `make live-serve`, `make live-serve-dead` and `make live-dead`; confirm through the RunPod console that no pod and no `gpunit-` volume is left; append the tails of `make live-volume` and `make live-dead` to `live/last_run.txt`, and those of `make live-serve` and `make live-serve-dead` to `live/serve_last_run.txt`, each under a header `<date> — make <target>, 0010-on-demand-volumes`, per [D10](design.md#d10). A failed target is a halt: say so and keep its lines.
   Verify: `grep -c '^2026-.*0010-on-demand-volumes' live/last_run.txt` prints `2`, `grep -c '^2026-.*0010-on-demand-volumes' live/serve_last_run.txt` prints `2`, and `grep -c 'refused: the pod stopped while the model loaded' live/serve_last_run.txt` prints a number of at least `1`.

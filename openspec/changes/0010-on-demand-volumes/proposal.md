@@ -47,6 +47,7 @@ images carry `boot.sh` from before `681e23c` (`0009·R6`, `0009·S3`).
   reaches boot's stop ([D10](design.md#d10), `0009·L1`).
 - **The images rebuilt** from `boot.sh` at HEAD and re-pinned ([D11](design.md#d11), `0009·R6`, `0009·S3`).
 - **The serve image keeps the weights on a mounted volume:** its `CMD` broke on any volume ([D13](design.md#d13)).
+- **The log since the create is read:** RunPod's `since` stream sends no past line ([D14](design.md#d14)).
 
 ## Capabilities
 
