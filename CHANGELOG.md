@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `volume`, or outside 10–4000 GB; `.gpunit/volume` records the window and the ledger names its volume and end.
 - `gpunit volume up` creates `gpunit-<project>` where the first card of `gpus` is in stock, after the price, or extends
   a live one; `gpunit volume down` deletes it, and sweeps any other of its name only after a lost create, so another
-  checkout's volume is never deleted (`0010·S1`). A volume past its end is deleted first.
+  checkout's volume is never deleted (`0010·S1`); that sweep skips a volume the ledger records and deletes each other
+  one only on a `y`, and a record beside the mark clears it unswept (`0010·S2`). A volume past its end is deleted first.
 - A spec with `volume_gb` mounts the window's volume in `up`, `run` and `serve`, and refuses with none recorded or a
   session that would outlive it; `up` and `status` delete an overdue volume first, `down` after its pods, which may
   hold it (`0010·R2`); `status` names the volume.

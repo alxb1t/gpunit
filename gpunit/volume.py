@@ -77,7 +77,6 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
     if window is not None:
         code = provider.delete_volume(window.id)
         if code == 204:
-            # Cleared on its own delete: a sweep that fails after it names no ghost.
             state.clear_window()
             log.say(f"volume {window.id} deleted")
         else:
@@ -86,25 +85,45 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
                 f"delete of volume {window.id} answered HTTP {code}; the record is kept"
             )
             failed = True
-    # Only a lost create leaves a volume of this checkout unrecorded; any other of
-    # the name is another checkout's, or made by hand.
     if not state.volume_pending.exists():
         return 1 if failed else 0
+    if window is not None:
+        # A record beside the mark: the create came back, and its volume is the
+        # record's; any other of the name is another checkout's.
+        state.clear_volume_pending()
+        return 1 if failed else 0
+    return _sweep(pod_name(spec.project), provider, state)
+
+
+def _sweep(name: str, provider: Provider, state: State) -> int:
+    """Offer each unrecorded volume `name` lists for deletion; clear the mark; 0, or 1.
+
+    A volume this machine's ledger records is another checkout's, and is skipped;
+    any other is named and deleted on a yes alone, since a teammate's on the
+    account carries the same name and a network volume's delete cannot be undone.
+    """
     try:
-        listed = provider.volumes(pod_name(spec.project))
+        listed = provider.volumes(name)
     except Lost as fault:
         log.say(f"no sweep was made: {fault}")
         return 1
+    known = ledger.volumes()
+    settled = True
     for volume_id in listed:
-        if window is not None and volume_id == window.id:
+        if volume_id in known:
             continue
-        code = provider.delete_volume(volume_id)
-        if code == 204:
+        answer = _ask(f"delete volume {volume_id}, named {name} but in no record?")
+        if answer is None:
+            log.say(f"volume {volume_id} kept: no answer; run gpunit volume down")
+            settled = False
+        elif not answer:
+            log.say(f"volume {volume_id} kept")
+        elif (code := provider.delete_volume(volume_id)) == 204:
             log.say(f"swept volume {volume_id}")
         else:
             log.say(f"delete of swept volume {volume_id} answered HTTP {code}")
-            failed = True
-    if failed:
+            settled = False
+    if not settled:
         return 1
     state.clear_volume_pending()
     return 0
@@ -178,18 +197,21 @@ def _agree(
     most = most_cost(size_gb, ceiling_s)
     log.say(f"price: ${VOLUME_GB_MONTH}/GB a month")
     log.say(f"at most ${most} for {size_gb} GB over {_hours(ceiling_s)}")
-    if yes:
-        return
-    try:
-        answer = input(f"{question} for at most ${most}? [y/N] ")
-    except EOFError:
-        answer = ""
-    except KeyboardInterrupt:
-        # Ends the prompt's line, so the refusal opens at its start.
-        print(file=sys.stderr, flush=True)
-        answer = ""
-    if answer.strip().lower() not in ("y", "yes"):
+    if not yes and not _ask(f"{question} for at most ${most}?"):
         log.refuse(refused)
+
+
+def _ask(question: str) -> bool | None:
+    """Ask `question` [y/N]; return whether the answer is yes, or None for no answer."""
+    try:
+        answer = input(f"{question} [y/N] ")
+    except EOFError:
+        return None
+    except KeyboardInterrupt:
+        # Ends the prompt's line, so what follows opens at its start.
+        print(file=sys.stderr, flush=True)
+        return None
+    return answer.strip().lower() in ("y", "yes")
 
 
 def _hours(seconds: int) -> str:

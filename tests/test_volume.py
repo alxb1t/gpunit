@@ -226,9 +226,12 @@ def test_down_deletes_the_volume(cwd: Path, capsys: pytest.CaptureFixture[str]) 
 
 
 @pytest.mark.spec("volume:down:sweeps-by-name")
-def test_a_lost_create_is_swept(cwd: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_a_lost_create_is_swept(
+    cwd: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     state = State(cwd)
     state.mark_volume_pending()
+    monkeypatch.setattr("sys.stdin", io.StringIO("y\n"))
     provider = FakeProvider(volume_listings=[["v9"]])
 
     assert gpunit(["volume", "down"], provider=provider) == 0
@@ -261,9 +264,12 @@ def test_a_refused_delete_keeps_the_record(
 
 
 @pytest.mark.spec("volume:down:refused-delete-kept")
-def test_a_failed_sweep_keeps_the_pending_mark(cwd: Path) -> None:
+def test_a_failed_sweep_keeps_the_pending_mark(
+    cwd: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     state = State(cwd)
     state.mark_volume_pending()
+    monkeypatch.setattr("sys.stdin", io.StringIO("y\n"))
     provider = FakeProvider(volume_listings=[["v9"]], volume_deletes={"v9": 500})
 
     assert gpunit(["volume", "down"], provider=provider) == 1
@@ -282,14 +288,67 @@ def test_down_leaves_a_volume_of_its_name_it_did_not_make(cwd: Path) -> None:
     assert not state.volume.exists()
 
 
-@pytest.mark.spec("volume:down:record-cleared-on-its-delete")
-def test_the_records_own_delete_clears_it_when_the_sweep_fails(cwd: Path) -> None:
-    # A run stopped between the window's write and the mark's clear leaves both.
+@pytest.mark.spec("volume:down:recorded-window-clears-the-mark")
+@pytest.mark.parametrize(("code", "exit_code"), [(204, 0), (409, 1)])
+def test_a_recorded_window_clears_the_mark_and_sweeps_nothing(
+    code: int, exit_code: int, cwd: Path
+) -> None:
+    # A run stopped between the window's write and the mark's clear leaves both: the
+    # create came back, so `v8`, of the name, is another checkout's.
     state = open_window(cwd, 3600)
     state.mark_volume_pending()
-    provider = FakeProvider(volume_listings=[Lost("volume listing returned HTTP 500")])
+    provider = FakeProvider(volume_listings=[["v1", "v8"]], volume_deletes={"v1": code})
 
-    assert gpunit(["volume", "down"], provider=provider) == 1
+    assert gpunit(["volume", "down"], provider=provider) == exit_code
     assert provider.named("delete_volume") == [("v1",)]
-    assert state.window() is None
-    assert state.volume_pending.exists()
+    assert provider.named("volumes") == []
+    assert (state.window() is None) is (code == 204)
+    assert not state.volume_pending.exists()
+
+
+@pytest.mark.spec("volume:down:ledger-volume-kept")
+def test_a_volume_the_ledger_records_is_not_swept(
+    cwd: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Another checkout on this machine made `v5`; this one's create was lost.
+    ledger.record_volume("isekai", "v5", log.utc(3600))
+    state = State(cwd)
+    state.mark_volume_pending()
+    monkeypatch.setattr("sys.stdin", io.StringIO("y\n"))
+    provider = FakeProvider(volume_listings=[["v5", "v9"]])
+
+    assert gpunit(["volume", "down"], provider=provider) == 0
+    assert provider.named("delete_volume") == [("v9",)]
+    assert not state.volume_pending.exists()
+    assert "v5" not in capsys.readouterr().out
+
+
+@pytest.mark.spec("volume:down:sweep-asks")
+@pytest.mark.parametrize(
+    ("answer", "deleted", "exit_code"),
+    [("y\n", True, 0), ("n\n", False, 0), ("", False, 1)],
+    ids=["yes", "no", "no-answer"],
+)
+def test_the_sweep_asks_before_each_delete(
+    answer: str,
+    deleted: bool,
+    exit_code: int,
+    cwd: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    state = State(cwd)
+    state.mark_volume_pending()
+    monkeypatch.setattr("sys.stdin", io.StringIO(answer))
+    provider = FakeProvider(volume_listings=[["v9"]])
+
+    assert gpunit(["volume", "down"], provider=provider) == exit_code
+    assert bool(provider.named("delete_volume")) is deleted
+    # An answer, yes or no, settles the mark; no answer keeps it for a later run.
+    assert state.volume_pending.exists() is (answer == "")
+    captured = capsys.readouterr()
+    assert "delete volume v9" in captured.out
+    assert "[y/N]" in captured.out
+    if answer == "":
+        assert "volume v9 kept" in captured.err
+        assert "gpunit volume down" in captured.err

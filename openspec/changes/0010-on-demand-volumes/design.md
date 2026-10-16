@@ -49,7 +49,7 @@ being deleted; `status --json` naming the volume.
 | [D2](#d2) | `volume_gb`, `volume_ceiling`, `volume_datacenter` in the spec, refused as spec faults | *infra as config*; every spec fault is exit `1` | CLI flags |
 | [D3](#d3) | the data centre: the first placeable card's highest stock among standard-volume data centres | every pod of the window goes there | the cheapest data centre |
 | [D4](#d4) | `.gpunit/volume` and `.gpunit/volume.pending`, beside the pod's | one record per project, as the pod | a record in the ledger alone |
-| [D5](#d5) | `gpunit/volume.py`: `up` (create or extend, after the price) and `down` (delete, sweep by name after a lost create) | the pod's lifecycle, for a volume | folding it into `lifecycle.py` |
+| [D5](#d5) | `gpunit/volume.py`: `up` (create or extend, after the price) and `down` (delete, sweep by name after a lost create, on a `y` per volume) | the pod's lifecycle, for a volume | folding it into `lifecycle.py` |
 | [D6](#d6) | `up` mounts the window volume by setting `spec.volume`; refuses no record, or a session that outlives it | the mount path exists | a second mount path |
 | [D7](#d7) | `lifecycle.sweep_window` deletes an overdue volume first, in `up`, `status`, `volume up` and `volume down`; `down` after its pods | no chore to remember | a watcher pod |
 | [D8](#d8) | `volume up --serve <row> --ceiling D`; `serve` mounts a recorded window volume | `serve` has no config file; no side effects | `serve` creating one |
@@ -117,6 +117,25 @@ case where a volume of this checkout can go unrecorded; without the mark, any ot
 another checkout's, a teammate's on the same account, or one made by hand, and a network volume's delete cannot be
 undone. The record is cleared on its own `204`, before the sweep, so a sweep that fails after it leaves no record of
 a deleted volume for every later `volume down` to 404 on; only the pending mark waits for the sweep.
+
+**Amended in converge (`0010·S2`):** the mark alone does not prove a listed volume is this checkout's: a teammate's on
+the same account, or another clone's, carries the same name. So the sweep narrows three ways:
+
+```
+down:  … → pending and a record: the create came back; clear the mark, no listing
+       → pending, no record: volumes(gpunit-<project>) → skip each id ledger.volumes() records
+       → each other: ask "delete volume <id>, named gpunit-<project> but in no record? [y/N]"
+                ├─ y: delete; 204 says "swept volume <id>", else the answer, and the mark stays
+                ├─ any other answer: keep it, "volume <id> kept"
+                └─ no answer (EOF, Ctrl-C): keep it and the mark, name `gpunit volume down`, exit 1
+       → no delete failed and every one answered: clear the mark, exit 0
+```
+
+`volume down` gets no `--yes`: `volume up`'s `--yes` agrees to a price, and nothing on the command line can vouch that
+a volume of the name is this checkout's. The question is `volume up`'s `[y/N]`, no by default; a run with no terminal
+deletes nothing and keeps the mark, so `volume up` keeps refusing until a person answers. A `n` settles the mark: the
+person judged that volume another's. The ledger skip needs no question because a ledger line is written only after a
+create's answer arrived, and a lost create, the one volume the sweep is for, therefore has none.
 
 **The price:** `VOLUME_GB_MONTH = Decimal("0.07")`, `HOURS_A_MONTH = 730`; at most
 `size_gb × 0.07 × ceil(volume_ceiling_s / 3600) / 730`, up to the cent. It prints `price: $0.07/GB a month` and

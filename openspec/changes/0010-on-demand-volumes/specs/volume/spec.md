@@ -63,11 +63,14 @@ window, and on `y` SHALL move the volume's end to now plus `volume_ceiling` in `
 
 ### Requirement: The window volume is deleted by its verb
 
-`gpunit volume down` SHALL delete the recorded volume and remove `.gpunit/volume` once that delete answers `204`; SHALL,
-only while `.gpunit/volume.pending` exists, list the volumes named `gpunit-<project>` and delete each the record does not
-name, a lost create being the one way a volume of this checkout goes unrecorded; and SHALL remove
-`.gpunit/volume.pending` only when every delete answered `204`. Any other answer, a `404` among them, SHALL keep the
-record or the mark it concerns, say so, and exit `1`.
+`gpunit volume down` SHALL delete the recorded volume and remove `.gpunit/volume` once that delete answers `204`. With
+a volume recorded beside `.gpunit/volume.pending`, the create came back: it SHALL remove the mark and list nothing.
+Only while the mark exists and no volume is recorded, a lost create being the one way a volume of this checkout goes
+unrecorded, SHALL it list the volumes named `gpunit-<project>`, skip each the home directory's ledger records, and
+name each other one and ask `delete volume <id>, named gpunit-<project> but in no record? [y/N]`, deleting it on `y`
+alone; it SHALL remove `.gpunit/volume.pending` only when every such volume was answered and every delete answered
+`204`. No answer SHALL keep the volume and the mark, name `gpunit volume down`, and exit `1`. Any other delete answer,
+a `404` among them, SHALL keep the record or the mark it concerns, say so, and exit `1`.
 
 #### Scenario: down deletes the volume
 - **Key:** `volume:down:deletes`
@@ -76,7 +79,7 @@ record or the mark it concerns, say so, and exit `1`.
 
 #### Scenario: a lost create is swept
 - **Key:** `volume:down:sweeps-by-name`
-- **WHEN** `.gpunit/volume.pending` exists, no volume is recorded, and the provider lists one named `gpunit-<project>`
+- **WHEN** `.gpunit/volume.pending` exists, no volume is recorded, the provider lists one named `gpunit-<project>`, and the answer is `y`
 - **THEN** that volume is deleted, the pending mark is removed, and the command exits `0`
 
 #### Scenario: a refused delete keeps the record
@@ -89,10 +92,22 @@ record or the mark it concerns, say so, and exit `1`.
 - **WHEN** a volume `v1` is recorded, no `.gpunit/volume.pending` exists, and the provider lists `v1` and `v8` named `gpunit-<project>`
 - **THEN** `v1` alone is deleted, no volume is listed, and the command exits `0`
 
-#### Scenario: the record goes with its own delete
-- **Key:** `volume:down:record-cleared-on-its-delete`
-- **WHEN** a volume is recorded beside a pending mark, its delete answers `204`, and the listing's answer is lost
-- **THEN** `.gpunit/volume` is gone, `.gpunit/volume.pending` remains, and the command exits `1`
+#### Scenario: a record beside the mark clears it unswept
+- **Key:** `volume:down:recorded-window-clears-the-mark`
+- **WHEN** a volume `v1` is recorded beside `.gpunit/volume.pending`, and the provider lists `v1` and `v8` named `gpunit-<project>`
+- **THEN** `v1` alone is deleted, no volume is listed, the pending mark is removed, and the command exits `0`, or `1`
+  when `v1`'s delete answers other than `204`, the record then kept
+
+#### Scenario: a volume the ledger records is not swept
+- **Key:** `volume:down:ledger-volume-kept`
+- **WHEN** `.gpunit/volume.pending` exists, no volume is recorded, the provider lists `v5` and `v9`, and the ledger records `v5`
+- **THEN** only `v9` is asked about and deleted, and `v5` is neither named nor deleted
+
+#### Scenario: the sweep asks before each delete
+- **Key:** `volume:down:sweep-asks`
+- **WHEN** `.gpunit/volume.pending` exists, no volume is recorded, and the provider lists `v9`
+- **THEN** `volume down` asks `delete volume v9, … [y/N]`; `y` deletes it, any other answer keeps it, and either removes
+  the mark and exits `0`; no answer keeps `v9` and the mark, names `gpunit volume down`, and exits `1`
 
 ### Requirement: A window volume past its ceiling is deleted by the next command
 
