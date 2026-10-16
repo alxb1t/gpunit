@@ -17,7 +17,7 @@ names.
 - [x] 9 — The serve image's volume
 - [x] 10 — ⚠️ **HUMAN** — the serve image, again
 - [x] 11 — The log since the create
-- [ ] 12 — ⚠️ **HUMAN · METERED** — make live-volume, make live-serve, make live-serve-dead, make live-dead
+- [x] 12 — ⚠️ **HUMAN · METERED** — make live-volume, make live-serve, make live-serve-dead, make live-dead
 
 ## 1 — The seam
 
@@ -90,5 +90,5 @@ names.
 
 ## 12 — ⚠️ **HUMAN · METERED** — make live-volume, make live-serve, make live-serve-dead, make live-dead
 
-- [ ] 12.1 **HUMAN · METERED** — with `RUNPOD_API_KEY` set, run `make live-volume`, `make live-serve`, `make live-serve-dead` and `make live-dead`; confirm through the RunPod console that no pod and no `gpunit-` volume is left; append the tails of `make live-volume` and `make live-dead` to `live/last_run.txt`, and those of `make live-serve` and `make live-serve-dead` to `live/serve_last_run.txt`, each under a header `<date> — make <target>, 0010-on-demand-volumes`, per [D10](design.md#d10). A failed target is a halt: say so and keep its lines.
+- [x] 12.1 **HUMAN · METERED** — with `RUNPOD_API_KEY` set, run `make live-volume`, `make live-serve`, `make live-serve-dead` and `make live-dead`; confirm through the RunPod console that no pod and no `gpunit-` volume is left; append the tails of `make live-volume` and `make live-dead` to `live/last_run.txt`, and those of `make live-serve` and `make live-serve-dead` to `live/serve_last_run.txt`, each under a header `<date> — make <target>, 0010-on-demand-volumes`, per [D10](design.md#d10). A failed target is a halt: say so and keep its lines.
   Verify: `grep -c '^2026-.*0010-on-demand-volumes' live/last_run.txt` prints `2`, `grep -c '^2026-.*0010-on-demand-volumes' live/serve_last_run.txt` prints `2`, and `grep -c 'refused: the pod stopped while the model loaded' live/serve_last_run.txt` prints a number of at least `1`.

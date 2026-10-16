@@ -119,3 +119,92 @@ echo 'What is 2 + 2? Answer with the number.' | uv run gpunit serve qwen3.8-27b 
 > 4
 > 
 2026-10-13T11:46:48Z pod 7wy3rh59csnvy5 deleted
+
+2026-10-16 — make live-serve, 0010-on-demand-volumes
+
+Inside the row's window volume, on `gpunit-vllm:v0.7-rc2`. Earlier runs on `v0.7-rc1` failed: its `CMD` exited 2 with
+a volume mounted (design D13). This run is at `420e463`, before the log-read fix of design D14. The tunnel's
+`channel 2: open failed` lines, printed while vLLM loads, are left out.
+
+2026-10-16T11:37:31Z data centre: EU-CZ-1
+2026-10-16T11:37:31Z price: $0.07/GB a month
+2026-10-16T11:37:31Z at most $0.01 for 40 GB over 1h
+2026-10-16T11:37:33Z volume oztua1ktwp up in EU-CZ-1, 40 GB, until 2026-10-16T12:37:33Z
+2026-10-16T11:37:33Z price: NVIDIA RTX A5000 $0.27/h
+2026-10-16T11:37:34Z price: NVIDIA GeForce RTX 4090 $0.89/h
+2026-10-16T11:37:34Z price: NVIDIA L4 $0.59/h
+2026-10-16T11:37:34Z at most $0.75 for 1800s and a 1200s wait for SSH
+2026-10-16T11:37:37Z creating on NVIDIA RTX A5000
+2026-10-16T11:37:37Z create on 'NVIDIA RTX A5000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-16T11:37:37Z creating on NVIDIA GeForce RTX 4090
+2026-10-16T11:37:39Z pod bjt41qm5sxpkow created; waiting for SSH
+2026-10-16T11:44:58Z host key verified: SHA256:Cb/FY1OkFKGlXoxVcljay7faifbno3PC1vQcx1Lakjo
+2026-10-16T11:44:58Z session up: pod bjt41qm5sxpkow, root@213.192.2.126 -p 40106
+2026-10-16T11:46:59Z qwen3-4b answers on http://127.0.0.1:52248/v1
+2026-10-16T11:46:59Z serving until interrupted or the ceiling; Ctrl-C ends the session
+{"id":"chatcmpl-86e8105e2cd49746","object":"chat.completion","created":1792151220,"model":"qwen3-4b","choices":[{"index":0,"message":{"role":"assistant","content":"Hello!","refusal":null,"annotations":null,"audio":null,"function_call":null,"reasoning":null},"logprobs":null,"finish_reason":"stop","stop_reason":null,"token_ids":null,"routed_experts":null}],"service_tier":null,"system_fingerprint":"vllm-0.31.0-8f880aa1","usage":{"prompt_tokens":18,"total_tokens":21,"completion_tokens":3,"prompt_tokens_details":null,"completion_tokens_details":{"reasoning_tokens":0}},"prompt_logprobs":null,"prompt_token_ids":null,"prompt_text":null,"kv_transfer_params":null,"ec_transfer_params":null,"metrics":null}
+tool call: get_weather {"city": "Paris"}
+2026-10-16T11:47:01Z pod bjt41qm5sxpkow deleted
+2026-10-16T11:47:02Z price: $0.07/GB a month
+2026-10-16T11:47:02Z at most $0.01 for 40 GB over 1h
+2026-10-16T11:47:02Z volume oztua1ktwp extended until 2026-10-16T12:47:02Z
+2026-10-16T11:47:03Z price: NVIDIA RTX A5000 $0.27/h
+2026-10-16T11:47:03Z price: NVIDIA GeForce RTX 4090 $0.89/h
+2026-10-16T11:47:03Z price: NVIDIA L4 $0.59/h
+2026-10-16T11:47:03Z at most $0.75 for 1800s and a 1200s wait for SSH
+2026-10-16T11:47:06Z creating on NVIDIA RTX A5000
+2026-10-16T11:47:07Z create on 'NVIDIA RTX A5000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-16T11:47:07Z creating on NVIDIA GeForce RTX 4090
+2026-10-16T11:47:08Z pod t70nhuezetpn9q created; waiting for SSH
+2026-10-16T11:47:53Z host key verified: SHA256:8wMks225XbszRAdvKJZ5YVWSuNOyNm7lE/Qr3aD5aHk
+2026-10-16T11:47:53Z session up: pod t70nhuezetpn9q, root@213.192.2.126 -p 40051
+2026-10-16T11:49:05Z loading: (EngineCore pid=1028) INFO 10-16 11:49:02 [monitor.py:81] Initial profiling/warmup run took 0.17 s
+2026-10-16T11:49:28Z qwen3-4b answers on http://127.0.0.1:53325/v1
+> 4
+> 
+2026-10-16T11:49:30Z pod t70nhuezetpn9q deleted
+2026-10-16T11:49:31Z volume oztua1ktwp deleted
+
+2026-10-16 — make live-serve-dead, 0010-on-demand-volumes
+
+Inside qwen3-4b's window volume, at `cd30190`. An earlier run kept no `pod:` line: RunPod's `since` log read sends
+no past line (design D14). The tunnel's `channel 2: open failed` lines are left out.
+
+2026-10-16T12:10:55Z data centre: EU-RO-1
+2026-10-16T12:10:55Z price: $0.07/GB a month
+2026-10-16T12:10:55Z at most $0.01 for 40 GB over 1h
+2026-10-16T12:10:56Z volume 7jdg95brhb up in EU-RO-1, 40 GB, until 2026-10-16T13:10:56Z
+2026-10-16T12:10:56Z price: NVIDIA RTX A5000 $0.27/h
+2026-10-16T12:10:57Z price: NVIDIA GeForce RTX 4090 $0.89/h
+2026-10-16T12:10:57Z price: NVIDIA L4 $0.59/h
+2026-10-16T12:10:57Z at most $0.45 for 600s and a 1200s wait for SSH
+2026-10-16T12:11:00Z creating on NVIDIA RTX A5000
+2026-10-16T12:11:00Z create on 'NVIDIA RTX A5000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-16T12:11:00Z creating on NVIDIA GeForce RTX 4090
+2026-10-16T12:11:02Z pod 5k87rljyfb9bse created; waiting for SSH
+2026-10-16T12:15:55Z host key verified: SHA256:SsBeDLzZvEveKYkFOr4GLkaatJVCQ3lKo4RPhcAlCsU
+2026-10-16T12:15:55Z session up: pod 5k87rljyfb9bse, root@213.173.108.167 -p 15603
+2026-10-16T12:16:34Z loading: 2026-10-16T12:15:50Z the command exited 2
+Connection to 213.173.108.167 closed by remote host.
+2026-10-16T12:16:52Z the tunnel exited (255); reopening it in 1s
+kex_exchange_identification: read: Connection reset by peer
+Connection reset by 213.173.108.167 port 15603
+2026-10-16T12:16:54Z the tunnel exited (255); reopening it in 2s
+kex_exchange_identification: read: Connection reset by peer
+Connection reset by 213.173.108.167 port 15603
+2026-10-16T12:16:57Z the tunnel exited (255); reopening it in 4s
+2026-10-16T12:16:58Z pod: 2026-10-16T12:15:35Z step: the ceiling, 600s
+2026-10-16T12:16:58Z pod: 2026-10-16T12:15:35Z step: sshd
+2026-10-16T12:16:58Z pod: gpunit host key 6233f0c26f4eb0f5c2da4a995a338706: SHA256:SsBeDLzZvEveKYkFOr4GLkaatJVCQ3lKo4RPhcAlCsU
+2026-10-16T12:16:58Z pod: 2026-10-16T12:15:35Z step: the command
+2026-10-16T12:16:58Z pod: usage: vllm [-h] [-v]
+2026-10-16T12:16:58Z pod:             {chat,complete,serve,launch,bench,collect-env,preload,run-batch,snapshot}
+2026-10-16T12:16:58Z pod:             ...
+2026-10-16T12:16:58Z pod: vllm: error: unrecognized arguments: --no-such-flag
+2026-10-16T12:16:58Z pod: 2026-10-16T12:15:50Z the command exited 2
+2026-10-16T12:16:58Z the pod's log is kept at ~/.local/state/gpunit/serve/qwen3-4b/pod.log
+2026-10-16T12:16:58Z refused: the pod stopped while the model loaded
+2026-10-16T12:16:59Z pod 5k87rljyfb9bse deleted
+check passed: the dead pod ended the wait and was deleted
+2026-10-16T12:17:00Z volume 7jdg95brhb deleted
+The account's pod and network-volume listings (RunPod's REST v2, read after the runs) were empty.

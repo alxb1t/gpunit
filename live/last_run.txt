@@ -243,3 +243,76 @@ at most $0.07 for 300s and a 120s wait for SSH
 up exited 1 after 128s
 no session is recorded
 The account's pod listing (RunPod's REST v2, read after the runs) was empty: no pod is left.
+
+2026-10-16 — make live-volume, 0010-on-demand-volumes
+
+A first run, with the four cards of `live/gpunit.toml`, made its volume in EU-RO-1 and then found no card there; the
+trap deleted the volume, and no pod was made. The cards then gained the RTX PRO 4500 Blackwell and the RTX 4090
+(`max_hourly = 0.90`), and this run passed: one pod wrote the UTC time to the volume, a new pod read the same line.
+
+NVIDIA RTX A4500: $0.25/h
+NVIDIA RTX A5000: $0.27/h
+NVIDIA A40: $0.59/h
+NVIDIA RTX A6000: $0.59/h
+NVIDIA RTX PRO 4500 Blackwell: $0.72/h
+NVIDIA GeForce RTX 4090: $0.89/h
+at most $0.26 for 600s and a 420s wait for SSH
+2026-10-16T11:00:10Z data centre: EU-RO-1
+2026-10-16T11:00:10Z price: $0.07/GB a month
+2026-10-16T11:00:10Z at most $0.01 for 10 GB over 1h
+2026-10-16T11:00:11Z volume 6u0jujzebp up in EU-RO-1, 10 GB, until 2026-10-16T11:30:11Z
+2026-10-16T11:00:15Z creating on NVIDIA RTX A4500
+2026-10-16T11:00:16Z create on 'NVIDIA RTX A4500' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-16T11:00:16Z creating on NVIDIA RTX A5000
+2026-10-16T11:00:16Z create on 'NVIDIA RTX A5000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-16T11:00:16Z creating on NVIDIA A40
+2026-10-16T11:00:17Z create on 'NVIDIA A40' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-16T11:00:17Z creating on NVIDIA RTX A6000
+2026-10-16T11:00:17Z create on 'NVIDIA RTX A6000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-16T11:00:17Z creating on NVIDIA RTX PRO 4500 Blackwell
+2026-10-16T11:00:19Z pod sa1br2ctw1f5la created; waiting for SSH
+2026-10-16T11:00:54Z host key verified: SHA256:WohS4SNZ/+8Yj0IWq6h66oqUdqXQnqPPdyHLKRf4y60
+2026-10-16T11:00:54Z session up: pod sa1br2ctw1f5la, root@213.173.107.24 -p 16390
+2026-10-16T11:00:56Z pod sa1br2ctw1f5la deleted
+2026-10-16T11:01:00Z creating on NVIDIA RTX A4500
+2026-10-16T11:01:01Z create on 'NVIDIA RTX A4500' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-16T11:01:01Z creating on NVIDIA RTX A5000
+2026-10-16T11:01:01Z create on 'NVIDIA RTX A5000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-16T11:01:01Z creating on NVIDIA A40
+2026-10-16T11:01:02Z create on 'NVIDIA A40' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-16T11:01:02Z creating on NVIDIA RTX A6000
+2026-10-16T11:01:02Z create on 'NVIDIA RTX A6000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-16T11:01:02Z creating on NVIDIA RTX PRO 4500 Blackwell
+2026-10-16T11:01:04Z pod 6x2e3117zuhtwd created; waiting for SSH
+2026-10-16T11:01:49Z host key verified: SHA256:UObeiFtGWHpy3aJqfk6+IrCB0W2P9Xywl9urChysTps
+2026-10-16T11:01:49Z session up: pod 6x2e3117zuhtwd, root@213.173.107.24 -p 49436
+2026-10-16T11:01:51Z pod 6x2e3117zuhtwd deleted
+wrote: 2026-10-16T11:00:55Z
+read: 2026-10-16T11:00:55Z
+2026-10-16T11:01:52Z volume 6u0jujzebp deleted
+uv run gpunit status --spec live/gpunit.volume.toml
+no session is recorded
+
+2026-10-16 — make live-dead, 0010-on-demand-volumes
+
+`up` exited 1 and printed its reason. RunPod restarts the container, so the reason is the 120s deadline, not the
+dead-pod rule; the dead-pod rule's live proof is `make live-serve-dead` (live/serve_last_run.txt).
+
+NVIDIA RTX A4500: $0.25/h
+NVIDIA RTX A5000: $0.27/h
+NVIDIA A40: $0.59/h
+NVIDIA RTX A6000: $0.59/h
+at most $0.07 for 300s and a 120s wait for SSH
+2026-10-16T11:08:52Z creating on NVIDIA RTX A4500
+2026-10-16T11:08:53Z create on 'NVIDIA RTX A4500' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-16T11:08:53Z creating on NVIDIA RTX A5000
+2026-10-16T11:08:53Z create on 'NVIDIA RTX A5000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-16T11:08:53Z creating on NVIDIA A40
+2026-10-16T11:08:54Z pod p7ax26qjcoqlg7 created; waiting for SSH
+2026-10-16T11:10:56Z pod p7ax26qjcoqlg7 got no host and port 22 within 120s; tearing the pod down
+2026-10-16T11:10:57Z pod p7ax26qjcoqlg7 deleted
+2026-10-16T11:10:58Z refused: pod p7ax26qjcoqlg7 got no host and port 22 within 120s
+up exited 1 after 129s
+reason: pod p7ax26qjcoqlg7 got no host and port 22 within 120s
+no session is recorded
+The account's pod and network-volume listings (RunPod's REST v2, read after the runs) were empty.

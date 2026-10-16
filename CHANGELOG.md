@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `make live-volume` proves a window: one pod writes the volume, a new pod reads it back. `make live-serve` and
   `make live-serve-dead` run inside the row's window; `make live-dead` passes on `up`'s exit `1` and prints `reason:`.
   README's *Working window* and `CLAUDE.md` name the volume verbs and `make live-volume`.
+- `live/last_run.txt` and `live/serve_last_run.txt` record `v0.6`'s acceptance, run inside working windows:
+  `make live-volume`, `make live-serve` and `make live-serve-dead` pass, and `make live-dead` passes on its deadline's
+  reason, the dead-pod rule's live proof being `make live-serve-dead` (`0009·L1`).
 
 ### Fixed
 
