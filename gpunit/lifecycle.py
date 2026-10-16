@@ -77,6 +77,7 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
 
     Refuse when it cannot; raise `Lost` when a create's answer did not arrive.
     """
+    sweep_window(state, lambda: provider)
     missing = [tool for tool in SSH_TOOLS if shutil.which(tool) is None]
     if missing:
         log.refuse(f"not on PATH: {', '.join(missing)}; install OpenSSH")
@@ -85,17 +86,20 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
         log.refuse(f"a pod is already recorded in {state.pod}; run gpunit down")
     if state.pending.exists():
         log.refuse(f"a create may have left a pod ({state.pending}); run gpunit down")
+    if spec.volume_gb is not None:
+        spec = _in_window(spec, state)
     _refuse_listed(spec, provider)
     if spec.volume is not None:
         try:
             provider.volume(spec.volume)
         except (Unknown, Lost) as fault:
             log.refuse(f"volume {spec.volume} could not be read: {fault}")
-    cards = _placeable(spec, provider)
+    cards = placeable(spec, provider)
 
     pubkey = state.keygen(pod_name(spec.project))
     nonce = NONCE()
-    # Before the create, so a log read `since` it holds the whole boot (0003 design D2).
+    # Before the create, so a log read `since` it misses none of the pod's lines
+    # within the provider's tail (0003 design D2, 0010 design D14).
     created = log.utc()
     state.mark_pending()
     pod_id = _create(spec, provider, cards, pubkey, nonce)
@@ -150,29 +154,34 @@ def ssh(
 def status(provider: Callable[[], Provider], state: State, *, as_json: bool) -> int:
     """Print the recorded session to stdout, in words or as one JSON object.
 
-    `provider` is built only when a record exists: no record needs no key.
+    `provider` is built only when a record exists, or a window volume is overdue: no
+    record needs no key.
     """
+    built = functools.cache(provider)
+    sweep_window(state, built)
+    window = state.window()
     record = state.read()
     if record is None:
         print("null" if as_json else "no session is recorded")
-        return 0
-    info = provider().get(record.id)
-    report = {
-        "id": record.id,
-        "image": record.image,
-        "host": record.host,
-        "port": record.port,
-        "status": info.status if info else "UNKNOWN",
-    }
-    if as_json:
-        print(json.dumps(report))
     else:
-        print(" ".join(f"{key}={value}" for key, value in report.items()))
+        _report(built().get(record.id), record, as_json)
+    if window is not None and not as_json:
+        ends = "overdue" if window.ends_within(0) else window.ends
+        print(f"volume={window.id} datacenter={window.datacenter} ends={ends}")
     return 0
 
 
 def down(spec: Spec, provider: Provider, state: State) -> int:
-    """Delete the recorded pod, sweep every listed one; return 0, or 1 on a fault."""
+    """Delete the recorded pod, sweep every listed one; return 0, or 1 on a fault.
+
+    An overdue window volume is swept after the pods, which may hold it.
+    """
+    code = _delete_pods(spec, provider, state)
+    sweep_window(state, lambda: provider)
+    return code
+
+
+def _delete_pods(spec: Spec, provider: Provider, state: State) -> int:
     failed = False
     record = state.read()
     if record is not None:
@@ -216,6 +225,53 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
     return 0
 
 
+def sweep_window(state: State, provider: Callable[[], Provider]) -> None:
+    """Delete the window volume once its end has passed; build `provider` only then.
+
+    A delete that fails keeps the record, and warns.
+    """
+    window = state.window()
+    if window is None or not window.ends_within(0):
+        return
+    code = provider().delete_volume(window.id)
+    if code == 204:
+        state.clear_window()
+        log.say(f"volume {window.id} passed its ceiling at {window.ends}; deleted")
+    else:
+        log.say(
+            f"warning: volume {window.id} passed its ceiling at {window.ends}; its "
+            f"delete answered HTTP {code}, so the record is kept"
+        )
+
+
+def _report(info: PodInfo | None, record: Record, as_json: bool) -> None:
+    report = {
+        "id": record.id,
+        "image": record.image,
+        "host": record.host,
+        "port": record.port,
+        "status": info.status if info else "UNKNOWN",
+    }
+    if as_json:
+        print(json.dumps(report))
+    else:
+        print(" ".join(f"{key}={value}" for key, value in report.items()))
+
+
+def _in_window(spec: Spec, state: State) -> Spec:
+    """Return `spec` mounting the window volume; refuse a session that outlives it."""
+    window = state.window()
+    # A volume still recorded after the sweep is one whose delete failed.
+    if window is None or window.ends_within(0):
+        log.refuse("no window volume is up; run gpunit volume up")
+    if window.ends_within(spec.ceiling_s + spec.timeout_s):
+        log.refuse(
+            f"the volume ends at {window.ends}; shorten the ceiling or run gpunit "
+            "volume up"
+        )
+    return replace(spec, volume=window.id)
+
+
 def _warn_unignored(state: State) -> None:
     if shutil.which("git") is None:
         return
@@ -245,7 +301,8 @@ def _refuse_listed(spec: Spec, provider: Provider) -> None:
         )
 
 
-def _placeable(spec: Spec, provider: Provider) -> list[str]:
+def placeable(spec: Spec, provider: Provider) -> list[str]:
+    """Return the cards of `gpus` that meet `vram_gb` and `max_hourly`, in order."""
     cards = []
     for card in spec.gpus:
         try:
@@ -321,14 +378,14 @@ def _verify_host_key(
     # The fingerprint comes over the authenticated API, never over the connection
     # it vouches for; nothing connects until the two agree.
     def read() -> str | None:
-        # A boot that logs heavily pushes the key line out of the tail.
-        for since in (None, record.created):
-            lines = provider.log(record.id, tail=LOG_TAIL, since=since)
-            if printed := fingerprint(lines, nonce):
-                return printed
-        # Judged on the log since the create alone, whose key line is boot's own: the
-        # tail can hold only a command's echo of an older one.
-        if old_boot(lines):
+        # The last LOG_TAIL lines alone: RunPod's `since` reads the same tail (0010
+        # design D14), so a key line a heavy boot pushes out of it is not read.
+        lines = provider.log(record.id, tail=LOG_TAIL)
+        if printed := fingerprint(lines, nonce):
+            return printed
+        # Judged on a read that holds the whole log, whose key line is boot's own: a
+        # full tail can hold only a command's echo of an older one.
+        if len(lines) < LOG_TAIL and old_boot(lines):
             _tear_down(
                 spec,
                 provider,

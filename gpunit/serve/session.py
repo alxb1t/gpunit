@@ -7,11 +7,12 @@ import socket
 import sys
 import urllib.request
 from collections.abc import Callable
+from dataclasses import replace
 from decimal import ROUND_UP, Decimal
 from pathlib import Path
 from typing import NoReturn
 
-from gpunit import library, lifecycle, log
+from gpunit import library, lifecycle, log, volume
 from gpunit.provider import Lost, Provider, Unknown
 from gpunit.run import outcome
 from gpunit.serve import chat, table
@@ -55,6 +56,9 @@ def serve(
     row = table.load().models[name]
     key = secrets.token_urlsafe(32)
     spec = row.spec(ceiling_s, volume, max_hourly, key, _free_port())
+    if volume is None and State(home(name)).window() is not None:
+        # `up` mounts the recorded window volume: 0010 design D6, D8.
+        spec = replace(spec, volume_gb=row.disk_gb)
     # No proxy: the endpoint is the tunnel's loopback side.
     opener = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
@@ -92,6 +96,24 @@ def down(name: str, provider: Provider) -> int:
     """Tear down the session `serve` left for `name`; return 0, or 1 on a fault."""
     spec = table.load().models[name].spec(0, None, None, "", table.PORT)
     return lifecycle.down(spec, provider, State(home(name)))
+
+
+def volume_up(name: str, ceiling_s: int, *, yes: bool, provider: Provider) -> int:
+    """Make or extend the window volume `serve` mounts for `name`, of its row's disk."""
+    place = home(name)
+    place.mkdir(mode=0o700, parents=True, exist_ok=True)
+    return volume.up(_window_spec(name, ceiling_s), provider, State(place), yes=yes)
+
+
+def volume_down(name: str, provider: Provider) -> int:
+    """Delete the window volume `volume_up` made for `name`; return 0, or 1."""
+    return volume.down(_window_spec(name, 0), provider, State(home(name)))
+
+
+def _window_spec(name: str, ceiling_s: int) -> Spec:
+    row = table.load().models[name]
+    spec = row.spec(0, None, None, "", table.PORT)
+    return replace(spec, volume_gb=row.disk_gb, volume_ceiling_s=ceiling_s)
 
 
 def most_cost(hourly: Decimal, spec: Spec) -> Decimal:

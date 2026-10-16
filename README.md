@@ -26,7 +26,11 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    ceiling = "45m"                             # required: the pod stops itself after this
    disk_gb = 50
    # optional
-   volume = "<network volume id>"              # pins the data centre; the pod sees GPUNIT_VOLUME_PATH
+   volume_gb = 60                              # a window volume, made by gpunit volume up
+   volume_ceiling = "4h"                       # required with volume_gb: the volume is deleted after it
+   volume_datacenter = "EU-RO-1"               # else where the first card of gpus is in stock
+   # volume = "<network volume id>"            # or a kept volume, never with volume_gb
+   # either pins the data centre; the pod sees GPUNIT_VOLUME_PATH
    ports = [8188, { remote = 8080, local = 18080 }]
    ram_gb = 32
    cuda = "12.8"
@@ -40,7 +44,7 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    image, and BuildKit for the checksum; on an older Docker, copy the file in.
 
    ```dockerfile
-   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.6.0/boot/boot.sh /opt/gpunit/boot.sh
+   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.7.0/boot/boot.sh /opt/gpunit/boot.sh
    RUN chmod +x /opt/gpunit/boot.sh
    ENTRYPOINT ["/opt/gpunit/boot.sh", "--"]
    CMD ["python3", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
@@ -55,7 +59,7 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    on the pod you would not trust with the key.
 
    ```sh
-   uv add --dev git+https://github.com/alxb1t/gpunit@v0.6.0
+   uv add --dev git+https://github.com/alxb1t/gpunit@v0.7.0
    echo .gpunit/ >> .gitignore
    export RUNPOD_API_KEY=...
    uv run gpunit run -- python3 render.py
@@ -141,7 +145,8 @@ A warp is ...
   printed, and nothing is rented without `y`. `--yes` skips the question; `--max-hourly` drops the dearer cards.
 - **The wait is minutes.** The first boot pulls vLLM's image and downloads the weights; the pull and the load each
   have 1200s, a `loading:` line from the pod's log comes every 30s, and past 1200s the session is torn down.
-  `--volume <id>` keeps the weights on a network volume across sessions.
+  `--volume <id>` keeps the weights on a network volume across sessions; a [working window](#working-window)
+  keeps them for the window alone.
 - **A pod that stops ends the session.** Two status reads in a row of a stopped pod, in the wait or the `--api`
   hold, refuse with `the pod stopped while the model loaded` or `… while serving`, and tear it down. The pod's log
   is kept every 30s at `~/.local/state/gpunit/serve/<model>/pod.log`; the refusal prints its last 30 lines.
@@ -177,10 +182,56 @@ A client in a container, such as an agent's box, needs two checks before it can 
    `127.0.0.1` is the container itself.
 2. **Its SSRF block.** A client that refuses loopback and private addresses refuses `OPENAI_BASE_URL` too.
 
+## Working window
+
+**A network volume that lives for a working window.** `gpunit volume up` creates it from `gpunit.toml`, every
+session in the window mounts it, and `gpunit volume down`, or the volume's own ceiling, deletes it. The weights
+download once a window, and no storage bills between windows.
+
+```
+gpunit volume up ──▶ run · up · serve, each pod mounts it ──▶ gpunit volume down
+ data centre · price · [y/N]    GPUNIT_VOLUME_PATH              or the next command past its ceiling
+```
+
+From a project whose `gpunit.toml` sets `volume_gb` and `volume_ceiling`:
+
+```sh
+uv run gpunit volume up                    # .gpunit/volume records it
+uv run gpunit run -- python3 render.py     # downloads the weights into $GPUNIT_VOLUME_PATH
+uv run gpunit run -- python3 render.py     # a new pod reads them
+uv run gpunit volume down
+```
+
+For `serve`, the volume is the row's `disk_gb`, and `serve` mounts it:
+
+```sh
+uv run gpunit volume up --serve qwen3-4b --ceiling 4h
+uv run gpunit serve qwen3-4b --ceiling 1h
+uv run gpunit volume down --serve qwen3-4b
+```
+
+- **The data centre comes from stock:** `volume_datacenter`, else the first card of `gpus` in stock in a data centre
+  offering standard volumes, the highest stock winning. Every pod of the window goes there; when stock moves, run
+  `volume down` and `volume up` to choose afresh.
+- **The price comes first:** $0.07 per GB a month, over the whole hours of `volume_ceiling`, and nothing is created
+  without `y`. `--yes` skips the question.
+- **No session outlives its volume.** `up`, `run` and `serve` refuse when no volume is recorded, or when the session's
+  ceiling plus its wait for SSH would end after the volume.
+- **`volume up` again extends** a live volume to now plus `volume_ceiling`, after the price.
+- **The ceiling:** `up`, `run`, `serve`, `down`, `status`, `volume up` and `volume down` each delete a volume past its
+  end before anything else, `down` after its pods, which may hold it. `status` names the volume and its end.
+- **The residual:** a volume no command reaches after its ceiling bills $0.07/GB a month until one does; `spend` names
+  it once its billing shows it.
+- **A lost create exits `3`.** `.gpunit/volume.pending` stays, and `volume down` lists the `gpunit-<project>`
+  volumes, skips any this machine's ledger records, and names each other one, deleting it only on your `y`; no answer
+  keeps it and the mark. Only that mark, with no volume recorded, sweeps by name: otherwise `volume down` deletes the
+  recorded volume alone, so another checkout's volume of the same project is never deleted unasked.
+- **`volume = "<id>"` keeps its meaning:** a volume you keep, never set with `volume_gb`.
+
 ## What it cost
 
 `gpunit spend` prints what the provider billed for pods and network volumes over the last 7 whole UTC days, each
-pod under its project.
+pod and window volume under its project.
 `--days N` picks another window, from 1 to 3660; `--json` prints one object, its amounts in whole cents.
 
 ```console
@@ -202,14 +253,16 @@ total                                  $1.79
   the image and the time; one that cannot be written warns and blocks nothing, one that cannot be read exits `1`.
 - **`unattributed`** counts the pods the ledger does not name: made before this version, on another machine, by a
   create whose answer was lost, or outside gpunit.
-- **`storage`** is one line per network volume, billed whether or not a pod runs; no project is given one.
+- **`storage`** is one line per network volume the ledger does not name, billed whether or not a pod runs.
+- **A window volume bills under its project**, in its amount; a project with a volume and no pod shows `0 pods`. One
+  whose end fell before today and still bills today is named on stderr, with `gpunit volume down`.
 - **The current UTC day is still being billed**: its figures can change, and stderr says so.
 - **An unreadable billing exits `1`**, with no table: a table of zeros would read as a free week.
 
 ## The verbs
 
-Each verb reads `gpunit.toml` from the working directory, or the file `--spec <path>` names; `serve` and
-`down --serve` read the bundled model table instead, and `spend` reads only the billing and the ledger.
+Each verb reads `gpunit.toml` from the working directory, or the file `--spec <path>` names; `serve` and each
+`--serve` read the bundled model table instead, and `spend` reads only the billing and the ledger.
 
 | verb | does |
 |---|---|
@@ -221,13 +274,17 @@ Each verb reads `gpunit.toml` from the working directory, or the file `--spec <p
 | `gpunit serve <model> --ceiling <d>` | the price and `[y/N]`, then the session around a chat; `--api` for the endpoint ([how](#serve-a-model)) |
 | `gpunit down --serve <model>` | `down` for the session `serve` left for `<model>` |
 | `gpunit spend [--days N] [--json]` | the provider's billing over the last N UTC days, by project ([how](#what-it-cost)) |
+| `gpunit volume up [--yes]` | the price and `[y/N]`, then creates the window volume, or extends a live one ([how](#working-window)) |
+| `gpunit volume down` | deletes the window volume, then, after a lost create, each other `gpunit-<project>` volume you agree to |
+| `gpunit volume up --serve <model> --ceiling <d>` | `volume up` for the row's volume, which `serve` mounts |
+| `gpunit volume down --serve <model>` | `volume down` for the row's volume |
 
 | exit | means |
 |---|---|
 | `0` | done; for `run`, the command's own code passes through |
 | `1` | refused or failed; the teardown failed |
-| `2` | usage: an unknown verb, a missing command, an unreadable spec path, `serve` without `--ceiling`, an unknown model, `spend --days` under 1 or over 3660 |
-| `3` | a create's answer was lost; a pod may exist and bill — run `gpunit down` |
+| `2` | usage: an unknown verb, a missing command, an unreadable spec path, `serve` or `volume up --serve` without `--ceiling`, an unknown model, `spend --days` under 1 or over 3660, `volume` without `up` or `down` |
+| `3` | a create's answer was lost; a pod may exist and bill — run `gpunit down`; for a volume's create, `gpunit volume down` |
 | `128+n` | signal `n` stopped `run` or `serve`, or killed `run`'s command, and the teardown succeeded; a failed teardown is still `1` |
 
 gpunit's own lines go to stderr, each opening with the UTC time; stdout belongs to the command, or to `serve`'s
@@ -251,12 +308,17 @@ chat and `--api`'s two lines, or to `spend`'s report.
 card's price and the maximum first, then runs `nvidia-smi` through `gpunit run`. The gate, `make gate`, fakes every
 provider answer.
 
+`make live-volume` opens a [working window](#working-window) of 10 GB for at most 30 minutes: one pod writes the UTC
+time to the volume, a new pod reads it back, and the target fails unless the lines are equal.
+
 `make live-serve MODEL=<row>` proves the serve image and a row on one of its cards, for at most 30 minutes plus the
-1200s wait for SSH a session: `gpunit serve <row> --api` for one `curl` and one tool call through
-[live/tool_call.py](live/tool_call.py), then a chat of one prompt. `MODEL` defaults to `qwen3-4b`.
+1200s wait for SSH a session, inside the row's working window: `gpunit serve <row> --api` downloads the weights into
+the volume for one `curl` and one tool call through [live/tool_call.py](live/tool_call.py), then a chat of one prompt
+loads them from it. `MODEL` defaults to `qwen3-4b`.
 
-`make live-dead` boots an image whose container exits at once, and shows `up` tearing it down within seconds.
+`make live-dead` boots an image whose container exits at once, and passes when `up` exits `1` and prints its refusal
+as `reason: <line>`. RunPod may restart such a container, so the reason can be the 120s wait's end.
 
-`make live-serve-dead` serves `qwen3-4b` with an argument vLLM refuses, through
+`make live-serve-dead` serves `qwen3-4b` with an argument vLLM refuses, inside its working window, through
 [live/serve_dead.py](live/serve_dead.py): it passes when the dead-pod refusal, the crash's lines from `pod.log` and
-the delete within 15s all show.
+the delete within 15s all show. It is the dead-pod rule's live proof.

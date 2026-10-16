@@ -6,6 +6,8 @@ import subprocess
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from gpunit import log
+
 DIR = ".gpunit"
 
 
@@ -28,8 +30,23 @@ class Record:
     created: str
 
 
+@dataclass(frozen=True)
+class Window:
+    """The recorded window volume; `ends` is UTC, e.g. "2026-10-15T14:30:00Z"."""
+
+    id: str
+    datacenter: str
+    size_gb: int
+    ends: str
+
+    def ends_within(self, seconds: int) -> bool:
+        """Return True when the window ends `seconds` from now or sooner."""
+        # One UTC form, Z: these times order as strings do.
+        return log.utc(seconds) >= self.ends
+
+
 class State:
-    """The `.gpunit/` files: `pod`, `pending`, `known_hosts`, `key`, `key.pub`."""
+    """The `.gpunit/` files: the pod's, the keypair's and the window volume's."""
 
     def __init__(self, cwd: Path) -> None:
         """Point at `<cwd>/.gpunit/`; nothing is created until written."""
@@ -39,6 +56,8 @@ class State:
         self.known_hosts = self.dir / "known_hosts"
         self.key = self.dir / "key"
         self.key_pub = self.dir / "key.pub"
+        self.volume = self.dir / "volume"
+        self.volume_pending = self.dir / "volume.pending"
         # Set by this process's own `mark_pending`: a create began here, whatever
         # files an earlier session left.
         self.began = False
@@ -51,10 +70,30 @@ class State:
 
     def write(self, record: Record) -> None:
         """Write the record whole, so a reader never sees half of it."""
+        self._replace(self.pod, asdict(record))
+
+    def window(self) -> Window | None:
+        """Return the recorded window volume, or None when none is recorded."""
+        if not self.volume.exists():
+            return None
+        return Window(**json.loads(self.volume.read_text(encoding="utf-8")))
+
+    def write_window(self, window: Window) -> None:
+        """Write the window whole, so a reader never sees half of it."""
+        self._replace(self.volume, asdict(window))
+
+    def clear_window(self) -> None:
+        """Remove the window's record."""
+        self.volume.unlink(missing_ok=True)
+
+    def mark_volume_pending(self) -> None:
+        """Create `volume.pending`: a create may have made a volume no record names."""
         self._mkdir()
-        partial = self.pod.with_name("pod.partial")
-        partial.write_text(json.dumps(asdict(record)) + "\n", encoding="utf-8")
-        os.replace(partial, self.pod)
+        self.volume_pending.touch()
+
+    def clear_volume_pending(self) -> None:
+        """Remove `volume.pending`."""
+        self.volume_pending.unlink(missing_ok=True)
 
     def mark_pending(self) -> None:
         """Create `pending`: a create may have made a pod no record names."""
@@ -103,3 +142,9 @@ class State:
 
     def _mkdir(self) -> None:
         self.dir.mkdir(mode=0o700, exist_ok=True)
+
+    def _replace(self, path: Path, fields: dict[str, object]) -> None:
+        self._mkdir()
+        partial = path.with_name(f"{path.name}.partial")
+        partial.write_text(json.dumps(fields) + "\n", encoding="utf-8")
+        os.replace(partial, path)

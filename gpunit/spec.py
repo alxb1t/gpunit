@@ -6,6 +6,7 @@ import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from gpunit import log
 
@@ -13,6 +14,7 @@ DIGEST = re.compile(r"@sha256:[0-9a-f]{64}$")
 _DURATION = re.compile(r"([1-9][0-9]*)([smh])")
 _UNIT_S = {"s": 1, "m": 60, "h": 3600}
 DEFAULT_TIMEOUT_S = 420
+VOLUME_GB = (10, 4000)
 
 # The key, then the TOML types it accepts.
 _REQUIRED: dict[str, tuple[type, ...]] = {
@@ -25,6 +27,9 @@ _REQUIRED: dict[str, tuple[type, ...]] = {
 }
 _OPTIONAL: dict[str, tuple[type, ...]] = {
     "volume": (str,),
+    "volume_gb": (int,),
+    "volume_ceiling": (str,),
+    "volume_datacenter": (str,),
     "ports": (list,),
     "ram_gb": (int,),
     "cuda": (str,),
@@ -54,6 +59,9 @@ class Spec:
     ceiling_s: int
     disk_gb: int
     volume: str | None = None
+    volume_gb: int | None = None
+    volume_ceiling_s: int | None = None
+    volume_datacenter: str | None = None
     ports: tuple[Port, ...] = ()
     ram_gb: int | None = None
     cuda: str | None = None
@@ -92,12 +100,7 @@ def load_spec(path: Path) -> Spec:
 
     if not DIGEST.search(raw["image"]):
         log.refuse(f"{path}: 'image' must end in @sha256:<64 hex>, not a tag")
-    try:
-        ceiling_s = parse_ceiling(raw["ceiling"])
-    except ValueError:
-        log.refuse(
-            f"{path}: 'ceiling' must be a duration with a unit, as 600s, 45m or 4h"
-        )
+    ceiling_s = _duration(path, "ceiling", raw["ceiling"])
     return Spec(
         project=raw["project"],
         image=raw["image"],
@@ -106,6 +109,9 @@ def load_spec(path: Path) -> Spec:
         ceiling_s=ceiling_s,
         disk_gb=raw["disk_gb"],
         volume=raw.get("volume"),
+        volume_gb=raw.get("volume_gb"),
+        volume_ceiling_s=_volume_ceiling(path, raw),
+        volume_datacenter=raw.get("volume_datacenter"),
         ports=tuple(_port(path, item) for item in raw.get("ports", [])),
         ram_gb=raw.get("ram_gb"),
         cuda=raw.get("cuda"),
@@ -120,6 +126,32 @@ def _check_type(path: Path, key: str, value: object, kinds: tuple[type, ...]) ->
     if isinstance(value, bool) or not isinstance(value, kinds):
         names = " or ".join(kind.__name__ for kind in kinds)
         log.refuse(f"{path}: {key!r} must be {names}, not {type(value).__name__}")
+
+
+def _volume_ceiling(path: Path, raw: dict[str, Any]) -> int | None:
+    """Return the window volume's ceiling in seconds; refuse a key without its pair."""
+    if "volume_gb" not in raw:
+        for key in ("volume_ceiling", "volume_datacenter"):
+            if key in raw:
+                log.refuse(f"{path}: {key!r} needs 'volume_gb'")
+        return None
+    if "volume" in raw:
+        log.refuse(f"{path}: 'volume' and 'volume_gb' cannot both be set")
+    low, high = VOLUME_GB
+    if not low <= raw["volume_gb"] <= high:
+        log.refuse(f"{path}: 'volume_gb' must be from {low} to {high}")
+    if "volume_ceiling" not in raw:
+        log.refuse(f"{path}: 'volume_gb' needs 'volume_ceiling'")
+    return _duration(path, "volume_ceiling", raw["volume_ceiling"])
+
+
+def _duration(path: Path, key: str, text: str) -> int:
+    try:
+        return parse_ceiling(text)
+    except ValueError:
+        log.refuse(
+            f"{path}: {key!r} must be a duration with a unit, as 600s, 45m or 4h"
+        )
 
 
 def _gpus(path: Path, items: list[object]) -> tuple[str, ...]:

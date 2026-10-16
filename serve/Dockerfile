@@ -9,4 +9,5 @@ ENV DO_NOT_TRACK=1 HF_HUB_DISABLE_TELEMETRY=1 VLLM_NO_USAGE_STATS=1
 COPY boot/boot.sh /opt/gpunit/boot.sh
 ENTRYPOINT ["/opt/gpunit/boot.sh", "--"]
 # Loopback only: the laptop reaches it over the session's tunnel. vLLM reads VLLM_API_KEY itself.
-CMD ["sh", "-c", "${GPUNIT_VOLUME_PATH:+export HF_HOME=\"$GPUNIT_VOLUME_PATH/huggingface\";} exec vllm serve \"$SERVE_REPO\" --revision \"$SERVE_REVISION\" --served-model-name \"$SERVE_NAME\" --host 127.0.0.1 --port 8000 $SERVE_ARGS"]
+# An `if`, not `${…:+…}`: an expansion's `;` is a word, not a separator (0010 design D13).
+CMD ["sh", "-c", "if [ -n \"${GPUNIT_VOLUME_PATH:-}\" ]; then export HF_HOME=\"$GPUNIT_VOLUME_PATH/huggingface\"; fi; exec vllm serve \"$SERVE_REPO\" --revision \"$SERVE_REVISION\" --served-model-name \"$SERVE_NAME\" --host 127.0.0.1 --port 8000 $SERVE_ARGS"]

@@ -11,13 +11,15 @@ from gpunit import lifecycle, log, run
 from gpunit.provider import Lost, Provider
 from gpunit.runpod import RunPod
 from gpunit.serve import table
-from gpunit.spec import load_spec, parse_ceiling
+from gpunit.spec import Spec, load_spec, parse_ceiling
 from gpunit.state import State
 
 USAGE = (
     "gpunit {up,status,down,ssh} [--spec PATH] | gpunit run [--spec PATH] -- <command>"
     " | gpunit serve <model> --ceiling 2h [--api] | gpunit down --serve <model>"
     " | gpunit spend [--days N] [--json]"
+    " | gpunit volume up [--spec PATH | --serve <model> --ceiling 4h] [--yes]"
+    " | gpunit volume down [--spec PATH | --serve <model>]"
 )
 
 FAILED, USAGE_FAULT = 1, 2
@@ -52,6 +54,15 @@ def _parser() -> _Parser:
     serve.add_argument("--max-hourly", type=float)
     serve.add_argument("--yes", action="store_true")
     serve.add_argument("--think", action="store_true")
+    volume = verbs.add_parser("volume")
+    actions = volume.add_subparsers(dest="action", required=True, parser_class=_Parser)
+    for action in ("up", "down"):
+        sub = actions.add_parser(action)
+        sub.add_argument("--spec", type=Path, default=Path("gpunit.toml"))
+        sub.add_argument("--serve", dest="model", metavar="MODEL")
+        if action == "up":
+            sub.add_argument("--ceiling", type=_ceiling)
+            sub.add_argument("--yes", action="store_true")
     report = verbs.add_parser("spend")
     report.add_argument("--days", type=_days, default=DAYS)
     report.add_argument("--json", action="store_true")
@@ -95,7 +106,12 @@ def parse(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
         raise Usage("gpunit run -- <command> needs a command")
     if args.verb != "run" and command is not None:
         raise Usage(f"gpunit {args.verb} takes no command after --")
-    # `serve` and `down --serve` name a model, whose spec is its table row;
+    if getattr(args, "action", None) == "up":
+        if args.model is not None and args.ceiling is None:
+            raise Usage("gpunit volume up --serve <model> needs --ceiling")
+        if args.model is None and args.ceiling is not None:
+            raise Usage("--ceiling goes with --serve; a spec sets volume_ceiling")
+    # `serve` and `--serve` name a model, whose spec is its table row;
     # `spend` has no `--spec`: it reads only the billing and the ledger.
     args.model = getattr(args, "model", None)
     if args.model is not None or not hasattr(args, "spec"):
@@ -146,6 +162,8 @@ def _run(argv: list[str], provider: Provider | None) -> int:
                 return lifecycle.status(lazy, state, as_json=args.json)
             case "down":
                 return lifecycle.down(spec, lazy(), state)
+            case "volume":
+                return _volume(args, spec, lazy(), state)
             case "ssh":
                 lifecycle.ssh(state)
                 # unreachable: the exec replaces this process, or ssh() refuses
@@ -164,6 +182,12 @@ def _serve(args: argparse.Namespace, provider: Callable[[], Provider]) -> int:
 
     if args.verb == "down":
         return session.down(args.model, provider())
+    if args.verb == "volume":
+        if args.action == "up":
+            return session.volume_up(
+                args.model, args.ceiling, yes=args.yes, provider=provider()
+            )
+        return session.volume_down(args.model, provider())
     return session.serve(
         args.model,
         args.ceiling,
@@ -174,6 +198,17 @@ def _serve(args: argparse.Namespace, provider: Callable[[], Provider]) -> int:
         think=args.think,
         provider=provider(),
     )
+
+
+def _volume(
+    args: argparse.Namespace, spec: Spec, provider: Provider, state: State
+) -> int:
+    # Here, not at the top: `decimal` would slow every other verb's start.
+    from gpunit import volume
+
+    if args.action == "up":
+        return volume.up(spec, provider, state, yes=args.yes)
+    return volume.down(spec, provider, state)
 
 
 def _known(model: str) -> None:

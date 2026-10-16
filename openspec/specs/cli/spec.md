@@ -8,10 +8,12 @@ can read its outcome without parsing its words.
 ### Requirement: The verbs and the usage exit
 
 The system SHALL accept the verbs `up`, `status`, `down`, `ssh` and `run`, each reading `gpunit.toml` from the
-working directory unless `--spec <path>` names another, `serve <model>`, which reads the bundled model table, and
-`spend`, which reads the provider's billing and the ledger; `down --serve <model>` SHALL tear down the session
-`serve` left for that model; and SHALL exit `2` with a usage line on an unknown verb, a missing argument or an
-unreadable spec path, before any network call.
+working directory unless `--spec <path>` names another, `volume up` and `volume down`, which read the spec the same
+way, `serve <model>`, which reads the bundled model table, and `spend`, which reads the provider's billing and the
+ledger; `down --serve <model>` SHALL tear down the session `serve` left for that model; `volume up --serve <model>
+--ceiling <duration>` and `volume down --serve <model>` SHALL make and delete the window volume of that model's row; and
+the system SHALL exit `2` with a usage line on an unknown verb, a missing argument or an unreadable spec path, before
+any network call.
 
 #### Scenario: an unknown verb exits 2
 - **Key:** `cli:verbs:unknown-verb-exits-2`
@@ -37,6 +39,16 @@ unreadable spec path, before any network call.
 - **Key:** `cli:verbs:spend-bad-days-exits-2`
 - **WHEN** `gpunit spend --days 0` runs
 - **THEN** it exits `2`, names `--days`, and makes no request
+
+#### Scenario: volume without an action exits 2
+- **Key:** `cli:verbs:volume-without-action-exits-2`
+- **WHEN** `gpunit volume` runs with neither `up` nor `down`
+- **THEN** it exits `2`, names `volume up` and `volume down`, and makes no request
+
+#### Scenario: a model's volume without a ceiling exits 2
+- **Key:** `cli:verbs:volume-serve-without-ceiling-exits-2`
+- **WHEN** `gpunit volume up --serve qwen3-4b` runs with no `--ceiling`
+- **THEN** it exits `2`, names `--ceiling`, and makes no request
 
 ### Requirement: The exit codes say what happened
 

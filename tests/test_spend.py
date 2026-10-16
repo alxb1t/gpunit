@@ -218,3 +218,51 @@ def test_a_chosen_window(capsys: pytest.CaptureFixture[str]) -> None:
     assert provider.named("pod_billing") == [(DAY_1, WEEK[1])]
     assert out.startswith("spend, 2026-10-11 → 2026-10-12 (UTC)\n")
     assert "$1.00" not in out
+
+
+@pytest.mark.spec("spend:report:window-volume-under-project")
+def test_a_window_volume_bills_under_its_project(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    owned(p1="isekai")
+    ledger.record_volume("isekai", "v2", "2026-10-12T18:00:00Z")
+    ledger.record_volume("portraits", "v3", "2026-10-12T18:00:00Z")
+    provider = FakeProvider(
+        pod_costs=[PodCost("p1", DAY_1, 0.25)],
+        volume_costs=[
+            VolumeCost("v2", DAY_2, 0.02),
+            VolumeCost("v3", DAY_2, 0.01),
+            VolumeCost("v1", DAY_2, 0.05),
+        ],
+    )
+
+    out, _ = report(capsys, provider)
+    assert "pods      isekai               1 pod   $0.27\n" in out
+    assert "pods      portraits            0 pods  $0.01\n" in out
+    assert "storage   v1                           $0.05\n" in out
+    assert "v2" not in out
+    assert "v3" not in out
+    assert out.endswith("total                                  $0.33\n")
+
+
+@pytest.mark.spec("spend:report:overdue-volume-named")
+@pytest.mark.parametrize(
+    ("ends", "day", "named"),
+    [
+        ("2026-10-11T18:00:00Z", DAY_2, True),
+        ("2026-10-12T10:00:00Z", DAY_2, False),
+        ("2026-10-10T18:00:00Z", DAY_1, False),
+    ],
+    ids=["ended-yesterday-bills-today", "twin-ended-today", "twin-no-charge-today"],
+)
+def test_an_overdue_volume_still_billing_is_named(
+    ends: str, day: str, named: bool, capsys: pytest.CaptureFixture[str]
+) -> None:
+    ledger.record_volume("isekai", "v2", ends)
+    provider = FakeProvider(volume_costs=[VolumeCost("v2", day, 0.01)])
+
+    _, err = report(capsys, provider)
+    said = (
+        "volume v2 (isekai) passed its ceiling and still bills; run gpunit volume down"
+    )
+    assert (said in err) is named

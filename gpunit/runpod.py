@@ -6,10 +6,10 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from email.message import Message
-from typing import IO, Any
+from typing import IO, Any, TypeVar
 
 from gpunit import __version__, log
 from gpunit.provider import (
@@ -34,7 +34,11 @@ TIMEOUT_S = 30
 LOG_READ_S = 10
 LOG_IDLE_S = 3
 MAX_PAGES = 100
+# The most lines a log read backfills.
+MAX_TAIL = 5000
 VOLUME_PATH = "/runpod-volume"
+
+T = TypeVar("T")
 
 
 @dataclass(frozen=True)
@@ -175,12 +179,15 @@ class RunPod:
     def log(self, pod_id: str, *, tail: int, since: str | None = None) -> list[str]:
         """Return the container log's last `tail` lines; empty on a failed read.
 
-        With `since`, an RFC 3339 time, return the lines from then on instead.
+        With `since`, an RFC 3339 time, return the lines from then on instead, among
+        the provider's longest tail: RunPod's last 5000, so a line before them is lost.
         """
-        start = {"tail": tail} if since is None else {"since": since}
-        query = urllib.parse.urlencode(start | {"source": "container"})
+        # RunPod's own `since` sends no past line, so it is the tail's: 0010 design D14.
+        query = urllib.parse.urlencode(
+            {"tail": tail if since is None else MAX_TAIL, "source": "container"}
+        )
         request = self._request("GET", f"/pods/{_quote(pod_id)}/logs?{query}")
-        lines: list[str] = []
+        events: list[tuple[str | None, str]] = []
         deadline = time.monotonic() + LOG_READ_S
         try:
             # A quiet stream raises `TimeoutError`, an `OSError`, after LOG_IDLE_S.
@@ -189,10 +196,15 @@ class RunPod:
                     raw = stream.readline()
                     if not raw:
                         break
-                    lines.extend(_event_line(raw))
+                    events.extend(_event(raw))
         except (OSError, ValueError):
             pass  # what arrived before the fault is what was read
-        return lines
+        # To the second: `since` is stamped in seconds, `ts` in nanoseconds.
+        return [
+            line
+            for ts, line in events
+            if since is None or ts is None or ts[:19] >= since[:19]
+        ]
 
     def pod_billing(self, start: str, end: str) -> list[PodCost]:
         """Return each pod's charge per UTC day in `[start, end)`; raise `Lost`."""
@@ -217,36 +229,42 @@ class RunPod:
         except (TypeError, KeyError, ValueError):
             raise Lost(_report(f"{kind} billing read", answer)) from None
 
-    def list(self, project: str, image: str) -> list[tuple[str, str]]:
-        """Return (id, status) of each live project pod; raise `Lost` or `NoImage`."""
-        name, repo = pod_name(project), image.split("@", 1)[0]
-        live: list[tuple[str, str]] = []
+    def volumes(self, name: str) -> list[str]:
+        """Return the ids of the volumes named `name`; raise `Lost`."""
+        return self._walk(
+            "/network-volumes",
+            "networkVolumes",
+            "volume listing",
+            lambda volume: str(volume["id"]) if volume["name"] == name else None,
+        )
+
+    def _walk(
+        self,
+        path: str,
+        key: str,
+        what: str,
+        pick: Callable[[dict[str, Any]], T | None],
+    ) -> list[T]:
+        """Return what `pick` keeps of every item on every page; raise `Lost`."""
+        kept: list[T] = []
         cursor: str | None = None
         seen: set[str] = set()
         for _ in range(MAX_PAGES):
             query = {"limit": 1000} | ({"cursor": cursor} if cursor else {})
-            answer = self._call("GET", f"/pods?{urllib.parse.urlencode(query)}")
+            answer = self._call("GET", f"{path}?{urllib.parse.urlencode(query)}")
             try:
                 page = answer.json(200)
-                pods, pagination = page["pods"], page["pagination"]
-                for pod in pods:
-                    if pod["name"] != name or pod["status"] == "TERMINATED":
-                        continue
-                    if not pod.get("image"):
-                        raise NoImage(
-                            f"pod {pod['id']} is named {name!r} but carries no image"
-                        )
-                    if _ours(pod["image"], repo):
-                        live.append((str(pod["id"]), str(pod["status"])))
+                items, pagination = page[key], page["pagination"]
+                kept.extend(x for item in items if (x := pick(item)) is not None)
                 if not pagination["hasNextPage"]:
-                    return live
+                    return kept
                 cursor = str(pagination["nextCursor"])
             except (TypeError, KeyError, ValueError):
-                raise Lost(_report("pod listing", answer)) from None
+                raise Lost(_report(what, answer)) from None
             if cursor in seen:
-                raise Lost(f"the pod listing answered cursor {cursor} twice")
+                raise Lost(f"the {what} answered cursor {cursor} twice")
             seen.add(cursor)
-        raise Lost(f"the pod listing ran past {MAX_PAGES} pages")
+        raise Lost(f"the {what} ran past {MAX_PAGES} pages")
 
     def delete(self, pod_id: str) -> int:
         """Delete the pod and return the HTTP status; 0 when no answer came."""
@@ -260,6 +278,76 @@ class RunPod:
         return self._call(
             "POST", f"/pods/{_quote(pod_id)}/action", {"action": "stop"}
         ).status
+
+    def stock(self, card: str) -> list[tuple[str, str]]:
+        """Return (data centre, availability) where the card is in stock.
+
+        Raise `Unknown` on a 404, else `Lost`. e.g. [("EU-RO-1", "HIGH")]
+        """
+        query = {"include": "AVAILABILITY", "product": "POD", "cloud": "SECURE"}
+        path = f"/catalog/gpus/{_quote(card)}?{urllib.parse.urlencode(query)}"
+        answer = self._call("GET", path)
+        if answer.status == 404:
+            raise Unknown(f"RunPod's catalogue does not know {card!r}")
+        try:
+            # RunPod omits `dataCenters` when the card is out of stock everywhere.
+            stocked = [
+                (str(dc["id"]), str(dc["availability"]))
+                for dc in answer.json(200).get("dataCenters") or []
+            ]
+        except (AttributeError, TypeError, KeyError, ValueError):
+            raise Lost(_report(f"stock read of {card!r}", answer)) from None
+        return [(dc, level) for dc, level in stocked if level != "NONE"]
+
+    def volume_datacenters(self) -> set[str]:
+        """Return the data centres offering standard volumes; raise `Lost`."""
+        answer = self._call("GET", "/catalog/datacenters?networkVolumeTypes=STANDARD")
+        try:
+            return {str(dc["id"]) for dc in answer.json(200)["dataCenters"]}
+        except (TypeError, KeyError, ValueError):
+            raise Lost(_report("data centre read", answer)) from None
+
+    def create_volume(self, name: str, size_gb: int, datacenter: str) -> str:
+        """Return the new volume's id; raise `Refused` on a 400 or 422, else `Lost`."""
+        body = {
+            "name": name,
+            "size": size_gb,
+            "dataCenter": datacenter,
+            "type": "STANDARD",
+        }
+        answer = self._call("POST", "/network-volumes", body)
+        call = f"volume create in {datacenter!r}"
+        if answer.status in (400, 422):
+            raise Refused(_report(call, answer))
+        try:
+            volume_id = answer.json(201)["id"]
+        except (TypeError, KeyError, ValueError):
+            volume_id = None
+        if isinstance(volume_id, str) and volume_id:
+            return volume_id
+        raise Lost(_report(call, answer))
+
+    def delete_volume(self, volume_id: str) -> int:
+        """Delete the volume and return the HTTP status; 0 when no answer came."""
+        answer = self._call("DELETE", f"/network-volumes/{_quote(volume_id)}")
+        if answer.status != 204:
+            log.say(_report(f"delete of volume {volume_id}", answer))
+        return answer.status
+
+    def list(self, project: str, image: str) -> list[tuple[str, str]]:
+        """Return (id, status) of each live project pod; raise `Lost` or `NoImage`."""
+        name, repo = pod_name(project), image.split("@", 1)[0]
+
+        def live(pod: dict[str, Any]) -> tuple[str, str] | None:
+            if pod["name"] != name or pod["status"] == "TERMINATED":
+                return None
+            if not pod.get("image"):
+                raise NoImage(f"pod {pod['id']} is named {name!r} but carries no image")
+            if not _ours(pod["image"], repo):
+                return None
+            return str(pod["id"]), str(pod["status"])
+
+        return self._walk("/pods", "pods", "pod listing", live)
 
     def _request(
         self, method: str, path: str, body: object = None
@@ -301,15 +389,19 @@ def _amount(record: dict[str, object]) -> float:
     return float(amount)
 
 
-def _event_line(raw: bytes) -> list[str]:
+def _event(raw: bytes) -> list[tuple[str | None, str]]:
+    """Return the event's `ts` and line, e.g. b'data: {"line": "x"}' → [(None, "x")]."""
     text = raw.decode("utf-8", errors="replace").rstrip("\r\n")
     if not text.startswith("data: "):
         return []
     try:
-        line = json.loads(text[len("data: ") :]).get("line")
+        event = json.loads(text[len("data: ") :])
+        line, ts = event.get("line"), event.get("ts")
     except (ValueError, AttributeError):
         return []
-    return [line] if isinstance(line, str) else []
+    if not isinstance(line, str):
+        return []
+    return [(ts if isinstance(ts, str) else None, line)]
 
 
 def _report(call: str, answer: _Answer) -> str:

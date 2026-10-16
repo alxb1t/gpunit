@@ -5,6 +5,7 @@ import pytest
 
 from gpunit.provider import GpuInfo, Lost, PodInfo, Refused, Unknown, VolumeInfo
 from gpunit.runpod import RunPod
+from gpunit.spec import Spec
 from gpunit.state import State
 from tests.fakes import (
     BOOT_LOG,
@@ -16,7 +17,15 @@ from tests.fakes import (
     log_stream,
     page,
 )
-from tests.helpers import IMAGE, NO_REQUESTS, VALID, gpunit, write_spec
+from tests.helpers import (
+    IMAGE,
+    NO_REQUESTS,
+    VALID,
+    WINDOW,
+    gpunit,
+    open_window,
+    write_spec,
+)
 
 
 def creates(provider: FakeProvider) -> list[str]:
@@ -292,3 +301,68 @@ def test_the_ceiling_reaches_the_pod_in_seconds(cwd: Path) -> None:
 
     env = body["env"]
     assert isinstance(env, dict) and env["GPUNIT_CEILING"] == "2700"
+
+
+@pytest.mark.spec("session:volume:window-mounted")
+def test_the_windows_volume_is_mounted(cwd: Path) -> None:
+    write_spec(cwd, WINDOW)
+    open_window(cwd, 4 * 3600, "v2", "CA-MTL-4")
+    provider = FakeProvider(volumes={"v2": VolumeInfo("CA-MTL-4", 60)})
+
+    assert gpunit(["up"], provider=provider) == 0
+    assert provider.named("volume") == [("v2",)]
+    [create] = provider.named("create")
+    spec = create[0]
+    assert isinstance(spec, Spec)
+    assert spec.volume == "v2"
+
+
+@pytest.mark.spec("session:volume:window-missing-refuses")
+def test_no_window_volume_refuses(
+    cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_spec(cwd, WINDOW)
+    provider = FakeProvider()
+
+    assert gpunit(["up"], provider=provider) == 1
+    assert "no window volume is up; run gpunit volume up" in capsys.readouterr().err
+    assert creates(provider) == []
+
+
+@pytest.mark.spec("session:volume:outlives-window-refuses")
+@pytest.mark.parametrize(
+    ("ends_in_s", "refused"),
+    [(30 * 60, True), (45 * 60 + 420 + 120, False)],
+    ids=["30m", "twin-wait-inside"],
+)
+def test_a_session_past_the_volumes_end_refuses(
+    ends_in_s: int, refused: bool, cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_spec(cwd, WINDOW)
+    state = open_window(cwd, ends_in_s, "v2", "CA-MTL-4")
+    provider = FakeProvider(volumes={"v2": VolumeInfo("CA-MTL-4", 60)})
+
+    assert gpunit(["up"], provider=provider) == (1 if refused else 0)
+    recorded = state.window()
+    assert recorded is not None
+    err = capsys.readouterr().err
+    assert (f"the volume ends at {recorded.ends}" in err) is refused
+    assert ("run gpunit volume up" in err) is refused
+    assert bool(creates(provider)) is not refused
+
+
+@pytest.mark.spec("volume:ceiling:session-refuses")
+def test_a_session_after_the_ceiling_refuses(
+    cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_spec(cwd, WINDOW)
+    state = open_window(cwd, -60, "v2", "CA-MTL-4")
+    provider = FakeProvider()
+
+    assert gpunit(["up"], provider=provider) == 1
+    assert provider.named("delete_volume") == [("v2",)]
+    assert state.window() is None
+    err = capsys.readouterr().err
+    assert "volume v2 passed its ceiling" in err
+    assert "run gpunit volume up" in err
+    assert creates(provider) == []

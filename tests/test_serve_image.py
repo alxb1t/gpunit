@@ -1,9 +1,13 @@
+import json
+import os
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
 
 from gpunit.spec import DIGEST
+from tests.helpers import install_stubs
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCKERFILE = ROOT / "serve" / "Dockerfile"
@@ -80,3 +84,75 @@ def test_a_second_trigger_is_caught() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
 
     assert triggers(text.replace("on:\n", "on:\n  push:\n", 1)) != ["workflow_dispatch"]
+
+
+# Prints what vLLM would start with, in place of vLLM.
+VLLM = """#!/bin/sh
+echo "HF_HOME=${HF_HOME:-unset}"
+echo "args: $*"
+"""
+
+
+def command() -> list[str]:
+    """Return the Dockerfile's CMD, the exec form's array."""
+    [cmd] = [
+        line
+        for line in instructions(DOCKERFILE.read_text(encoding="utf-8"))
+        if line.startswith("CMD ")
+    ]
+    return json.loads(cmd[len("CMD ") :])
+
+
+def started(
+    cmd: list[str], bin_dir: Path, volume: str | None
+) -> subprocess.CompletedProcess[str]:
+    env = {
+        "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
+        "SERVE_REPO": "Qwen/Qwen3-4B",
+        "SERVE_REVISION": "abc123",
+        "SERVE_NAME": "qwen3-4b",
+        "SERVE_ARGS": "--max-model-len 16384",
+    }
+    if volume is not None:
+        env["GPUNIT_VOLUME_PATH"] = volume
+    return subprocess.run(cmd, env=env, capture_output=True, text=True, check=False)
+
+
+ARGS = (
+    "args: serve Qwen/Qwen3-4B --revision abc123 --served-model-name qwen3-4b"
+    " --host 127.0.0.1 --port 8000 --max-model-len 16384"
+)
+
+
+@pytest.mark.spec("serve:volume:weights-on-the-volume")
+@pytest.mark.parametrize(
+    ("volume", "home"),
+    [("/runpod-volume", "/runpod-volume/huggingface"), (None, "unset")],
+    ids=["volume", "no-volume"],
+)
+def test_vllm_starts_with_the_weights_on_the_volume(
+    volume: str | None, home: str, tmp_path: Path
+) -> None:
+    bin_dir = install_stubs(tmp_path / "bin", {"vllm": VLLM})
+
+    done = started(command(), bin_dir, volume)
+
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.splitlines() == [f"HF_HOME={home}", ARGS]
+
+
+@pytest.mark.spec("serve:volume:weights-on-the-volume")
+def test_the_expansion_form_is_caught(tmp_path: Path) -> None:
+    # The twin: the check fails on a CMD that sets HF_HOME inside `${…:+…}`.
+    bin_dir = install_stubs(tmp_path / "bin", {"vllm": VLLM})
+    shell, flag, script = command()
+    broken = re.sub(
+        r"if \[ .*?; fi; ",
+        '${GPUNIT_VOLUME_PATH:+export HF_HOME="$GPUNIT_VOLUME_PATH/huggingface";} ',
+        script,
+    )
+    assert broken != script
+
+    done = started([shell, flag, broken], bin_dir, "/runpod-volume")
+
+    assert done.returncode != 0

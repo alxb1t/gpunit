@@ -9,8 +9,10 @@ project, and what the ledger does not know, and the volumes the account keeps, a
 
 The system SHALL append one JSON line to `~/.local/state/gpunit/ledger.jsonl` when it first learns a pod's id — when a
 create answers, and when a sweep lists a pod no record names — holding the pod's id, the project, the card (null for a
-swept pod), the image and the UTC time, and nothing else. A ledger that cannot be written SHALL warn on stderr and
-SHALL NOT stop or alter the session or the teardown.
+swept pod), the image and the UTC time, and nothing else. It SHALL append one line when `volume up` creates or extends a
+window volume, holding the volume's id, the project, `kind` `volume`, its UTC end and the UTC time, and nothing else;
+the last line for a volume's id gives its end. A ledger that cannot be written SHALL warn on stderr and SHALL NOT stop
+or alter the session, the volume or the teardown.
 
 #### Scenario: a create is recorded
 - **Key:** `spend:ledger:create-is-recorded`
@@ -32,13 +34,20 @@ SHALL NOT stop or alter the session or the teardown.
 - **WHEN** the ledger's directory cannot be written during `up`
 - **THEN** stderr warns that the ledger could not be written, and `up` opens the session as it would have
 
+#### Scenario: a window volume is recorded with its end
+- **Key:** `spend:ledger:volume-is-recorded`
+- **WHEN** `volume up` creates `v1` for `isekai` with `volume_ceiling = "4h"`, then extends it
+- **THEN** the ledger holds a line for each, with the keys `id`, `project`, `kind`, `ends` and `at`, and the volume's end is the second line's
+
 ### Requirement: Spend reports the provider's billing by project
 
 The system SHALL, on `spend`, read the pods' and the network volumes' billing from the provider for the window; SHALL
-give each pod its project from the ledger, the first line for an id winning; and SHALL print one line per project with
-its pod count and amount, one line for the pods the ledger does not name, one line per volume, and a total, each
-amount the provider's own and never an estimate. Storage SHALL never be attributed to a project. A billing or a ledger
-that cannot be read SHALL be an error, never a table.
+give each pod and each window volume its project from the ledger, the first line for a pod's id winning; and SHALL
+print one line per project with its pod count and amount, its window volumes' charges in that amount, one line for the
+pods the ledger does not name, one line per other volume, and a total, each amount the provider's own and never an
+estimate. A volume the ledger does not name SHALL never be attributed to a project. A window volume past its end that
+the current UTC day still bills SHALL be named on stderr with `gpunit volume down`. A billing or a ledger that cannot
+be read SHALL be an error, never a table.
 
 #### Scenario: pods are summed by project
 - **Key:** `spend:report:by-project`
@@ -52,8 +61,18 @@ that cannot be read SHALL be an error, never a table.
 
 #### Scenario: storage is a line of its own
 - **Key:** `spend:report:storage-is-its-own-line`
-- **WHEN** the provider bills a volume `v1` over the window
+- **WHEN** the provider bills a volume `v1` over the window, and the ledger does not name it
 - **THEN** the report holds a line for `v1` with its amount, under no project
+
+#### Scenario: a window volume bills under its project
+- **Key:** `spend:report:window-volume-under-project`
+- **WHEN** the ledger names window volume `v2` for `isekai`, and the provider bills it `$0.02`
+- **THEN** `isekai`'s amount holds the `$0.02`, and no storage line names `v2`
+
+#### Scenario: an overdue volume still billing is named
+- **Key:** `spend:report:overdue-volume-named`
+- **WHEN** the ledger gives window volume `v2` an end yesterday, and the provider bills `v2` today
+- **THEN** stderr names `v2`, its project and `gpunit volume down`
 
 #### Scenario: the total is the provider's
 - **Key:** `spend:report:total-is-the-providers`

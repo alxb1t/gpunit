@@ -2,8 +2,9 @@ from pathlib import Path
 
 import pytest
 
+from gpunit import log
 from gpunit.provider import Lost
-from gpunit.state import State
+from gpunit.state import State, Window
 from tests.fakes import RECORD, FakeProvider
 from tests.helpers import gpunit
 
@@ -95,3 +96,37 @@ def test_the_keypair_leaves_with_the_pod(cwd: Path) -> None:
     assert gpunit(["down"], provider=FakeProvider()) == 0
     assert not state.key.exists()
     assert not state.key_pub.exists()
+
+
+@pytest.mark.spec("volume:ceiling:overdue-deleted")
+def test_down_deletes_an_overdue_volume_after_its_pods(cwd: Path) -> None:
+    state = recorded(cwd)
+    state.write_window(Window("v1", "EU-RO-1", 60, log.utc(-60)))
+    provider = FakeProvider()
+
+    assert gpunit(["down"], provider=provider) == 0
+    assert provider.calls[-1] == ("delete_volume", ("v1",))
+    assert state.window() is None
+
+
+class HeldVolume(FakeProvider):
+    """Refuse a volume's delete while the recorded pod, which holds it, stands."""
+
+    def delete_volume(self, volume_id: str) -> int:
+        code = super().delete_volume(volume_id)
+        return code if self.named("delete") else 409
+
+
+@pytest.mark.spec("volume:ceiling:down-after-the-pod")
+def test_down_deletes_an_overdue_volume_once_its_pod_is_gone(
+    cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    state = recorded(cwd)
+    state.write_window(Window("v1", "EU-RO-1", 60, log.utc(-60)))
+    provider = HeldVolume()
+
+    assert gpunit(["down"], provider=provider) == 0
+    deletes = [name for name, _ in provider.calls if name.startswith("delete")]
+    assert deletes == ["delete", "delete_volume"]
+    assert state.window() is None
+    assert "warning" not in capsys.readouterr().err

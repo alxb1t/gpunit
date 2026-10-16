@@ -10,16 +10,20 @@ from typing import NoReturn
 import pytest
 
 from gpunit import log
-from gpunit.provider import PodInfo, Provider
+from gpunit.provider import PodInfo, Provider, VolumeInfo
+from gpunit.runpod import RunPod
 from gpunit.serve import session, table
 from gpunit.spec import Spec
+from gpunit.state import State
 from tests.fakes import (
     RUNNING,
     Answer,
     FakeOpener,
     FakeProvider,
     _Response,
+    fixture,
 )
+from tests.helpers import gpunit
 
 MODELS = (200, b'{"object": "list", "data": [{"id": "qwen3-4b"}]}')
 NOT_YET = urllib.error.URLError(ConnectionRefusedError(61, "Connection refused"))
@@ -49,10 +53,11 @@ def served(
     ask: Callable[[str], str] = no_question,
     api: bool = False,
     read: Callable[[str], str] = leaves,
+    ceiling_s: int = 7200,
 ) -> int:
     return session.serve(
         "qwen3-4b",
-        7200,
+        ceiling_s,
         api=api,
         volume=None,
         max_hourly=None,
@@ -249,18 +254,25 @@ def test_a_running_pod_keeps_the_wait(
 
 @pytest.mark.spec("serve:wait:log-kept")
 def test_the_pods_log_is_kept_and_the_next_session_starts_without_it(
-    home: Path,
+    home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Reads at 30s and 60s, the second shorter; the model answers at 65s.
     provider = FakeProvider(since_logs=[["a", "b", "c"], ["a"]])
     opener = FakeOpener(*[NOT_YET] * 13, MODELS)
+    # The stamp says whether the create had been asked when it was taken.
+    utc = log.utc
+    monkeypatch.setattr(
+        log, "utc", lambda _=0: "after" if provider.named("create") else "before"
+    )
 
     assert served(provider, opener) == 0
 
     kept = kept_path()
     assert kept.read_text(encoding="utf-8") == "a\nb\nc\n"
     assert kept.stat().st_mode & 0o777 == 0o600
-    assert len([call for call in provider.named("log") if call[2] is not None]) == 2
+    since = [call[2] for call in provider.named("log") if call[2] is not None]
+    assert since == ["before", "before"]
+    monkeypatch.setattr(log, "utc", utc)
 
     assert served(FakeProvider(), FakeOpener(MODELS)) == 0
     assert not kept.exists()
@@ -518,3 +530,53 @@ def test_a_sigterm_on_the_held_endpoint_exits_143(home: Path) -> None:
 
     assert served(provider, opener, api=True) == 143
     assert provider.named("delete") == [("pod-1",)]
+
+
+@pytest.mark.spec("serve:volume:window-mounted")
+def test_serve_mounts_the_rows_window_volume(home: Path) -> None:
+    provider = FakeProvider(
+        volume_creates=["v3"], volumes={"v3": VolumeInfo("EU-RO-1", 40)}
+    )
+
+    assert session.volume_up("qwen3-4b", 3600, yes=True, provider=provider) == 0
+    assert served(provider, FakeOpener(MODELS), ceiling_s=1800) == 0
+
+    row = table.load().models["qwen3-4b"]
+    [(name, size_gb, _)] = provider.named("create_volume")
+    assert (name, size_gb) == ("gpunit-serve-qwen3-4b", row.disk_gb)
+    spec = created_spec(provider)
+    assert spec.volume == "v3"
+    # The spec reaches RunPod's create: the volume's data centre, mount and path.
+    opener = FakeOpener((200, fixture("volume.json")), (201, b'{"id": "p"}'))
+    runpod = RunPod({"RUNPOD_API_KEY": "rpa_test"}, opener=opener)
+    runpod.create(spec, "NVIDIA A40", "key", spec.ceiling_s, nonce="n")
+    body = opener.sent()
+    assert body["dataCenterIds"] == ["EU-RO-1"]
+    env = body["env"]
+    assert isinstance(env, dict)
+    assert env["GPUNIT_VOLUME_PATH"] == "/runpod-volume"
+
+
+@pytest.mark.spec("serve:volume:never-created")
+def test_serve_never_makes_a_volume(home: Path) -> None:
+    provider = FakeProvider()
+
+    assert served(provider, FakeOpener(MODELS)) == 0
+    assert provider.named("create_volume") == []
+    spec = created_spec(provider)
+    assert (spec.volume, spec.volume_gb) == (None, None)
+
+
+@pytest.mark.spec("volume:down:deletes")
+def test_volume_down_serve_deletes_the_rows_volume(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    provider = FakeProvider(volume_creates=["v3"])
+    assert session.volume_up("qwen3-4b", 3600, yes=True, provider=provider) == 0
+
+    assert gpunit(["volume", "down", "--serve", "qwen3-4b"], provider=provider) == 0
+    assert provider.named("delete_volume") == [("v3",)]
+    # No pending mark: nothing is swept by name.
+    assert provider.named("volumes") == []
+    assert State(session.home("qwen3-4b")).window() is None
+    assert "volume v3 deleted" in capsys.readouterr().err

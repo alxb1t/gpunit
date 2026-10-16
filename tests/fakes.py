@@ -5,6 +5,7 @@ import json
 import urllib.error
 import urllib.request
 from collections.abc import Mapping, Sequence
+from collections.abc import Set as AbstractSet
 from email.message import Message
 from pathlib import Path
 from typing import TypeVar
@@ -65,10 +66,18 @@ class FakeProvider:
         deletes: Mapping[str, int] | None = None,
         pod_costs: Sequence[PodCost] | Exception = (),
         volume_costs: Sequence[VolumeCost] | Exception = (),
+        stocks: Mapping[str, list[tuple[str, str]] | Exception] | None = None,
+        volume_datacenters: AbstractSet[str] | Exception = frozenset({"EU-RO-1"}),
+        volume_creates: Sequence[str | Exception] = ("vol-1",),
+        volume_listings: Sequence[list[str] | Exception] = ([],),
+        volume_deletes: Mapping[str, int] | None = None,
     ) -> None:
-        """Script the answers; a card or volume not named answers `CARD` or fails."""
+        """Script the answers; a card or volume not named answers `CARD` or fails.
+
+        A card with no stock scripted is in stock in `EU-RO-1` alone.
+        """
         self.gpus = dict(gpus or {})
-        self.volumes = dict(volumes or {})
+        self.volume_infos = dict(volumes or {})
         self.creates = list(creates)
         self.gets = list(gets)
         self.logs = [list(lines) for lines in logs]
@@ -77,6 +86,11 @@ class FakeProvider:
         self.deletes = dict(deletes or {})
         self.pod_costs = pod_costs
         self.volume_costs = volume_costs
+        self.stocks = dict(stocks or {})
+        self.standard = volume_datacenters
+        self.volume_creates = list(volume_creates)
+        self.volume_listings = list(volume_listings)
+        self.volume_deletes = dict(volume_deletes or {})
         self.calls: list[tuple[str, tuple[object, ...]]] = []
 
     def named(self, verb: str) -> list[tuple[object, ...]]:
@@ -91,7 +105,7 @@ class FakeProvider:
     def volume(self, volume_id: str) -> VolumeInfo:
         """Answer the volume's script; an unscripted volume fails the test."""
         self.calls.append(("volume", (volume_id,)))
-        return _raise_or(self.volumes[volume_id])
+        return _raise_or(self.volume_infos[volume_id])
 
     def create(
         self, spec: Spec, gpu: str, pubkey: str, ceiling_s: int, *, nonce: str
@@ -106,7 +120,11 @@ class FakeProvider:
         return _next(self.gets)
 
     def log(self, pod_id: str, *, tail: int, since: str | None = None) -> list[str]:
-        """Answer the next log read in its script: `since_logs` for a `since` read."""
+        """Answer the next log read in its script: `since_logs` for a `since` read.
+
+        A `since` read is a later read of the same tail, from then on: no test scripts
+        it a line a tail read at the same poll has lost (0010 design D14).
+        """
         self.calls.append(("log", (pod_id, tail, since)))
         return list(_next(self.logs if since is None else self.since_logs))
 
@@ -120,11 +138,6 @@ class FakeProvider:
         self.calls.append(("volume_billing", (start, end)))
         return _in_window(_raise_or(self.volume_costs), start, end)
 
-    def list(self, project: str, image: str) -> list[tuple[str, str]]:
-        """Answer the next listing in the script."""
-        self.calls.append(("list", (project, image)))
-        return list(_raise_or(_next(self.listings)))
-
     def delete(self, pod_id: str) -> int:
         """Answer the pod's scripted status, or 204."""
         self.calls.append(("delete", (pod_id,)))
@@ -134,6 +147,36 @@ class FakeProvider:
         """Answer 200."""
         self.calls.append(("stop", (pod_id,)))
         return 200
+
+    def stock(self, card: str) -> list[tuple[str, str]]:
+        """Answer the card's script, or `EU-RO-1` at `HIGH`."""
+        self.calls.append(("stock", (card,)))
+        return list(_raise_or(self.stocks.get(card, [("EU-RO-1", "HIGH")])))
+
+    def volume_datacenters(self) -> set[str]:
+        """Answer the scripted data centres."""
+        self.calls.append(("volume_datacenters", ()))
+        return set(_raise_or(self.standard))
+
+    def create_volume(self, name: str, size_gb: int, datacenter: str) -> str:
+        """Answer the next volume create in the script."""
+        self.calls.append(("create_volume", (name, size_gb, datacenter)))
+        return _raise_or(_next(self.volume_creates))
+
+    def volumes(self, name: str) -> list[str]:
+        """Answer the next volume listing in the script."""
+        self.calls.append(("volumes", (name,)))
+        return list(_raise_or(_next(self.volume_listings)))
+
+    def delete_volume(self, volume_id: str) -> int:
+        """Answer the volume's scripted status, or 204."""
+        self.calls.append(("delete_volume", (volume_id,)))
+        return self.volume_deletes.get(volume_id, 204)
+
+    def list(self, project: str, image: str) -> list[tuple[str, str]]:
+        """Answer the next listing in the script."""
+        self.calls.append(("list", (project, image)))
+        return list(_raise_or(_next(self.listings)))
 
 
 C = TypeVar("C", PodCost, VolumeCost)
@@ -164,10 +207,10 @@ def log_stream(*lines: str) -> bytes:
     return "".join(f"data: {json.dumps({'line': line})}\n" for line in lines).encode()
 
 
-def page(pods: list[dict[str, str]], cursor: str | None) -> bytes:
-    """Return one page of RunPod's pod listing; `cursor` None is the last page."""
+def page(items: list[dict[str, str]], cursor: str | None, key: str = "pods") -> bytes:
+    """Return one page of a RunPod listing; `cursor` None is the last page."""
     more = {"nextCursor": cursor, "hasNextPage": cursor is not None}
-    return json.dumps({"pods": pods, "pagination": more}).encode()
+    return json.dumps({key: items, "pagination": more}).encode()
 
 
 class _Response(io.BytesIO):

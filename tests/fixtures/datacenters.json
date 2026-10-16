@@ -1,0 +1,20 @@
+{
+  "dataCenters": [
+    {
+      "id": "EU-RO-1",
+      "name": "EU-RO-1",
+      "region": "EUROPE",
+      "globalNetwork": false,
+      "networkVolumeTypes": ["STANDARD"],
+      "compliance": ["GDPR"]
+    },
+    {
+      "id": "CA-MTL-4",
+      "name": "CA-MTL-4",
+      "region": "NORTH_AMERICA",
+      "globalNetwork": true,
+      "networkVolumeTypes": ["STANDARD", "HIGH_PERFORMANCE"],
+      "compliance": []
+    }
+  ]
+}

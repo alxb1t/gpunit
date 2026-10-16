@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-16
+
+### Added
+
+- The `Provider` seam reads a card's stock by data centre and the data centres with standard volumes, and creates,
+  lists and deletes a network volume, so a window volume can be made where the cards are (0010).
+- `gpunit.toml` takes `volume_gb`, `volume_ceiling` and `volume_datacenter`, refused without their pair, beside
+  `volume`, or outside 10–4000 GB; `.gpunit/volume` records the window and the ledger names its volume and end.
+- `gpunit volume up` creates `gpunit-<project>` where the first card of `gpus` is in stock, after the price, or extends
+  a live one; `gpunit volume down` deletes it, and sweeps any other of its name only after a lost create, so another
+  checkout's volume is never deleted (`0010·S1`); that sweep skips a volume the ledger records and deletes each other
+  one only on a `y`, and a record beside the mark clears it unswept (`0010·S2`). A volume past its end is deleted first.
+- A spec with `volume_gb` mounts the window's volume in `up`, `run` and `serve`, and refuses with none recorded or a
+  session that would outlive it; `up` and `status` delete an overdue volume first, `down` after its pods, which may
+  hold it (`0010·R2`); `status` names the volume.
+- `gpunit volume up --serve <model> --ceiling 4h` makes the row's window volume, of its `disk_gb`, and `serve` mounts
+  it; `gpunit volume down --serve <model>` deletes it. `serve` never creates a volume.
+- `spend` bills a window volume under its project, a project with no pod showing `0 pods`, and names on stderr one
+  that ended before today and still bills today, with `gpunit volume down`.
+- `make live-volume` proves a window: one pod writes the volume, a new pod reads it back. `make live-serve` and
+  `make live-serve-dead` run inside the row's window; `make live-dead` passes on `up`'s exit `1` and prints `reason:`.
+  README's *Working window* and `CLAUDE.md` name the volume verbs and `make live-volume`.
+- `live/last_run.txt` and `live/serve_last_run.txt` record `v0.6`'s acceptance, run inside working windows:
+  `make live-volume`, `make live-serve` and `make live-serve-dead` pass, and `make live-dead` passes on its deadline's
+  reason, the dead-pod rule's live proof being `make live-serve-dead` (`0009·L1`).
+
+### Fixed
+
+- `gpunit-vllm`, `gpunit-live` and `gpunit-live-dead` carry the released `boot.sh` and are re-pinned by digest:
+  `gpunit-vllm:v0.7-rc2` from `build-serve-image` run 38893906654, with the `CMD` fixed below; the live images pushed
+  by hand for `linux/amd64`.
+  `v0.6.0`'s digests carried the `boot.sh` of `057ce89`, from before `681e23c` (`0009·R6`, `0009·S3`).
+- The serve image starts vLLM with a volume mounted: its `CMD` set `HF_HOME` inside `${…:+…}`, whose `;` is a word,
+  so `sh` ran one `export` over vLLM's arguments and exited `2`. `serve --volume` broke the same way since `v0.3`.
+  `make live-volume`'s cards add the RTX PRO 4500 Blackwell and the RTX 4090, under `max_hourly = 0.90`.
+- A log read since the create holds the pod's lines: RunPod's `since` stream sends none, so the read takes the last
+  5000 lines and keeps those from that second on. `serve`'s `pod.log`, the host-key fallback and the older-`boot.sh`
+  refusal read nothing on a real pod before. The host-key poll now makes one read of the last 5000 lines, a key line
+  further back being lost, and judges an older `boot.sh` only on a read that holds the whole log (`0010·R3`).
+
 ## [0.6.0] - 2026-10-15
 
 ### Added

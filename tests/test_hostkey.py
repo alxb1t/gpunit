@@ -1,11 +1,10 @@
-import json
 import re
 from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
-from gpunit import lifecycle, log
+from gpunit import lifecycle
 from tests.fakes import (
     BOOT_LOG,
     KEY_LINE,
@@ -60,21 +59,19 @@ def test_no_fingerprint_or_no_scan_tears_down(
     assert waited <= clock.now < waited + 10
 
 
-@pytest.mark.spec("session:hostkey:since-fallback")
-def test_a_key_line_out_of_the_tail_is_read_from_the_create(
-    cwd: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+@pytest.mark.spec("session:hostkey:tail-bound")
+def test_a_key_line_out_of_the_tail_is_not_read(
+    cwd: Path, clock: FakeClock, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    provider = FakeProvider(logs=[["a boot that logs heavily"]], since_logs=[BOOT_LOG])
-    # The stamp says whether the create had been asked when it was taken.
-    monkeypatch.setattr(
-        log, "utc", lambda: "after" if provider.named("create") else "before"
-    )
+    # Boot's lines have left the last 5000; RunPod's `since` reads no further back.
+    heavy = [f"a boot that logs heavily {n}" for n in range(5000)]
+    provider = FakeProvider(logs=[heavy])
 
-    assert gpunit(["up"], provider=provider) == 0
-    created = json.loads((cwd / ".gpunit" / "pod").read_text(encoding="utf-8"))
-    assert created["created"] == "before"
-    assert provider.named("log") == [("pod-1", 5000, None), ("pod-1", 5000, "before")]
-    assert f"host key verified: {SERVED}" in capsys.readouterr().err
+    assert gpunit(["up"], provider=provider) == 1
+    assert set(provider.named("log")) == {("pod-1", 5000, None)}
+    assert provider.named("delete") == [("pod-1",)]
+    assert "no host-key line within 60s" in capsys.readouterr().err
+    assert 60 <= clock.now < 70
 
 
 @pytest.mark.spec("session:hostkey:echoed-line-is-ignored")
@@ -89,20 +86,28 @@ def test_a_key_line_the_command_echoes_is_not_the_key(
 
 
 @pytest.mark.spec("session:hostkey:echoed-line-is-ignored")
-@pytest.mark.spec("session:hostkey:since-fallback")
-def test_an_old_key_line_echoed_into_the_tail_is_no_older_boot(
-    cwd: Path, capsys: pytest.CaptureFixture[str]
+@pytest.mark.spec("session:hostkey:tail-bound")
+@pytest.mark.parametrize("full", [True, False], ids=["full", "twin-whole-log"])
+def test_an_old_key_line_echoed_into_a_full_tail_is_no_older_boot(
+    full: bool, cwd: Path, clock: FakeClock, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    # Boot's own lines have left the tail; a command's echo of an older boot's is in it.
+    # Boot's lines have left a full tail; a command's echo of an older boot's is in it.
     echoed = ["gpunit host key: SHA256:forged", "x step: the command"]
-    provider = FakeProvider(logs=[echoed], since_logs=[[*BOOT_LOG, *echoed]])
+    filler = ["command output"] * (5000 - len(echoed) - (0 if full else 1))
+    provider = FakeProvider(logs=[[*filler, *echoed]])
 
-    assert gpunit(["up"], provider=provider) == 0
+    assert gpunit(["up"], provider=provider) == 1
 
+    assert provider.named("delete") == [("pod-1",)]
     err = capsys.readouterr().err
-    assert "v0.6.0" not in err
-    assert f"host key verified: {SERVED}" in err
-    assert provider.named("delete") == []
+    if full:
+        assert "v0.6.0" not in err
+        assert "no host-key line within 60s" in err
+        assert 60 <= clock.now < 70
+        return
+    # The twin: a line short of the bound, the read holds the whole log and is judged.
+    assert "ADD boot.sh from gpunit v0.6.0" in err
+    assert clock.now == 0
 
 
 @pytest.mark.spec("session:hostkey:key-without-step-waits")
@@ -168,8 +173,8 @@ def test_an_older_boot_is_refused_at_once(
 ) -> None:
     old = f"gpunit host key: {SERVED}"
     lines = [old, STEP_LINE] if step else [old]
-    # Judged on the log since the create, which holds boot's own lines.
-    provider = FakeProvider(logs=[lines], since_logs=[lines])
+    # Judged on a read short of the tail's bound, which holds boot's own lines.
+    provider = FakeProvider(logs=[lines])
 
     assert gpunit(["up"], provider=provider) == 1
 

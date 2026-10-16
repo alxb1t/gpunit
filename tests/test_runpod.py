@@ -1,5 +1,6 @@
 import dataclasses
 import io
+import json
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -54,7 +55,7 @@ def test_gpu_reads_the_memory_and_the_secure_price() -> None:
     url = opener.requests[0].full_url
     assert url.endswith("/catalog/gpus/NVIDIA%20GeForce%20RTX%204090")
     assert opener.requests[0].get_header("Authorization") == f"Bearer {KEY}"
-    assert opener.requests[0].get_header("User-agent") == "gpunit/0.6.0"
+    assert opener.requests[0].get_header("User-agent") == "gpunit/0.7.0"
 
 
 @pytest.mark.spec("session:place:unknown-card-refuses")
@@ -198,18 +199,54 @@ def test_the_logs_last_fingerprint_wins() -> None:
     assert fingerprint(["echo gpunit host key: SHA256:abc"], NONCE) is None
 
 
-@pytest.mark.spec("session:hostkey:since-fallback")
-def test_a_since_read_starts_there_and_sends_no_tail() -> None:
-    provider, opener = runpod((200, fixture("log.txt")))
+def stamped(*events: tuple[str | None, str]) -> bytes:
+    """Return a log stream whose events carry RunPod's `ts`, as a live pod's do."""
+    body = []
+    for ts, line in events:
+        event = {"source": "container", "line": line} | ({"ts": ts} if ts else {})
+        body.append(f"data: {json.dumps(event)}\n\n")
+    return "".join(body).encode()
 
-    lines = provider.log("pod-abc123", tail=5000, since="2026-10-07T00:00:00Z")
+
+@pytest.mark.spec("serve:wait:log-kept")
+def test_a_since_read_takes_the_tail_from_that_second_on() -> None:
+    # RunPod's own `since` sends no past line (0010 design D14): the read is the tail's.
+    provider, opener = runpod(
+        (
+            200,
+            stamped(
+                ("2026-10-07T09:59:59.999999999Z", "an earlier boot's line"),
+                ("2026-10-07T10:00:00.250000000Z", "2026-10-07T10:00:00Z step: sshd"),
+                (None, "a line with no stamp"),
+                (
+                    "2026-10-07T10:00:05.000000000Z",
+                    "2026-10-07T10:00:05Z step: the command",
+                ),
+            ),
+        )
+    )
+
+    lines = provider.log("pod-abc123", tail=50, since="2026-10-07T10:00:00Z")
 
     query = urllib.parse.urlsplit(opener.requests[0].full_url).query
-    assert query == "since=2026-10-07T00%3A00%3A00Z&source=container"
-    assert (
-        fingerprint(lines, NONCE)
-        == "SHA256:LastKeyWins+/111111111111111111111111111111"
+    assert query == "tail=5000&source=container"
+    assert lines == [
+        "2026-10-07T10:00:00Z step: sshd",
+        "a line with no stamp",
+        "2026-10-07T10:00:05Z step: the command",
+    ]
+
+
+@pytest.mark.spec("serve:wait:log-kept")
+def test_a_tail_read_keeps_every_stamp() -> None:
+    # The twin: without `since`, the line stamped before it is read too.
+    provider, opener = runpod(
+        (200, stamped(("2026-10-07T09:59:59Z", "an earlier boot's line")))
     )
+
+    assert provider.log("pod-abc123", tail=50) == ["an earlier boot's line"]
+    query = urllib.parse.urlsplit(opener.requests[0].full_url).query
+    assert query == "tail=50&source=container"
 
 
 @pytest.mark.spec("session:hostkey:quiet-stream-ends-read")
@@ -418,3 +455,125 @@ def test_an_unreadable_billing_is_lost(answer: Answer, read: str, key: bytes) ->
 
     with pytest.raises(Lost, match="billing read"):
         getattr(provider, read)(*WEEK)
+
+
+@pytest.mark.spec("volume:up:datacenter-from-stock")
+def test_stock_reads_the_secure_pod_stock_and_drops_none() -> None:
+    provider, opener = runpod((200, fixture("gpu_stock.json")))
+
+    assert provider.stock("NVIDIA A40") == [("EU-RO-1", "MEDIUM"), ("CA-MTL-4", "HIGH")]
+    url = urllib.parse.urlsplit(opener.requests[0].full_url)
+    assert url.path == "/v2/catalog/gpus/NVIDIA%20A40"
+    assert urllib.parse.parse_qs(url.query) == {
+        "include": ["AVAILABILITY"],
+        "product": ["POD"],
+        "cloud": ["SECURE"],
+    }
+
+
+@pytest.mark.spec("volume:up:datacenter-from-stock")
+def test_a_card_out_of_stock_everywhere_has_no_data_centre() -> None:
+    provider, _ = runpod((200, fixture("gpu.json")))
+
+    assert provider.stock("NVIDIA GeForce RTX 4090") == []
+
+
+@pytest.mark.spec("volume:up:datacenter-from-stock")
+@pytest.mark.parametrize(
+    ("answer", "fault"),
+    [((404, fixture("problem.json")), Unknown), ((500, b"oops"), Lost)],
+    ids=["404", "500"],
+)
+def test_an_unreadable_stock_is_unknown_or_lost(
+    answer: Answer, fault: type[Exception]
+) -> None:
+    provider, _ = runpod(answer)
+
+    with pytest.raises(fault):
+        provider.stock("NVIDIA A40")
+
+
+@pytest.mark.spec("volume:up:datacenter-from-stock")
+def test_the_standard_data_centres_are_read() -> None:
+    provider, opener = runpod((200, fixture("datacenters.json")), (500, b"oops"))
+
+    assert provider.volume_datacenters() == {"EU-RO-1", "CA-MTL-4"}
+    assert opener.requests[0].full_url.endswith(
+        "/catalog/datacenters?networkVolumeTypes=STANDARD"
+    )
+    with pytest.raises(Lost, match="data centre read"):
+        provider.volume_datacenters()
+
+
+@pytest.mark.spec("volume:up:datacenter-from-stock")
+def test_the_volume_create_names_the_standard_tier() -> None:
+    provider, opener = runpod((201, fixture("volume_created.json")))
+
+    assert provider.create_volume("gpunit-isekai", 60, "EU-RO-1") == "vol-abc123"
+    assert opener.requests[0].get_method() == "POST"
+    assert opener.requests[0].full_url.endswith("/network-volumes")
+    assert opener.sent() == {
+        "name": "gpunit-isekai",
+        "size": 60,
+        "dataCenter": "EU-RO-1",
+        "type": "STANDARD",
+    }
+
+
+@pytest.mark.spec("volume:up:datacenter-from-stock")
+@pytest.mark.parametrize("status", [400, 422])
+def test_a_refused_volume_create_is_refused(status: int) -> None:
+    provider, _ = runpod((status, fixture("problem.json")))
+
+    with pytest.raises(Refused, match="no instances"):
+        provider.create_volume("gpunit-isekai", 60, "EU-RO-1")
+
+
+@pytest.mark.spec("volume:up:lost-create-exits-3")
+@pytest.mark.parametrize(
+    "answer",
+    [(503, b"upstream unavailable"), (201, b"{}"), urllib.error.URLError("down")],
+    ids=["503", "201-no-id", "transport"],
+)
+def test_a_volume_create_without_an_id_is_lost(answer: Answer) -> None:
+    provider, _ = runpod(answer)
+
+    with pytest.raises(Lost, match="volume create"):
+        provider.create_volume("gpunit-isekai", 60, "EU-RO-1")
+
+
+@pytest.mark.spec("volume:down:sweeps-by-name")
+def test_the_volume_listing_walks_the_cursor_and_keeps_the_name() -> None:
+    ours = {"id": "v1", "name": "gpunit-isekai", "dataCenter": "EU-RO-1"}
+    other = {"id": "v2", "name": "gpunit-isekai-old", "dataCenter": "EU-RO-1"}
+    again = {"id": "v3", "name": "gpunit-isekai", "dataCenter": "CA-MTL-4"}
+    provider, opener = runpod(
+        (200, page([ours, other], "c1", "networkVolumes")),
+        (200, page([again], None, "networkVolumes")),
+    )
+
+    assert provider.volumes("gpunit-isekai") == ["v1", "v3"]
+    assert opener.requests[0].full_url.endswith("/network-volumes?limit=1000")
+    assert "cursor=c1" in opener.requests[1].full_url
+
+
+@pytest.mark.spec("volume:down:sweeps-by-name")
+def test_an_unreadable_volume_listing_is_lost() -> None:
+    provider, _ = runpod(
+        (200, page([], "c1", "networkVolumes")), (200, page([], "c1", "networkVolumes"))
+    )
+
+    with pytest.raises(Lost, match="volume listing answered cursor c1 twice"):
+        provider.volumes("gpunit-isekai")
+    provider, _ = runpod((500, fixture("problem.json")))
+    with pytest.raises(Lost, match="volume listing returned HTTP 500"):
+        provider.volumes("gpunit-isekai")
+
+
+@pytest.mark.spec("volume:down:sweeps-by-name")
+def test_delete_volume_returns_the_status_and_0_without_an_answer() -> None:
+    provider, opener = runpod((204, b""), (409, fixture("problem.json")), OSError())
+
+    assert [provider.delete_volume("v1") for _ in range(3)] == [204, 409, 0]
+    assert opener.requests[0].get_method() == "DELETE"
+    assert opener.requests[0].full_url.endswith("/network-volumes/v1")

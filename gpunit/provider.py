@@ -140,7 +140,8 @@ class Provider(Protocol):
     def log(self, pod_id: str, *, tail: int, since: str | None = None) -> list[str]:
         """Return the container log's last `tail` lines; empty on a failed read.
 
-        With `since`, an RFC 3339 time, return the lines from then on instead.
+        With `since`, an RFC 3339 time, return the lines from then on instead, among
+        the provider's longest tail: RunPod's last 5000, so a line before them is lost.
         """
         ...
 
@@ -152,14 +153,37 @@ class Provider(Protocol):
         """Return each volume's charge per UTC day in `[start, end)`; raise `Lost`."""
         ...
 
-    def list(self, project: str, image: str) -> list[tuple[str, str]]:
-        """Return (id, status) of each live project pod; raise `Lost` or `NoImage`."""
-        ...
-
     def delete(self, pod_id: str) -> int:
         """Delete the pod and return the HTTP status; 0 when no answer came."""
         ...
 
     def stop(self, pod_id: str) -> int:
         """Stop the pod and return the HTTP status; 0 when no answer came."""
+        ...
+
+    def stock(self, card: str) -> list[tuple[str, str]]:
+        """Return (data centre, availability) where the card is in stock.
+
+        Raise `Unknown` on a 404, else `Lost`. e.g. [("EU-RO-1", "HIGH")]
+        """
+        ...
+
+    def volume_datacenters(self) -> set[str]:
+        """Return the data centres offering standard volumes; raise `Lost`."""
+        ...
+
+    def create_volume(self, name: str, size_gb: int, datacenter: str) -> str:
+        """Return the new volume's id; raise `Refused` on a 400 or 422, else `Lost`."""
+        ...
+
+    def volumes(self, name: str) -> list[str]:
+        """Return the ids of the volumes named `name`; raise `Lost`."""
+        ...
+
+    def delete_volume(self, volume_id: str) -> int:
+        """Delete the volume and return the HTTP status; 0 when no answer came."""
+        ...
+
+    def list(self, project: str, image: str) -> list[tuple[str, str]]:
+        """Return (id, status) of each live project pod; raise `Lost` or `NoImage`."""
         ...
