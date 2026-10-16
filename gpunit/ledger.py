@@ -2,11 +2,15 @@
 
 import json
 import os
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
+from typing import TypeVar
 
 from gpunit import log
 from gpunit.state import home_state
+
+T = TypeVar("T", "Entry", "VolumeEntry")
 
 
 @dataclass(frozen=True)
@@ -64,20 +68,13 @@ def read() -> dict[str, Entry]:
     field that is not a string (`card` may be null) is skipped. A ledger that
     cannot be read refuses.
     """
-    keys = [field.name for field in fields(Entry)]
     entries: dict[str, Entry] = {}
-    for line in _lines():
-        try:
-            raw = json.loads(line)
-            entry = Entry(**{key: raw[key] for key in keys})
-        except (ValueError, TypeError, KeyError):
-            continue
+    for entry in _parsed(Entry):
         texts = (entry.id, entry.project, entry.image, entry.at)
-        if not all(isinstance(text, str) for text in texts) or not isinstance(
+        if all(isinstance(text, str) for text in texts) and isinstance(
             entry.card, str | None
         ):
-            continue
-        entries.setdefault(entry.id, entry)
+            entries.setdefault(entry.id, entry)
     return entries
 
 
@@ -89,17 +86,23 @@ def volumes() -> dict[str, VolumeEntry]:
     """
     keys = [field.name for field in fields(VolumeEntry)]
     entries: dict[str, VolumeEntry] = {}
-    for line in _lines():
-        try:
-            raw = json.loads(line)
-            entry = VolumeEntry(**{key: raw[key] for key in keys})
-        except (ValueError, TypeError, KeyError):
-            continue
+    for entry in _parsed(VolumeEntry):
         if entry.kind == "volume" and all(
             isinstance(getattr(entry, key), str) for key in keys
         ):
             entries[entry.id] = entry
     return entries
+
+
+def _parsed(kind: type[T]) -> Iterator[T]:
+    """Yield a `kind` for each line holding its every key; skip the rest."""
+    keys = [field.name for field in fields(kind)]
+    for line in _lines():
+        try:
+            raw = json.loads(line)
+            yield kind(**{key: raw[key] for key in keys})
+        except (ValueError, TypeError, KeyError):
+            continue
 
 
 def _lines() -> list[str]:

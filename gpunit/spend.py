@@ -94,7 +94,7 @@ def build(
     pods: list[PodCost],
     volumes: list[VolumeCost],
     owners: dict[str, str],
-    volume_owners: dict[str, str] | None = None,
+    volume_owners: dict[str, str],
 ) -> Report:
     """Return the report: pods and window volumes by project, other volumes alone."""
     by_pod = _summed((cost.pod_id, cost.amount) for cost in pods)
@@ -104,7 +104,6 @@ def build(
         by_project[owners.get(pod_id, UNATTRIBUTED)].append(amount)
     stored: dict[str, Decimal] = defaultdict(Decimal)
     storage: list[tuple[str, Decimal]] = []
-    volume_owners = volume_owners or {}
     for volume_id, amount in by_volume.items():
         if volume_id in volume_owners:
             stored[volume_owners[volume_id]] += amount

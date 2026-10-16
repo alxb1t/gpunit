@@ -203,10 +203,10 @@ def log_stream(*lines: str) -> bytes:
     return "".join(f"data: {json.dumps({'line': line})}\n" for line in lines).encode()
 
 
-def page(pods: list[dict[str, str]], cursor: str | None) -> bytes:
-    """Return one page of RunPod's pod listing; `cursor` None is the last page."""
+def page(items: list[dict[str, str]], cursor: str | None, key: str = "pods") -> bytes:
+    """Return one page of a RunPod listing; `cursor` None is the last page."""
     more = {"nextCursor": cursor, "hasNextPage": cursor is not None}
-    return json.dumps({"pods": pods, "pagination": more}).encode()
+    return json.dumps({key: items, "pagination": more}).encode()
 
 
 class _Response(io.BytesIO):

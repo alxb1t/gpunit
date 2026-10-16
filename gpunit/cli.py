@@ -154,8 +154,6 @@ def _run(argv: list[str], provider: Provider | None) -> int:
 
             return spend.spend(lazy(), args.days, as_json=args.json)
         spec = load_spec(args.spec)
-        if args.verb == "volume":
-            return _volume(args, spec, lazy(), state)
         match args.verb:
             case "up":
                 lifecycle.up(spec, lazy(), state)
@@ -164,6 +162,8 @@ def _run(argv: list[str], provider: Provider | None) -> int:
                 return lifecycle.status(lazy, state, as_json=args.json)
             case "down":
                 return lifecycle.down(spec, lazy(), state)
+            case "volume":
+                return _volume(args, spec, lazy(), state)
             case "ssh":
                 lifecycle.ssh(state)
                 # unreachable: the exec replaces this process, or ssh() refuses

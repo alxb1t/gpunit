@@ -457,11 +457,6 @@ def test_an_unreadable_billing_is_lost(answer: Answer, read: str, key: bytes) ->
         getattr(provider, read)(*WEEK)
 
 
-def volume_page(volumes: list[dict[str, str]], cursor: str | None) -> bytes:
-    more = {"nextCursor": cursor, "hasNextPage": cursor is not None}
-    return json.dumps({"networkVolumes": volumes, "pagination": more}).encode()
-
-
 @pytest.mark.spec("volume:up:datacenter-from-stock")
 def test_stock_reads_the_secure_pod_stock_and_drops_none() -> None:
     provider, opener = runpod((200, fixture("gpu_stock.json")))
@@ -553,7 +548,8 @@ def test_the_volume_listing_walks_the_cursor_and_keeps_the_name() -> None:
     other = {"id": "v2", "name": "gpunit-isekai-old", "dataCenter": "EU-RO-1"}
     again = {"id": "v3", "name": "gpunit-isekai", "dataCenter": "CA-MTL-4"}
     provider, opener = runpod(
-        (200, volume_page([ours, other], "c1")), (200, volume_page([again], None))
+        (200, page([ours, other], "c1", "networkVolumes")),
+        (200, page([again], None, "networkVolumes")),
     )
 
     assert provider.volumes("gpunit-isekai") == ["v1", "v3"]
@@ -563,7 +559,9 @@ def test_the_volume_listing_walks_the_cursor_and_keeps_the_name() -> None:
 
 @pytest.mark.spec("volume:down:sweeps-by-name")
 def test_an_unreadable_volume_listing_is_lost() -> None:
-    provider, _ = runpod((200, volume_page([], "c1")), (200, volume_page([], "c1")))
+    provider, _ = runpod(
+        (200, page([], "c1", "networkVolumes")), (200, page([], "c1", "networkVolumes"))
+    )
 
     with pytest.raises(Lost, match="volume listing answered cursor c1 twice"):
         provider.volumes("gpunit-isekai")

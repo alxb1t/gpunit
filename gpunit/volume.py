@@ -2,7 +2,6 @@
 
 import math
 import sys
-from collections.abc import Callable
 from dataclasses import replace
 from decimal import ROUND_UP, Decimal
 
@@ -24,13 +23,12 @@ def up(
     state: State,
     *,
     yes: bool,
-    ask: Callable[[str], str] = input,
 ) -> int:
     """Create the window volume, or extend a live one, after the price; return 0.
 
     Refuse when it cannot; raise `Lost` when a create's answer did not arrive.
     """
-    lifecycle.sweep_window(state, provider)
+    lifecycle.sweep_window(state, lambda: provider)
     if state.volume_pending.exists():
         log.refuse(
             f"a create may have left a volume ({state.volume_pending}); "
@@ -41,7 +39,7 @@ def up(
     name = pod_name(spec.project)
     window = state.window()
     if window is not None:
-        return _extend(spec.project, state, window, spec.volume_ceiling_s, yes, ask)
+        return _extend(spec.project, state, window, spec.volume_ceiling_s, yes)
 
     datacenter = _datacenter(spec, provider)
     log.say(f"data centre: {datacenter}")
@@ -51,7 +49,6 @@ def up(
         f"create volume {name}",
         "not created",
         yes,
-        ask,
     )
     state.mark_volume_pending()
     try:
@@ -74,7 +71,7 @@ def up(
 
 def down(spec: Spec, provider: Provider, state: State) -> int:
     """Delete the recorded volume, sweep every one of its name; return 0, or 1."""
-    lifecycle.sweep_window(state, provider)
+    lifecycle.sweep_window(state, lambda: provider)
     failed = False
     window = state.window()
     if window is not None:
@@ -124,7 +121,6 @@ def _extend(
     window: Window,
     ceiling_s: int,
     yes: bool,
-    ask: Callable[[str], str],
 ) -> int:
     if window.ends_within(0):
         # The sweep's delete failed: there is no live window to extend.
@@ -133,7 +129,7 @@ def _extend(
             "run gpunit volume down"
         )
     question = f"extend volume {window.id}"
-    _agree(window.size_gb, ceiling_s, question, "not extended", yes, ask)
+    _agree(window.size_gb, ceiling_s, question, "not extended", yes)
     extended = replace(window, ends=log.utc(ceiling_s))
     state.write_window(extended)
     ledger.record_volume(project, window.id, extended.ends)
@@ -172,7 +168,6 @@ def _agree(
     question: str,
     refused: str,
     yes: bool,
-    ask: Callable[[str], str],
 ) -> None:
     """Print the price and ask `question`; refuse anything but yes, unless `yes`."""
     most = most_cost(size_gb, ceiling_s)
@@ -181,7 +176,7 @@ def _agree(
     if yes:
         return
     try:
-        answer = ask(f"{question} for at most ${most}? [y/N] ")
+        answer = input(f"{question} for at most ${most}? [y/N] ")
     except EOFError:
         answer = ""
     except KeyboardInterrupt:

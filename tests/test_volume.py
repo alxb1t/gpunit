@@ -6,19 +6,12 @@ import pytest
 
 from gpunit import ledger, log
 from gpunit.provider import GpuInfo, Lost, Refused
-from gpunit.state import State, Window
+from gpunit.state import State
 from gpunit.volume import most_cost
 from tests.fakes import FakeProvider
-from tests.helpers import NO_REQUESTS, VALID, gpunit, write_spec
+from tests.helpers import NO_REQUESTS, WINDOW, gpunit, open_window, write_spec
 
-WINDOW = VALID + 'volume_gb = 60\nvolume_ceiling = "4h"\n'
 CARDS = WINDOW.replace('["RTX 4090", "RTX A6000"]', '["NVIDIA A40", "NVIDIA L40"]')
-
-
-def recorded(cwd: Path, ends_in_s: int = 3600) -> State:
-    state = State(cwd)
-    state.write_window(Window("v1", "EU-RO-1", 60, log.utc(ends_in_s)))
-    return state
 
 
 @pytest.mark.spec("volume:up:datacenter-from-stock")
@@ -190,7 +183,7 @@ def test_a_pending_mark_refuses(
 @pytest.mark.spec("volume:extend:moves-the-end")
 def test_up_again_extends(cwd: Path, capsys: pytest.CaptureFixture[str]) -> None:
     write_spec(cwd, WINDOW)
-    state = recorded(cwd)
+    state = open_window(cwd, 3600)
     provider = FakeProvider()
 
     before = log.utc(14400)
@@ -209,7 +202,7 @@ def test_up_again_extends(cwd: Path, capsys: pytest.CaptureFixture[str]) -> None
 @pytest.mark.spec("volume:ceiling:overdue-deleted")
 def test_up_on_an_overdue_volume_deletes_it_and_makes_a_new_one(cwd: Path) -> None:
     write_spec(cwd, WINDOW)
-    state = recorded(cwd, ends_in_s=-60)
+    state = open_window(cwd, -60)
     provider = FakeProvider(volume_creates=["v2"])
 
     assert gpunit(["volume", "up", "--yes"], provider=provider) == 0
@@ -221,7 +214,7 @@ def test_up_on_an_overdue_volume_deletes_it_and_makes_a_new_one(cwd: Path) -> No
 
 @pytest.mark.spec("volume:down:deletes")
 def test_down_deletes_the_volume(cwd: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    state = recorded(cwd)
+    state = open_window(cwd, 3600)
     provider = FakeProvider(volume_listings=[["v1"]])
 
     assert gpunit(["volume", "down"], provider=provider) == 0
@@ -258,7 +251,7 @@ def test_an_unreadable_listing_keeps_the_pending_mark(cwd: Path) -> None:
 def test_a_refused_delete_keeps_the_record(
     code: int, cwd: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    state = recorded(cwd)
+    state = open_window(cwd, 3600)
     provider = FakeProvider(volume_deletes={"v1": code})
 
     assert gpunit(["volume", "down"], provider=provider) == 1

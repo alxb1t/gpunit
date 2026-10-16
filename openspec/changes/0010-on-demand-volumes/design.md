@@ -125,10 +125,11 @@ None → `log.refuse("no window volume is up; run gpunit volume up")`; `now + sp
 ### D7
 
 `lifecycle.sweep_window(state, provider)`: a window whose `ends` has passed → `delete_volume`; `204` → clear it, say
-`volume <id> passed its ceiling at <ends>; deleted`; else keep it and warn with the answer. It returns whether a window
-was overdue; `up` then refuses naming `gpunit volume up` when `spec.volume_gb` is set. It is called first in
-`lifecycle.up`, `lifecycle.down`, `lifecycle.status`, `volume.up` and `volume.down`; `run` and `serve` reach it through
-`up`. `status` builds the provider only when a window is overdue, keeping *no record needs no key*.
+`volume <id> passed its ceiling at <ends>; deleted`; else keep it and warn with the answer. `provider` is a callable,
+built only for that delete. `up` then refuses naming `gpunit volume up` when `spec.volume_gb` is set and the record is
+gone or still past its end. It is called first in `lifecycle.up`, `lifecycle.down`, `lifecycle.status`, `volume.up`
+and `volume.down`; `run` and `serve` reach it through `up`. So `status` builds the provider only when a window is
+overdue, keeping *no record needs no key*.
 
 ### D8
 

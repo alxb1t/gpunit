@@ -3,11 +3,10 @@ from pathlib import Path
 
 import pytest
 
-from gpunit import log
 from gpunit.provider import GpuInfo, Lost, PodInfo, Refused, Unknown, VolumeInfo
 from gpunit.runpod import RunPod
 from gpunit.spec import Spec
-from gpunit.state import State, Window
+from gpunit.state import State
 from tests.fakes import (
     BOOT_LOG,
     RUNNING,
@@ -18,7 +17,15 @@ from tests.fakes import (
     log_stream,
     page,
 )
-from tests.helpers import IMAGE, NO_REQUESTS, VALID, gpunit, write_spec
+from tests.helpers import (
+    IMAGE,
+    NO_REQUESTS,
+    VALID,
+    WINDOW,
+    gpunit,
+    open_window,
+    write_spec,
+)
 
 
 def creates(provider: FakeProvider) -> list[str]:
@@ -296,19 +303,10 @@ def test_the_ceiling_reaches_the_pod_in_seconds(cwd: Path) -> None:
     assert isinstance(env, dict) and env["GPUNIT_CEILING"] == "2700"
 
 
-WINDOW = VALID + 'volume_gb = 60\nvolume_ceiling = "4h"\n'
-
-
-def open_window(cwd: Path, ends_in_s: int) -> State:
-    state = State(cwd)
-    state.write_window(Window("v2", "CA-MTL-4", 60, log.utc(ends_in_s)))
-    return state
-
-
 @pytest.mark.spec("session:volume:window-mounted")
 def test_the_windows_volume_is_mounted(cwd: Path) -> None:
     write_spec(cwd, WINDOW)
-    open_window(cwd, 4 * 3600)
+    open_window(cwd, 4 * 3600, "v2", "CA-MTL-4")
     provider = FakeProvider(volumes={"v2": VolumeInfo("CA-MTL-4", 60)})
 
     assert gpunit(["up"], provider=provider) == 0
@@ -341,7 +339,7 @@ def test_a_session_past_the_volumes_end_refuses(
     ends_in_s: int, refused: bool, cwd: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     write_spec(cwd, WINDOW)
-    state = open_window(cwd, ends_in_s)
+    state = open_window(cwd, ends_in_s, "v2", "CA-MTL-4")
     provider = FakeProvider(volumes={"v2": VolumeInfo("CA-MTL-4", 60)})
 
     assert gpunit(["up"], provider=provider) == (1 if refused else 0)
@@ -358,7 +356,7 @@ def test_a_session_after_the_ceiling_refuses(
     cwd: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     write_spec(cwd, WINDOW)
-    state = open_window(cwd, -60)
+    state = open_window(cwd, -60, "v2", "CA-MTL-4")
     provider = FakeProvider()
 
     assert gpunit(["up"], provider=provider) == 1

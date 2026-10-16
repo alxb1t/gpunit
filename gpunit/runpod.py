@@ -308,8 +308,13 @@ class RunPod:
 
     def create_volume(self, name: str, size_gb: int, datacenter: str) -> str:
         """Return the new volume's id; raise `Refused` on a 400 or 422, else `Lost`."""
-        body = {"name": name, "size": size_gb, "dataCenter": datacenter}
-        answer = self._call("POST", "/network-volumes", body | {"type": "STANDARD"})
+        body = {
+            "name": name,
+            "size": size_gb,
+            "dataCenter": datacenter,
+            "type": "STANDARD",
+        }
+        answer = self._call("POST", "/network-volumes", body)
         call = f"volume create in {datacenter!r}"
         if answer.status in (400, 422):
             raise Refused(_report(call, answer))

@@ -6,8 +6,9 @@ from typing import NoReturn, cast
 
 import pytest
 
-from gpunit import cli
+from gpunit import cli, log
 from gpunit.provider import Provider
+from gpunit.state import State, Window
 
 IMAGE = "ghcr.io/alxb1t/isekai@sha256:" + "a" * 64
 
@@ -19,6 +20,9 @@ vram_gb = 24
 ceiling = "45m"
 disk_gb = 50
 """
+
+# The valid spec, with a window volume of 60 GB for 4h.
+WINDOW = VALID + 'volume_gb = 60\nvolume_ceiling = "4h"\n'
 
 
 class NoRequests:
@@ -37,6 +41,15 @@ def write_spec(cwd: Path, text: str = VALID) -> Path:
     path = cwd / "gpunit.toml"
     path.write_text(text, encoding="utf-8")
     return path
+
+
+def open_window(
+    cwd: Path, ends_in_s: int, volume_id: str = "v1", datacenter: str = "EU-RO-1"
+) -> State:
+    """Record a 60 GB window volume in `cwd`, ending `ends_in_s` from now."""
+    state = State(cwd)
+    state.write_window(Window(volume_id, datacenter, 60, log.utc(ends_in_s)))
+    return state
 
 
 def with_port(cwd: Path, local: int) -> None:
