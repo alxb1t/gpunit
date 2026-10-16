@@ -14,9 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `gpunit.toml` takes `volume_gb`, `volume_ceiling` and `volume_datacenter`, refused without their pair, beside
   `volume`, or outside 10–4000 GB; `.gpunit/volume` records the window and the ledger names its volume and end.
 - `gpunit volume up` creates `gpunit-<project>` where the first card of `gpus` is in stock, after the price, or extends
-  a live one; `gpunit volume down` deletes it and sweeps any other of its name. A volume past its end is deleted first.
+  a live one; `gpunit volume down` deletes it, and sweeps any other of its name only after a lost create, so another
+  checkout's volume is never deleted (`0010·S1`). A volume past its end is deleted first.
 - A spec with `volume_gb` mounts the window's volume in `up`, `run` and `serve`, and refuses with none recorded or a
-  session that would outlive it; `up`, `down` and `status` delete an overdue volume first; `status` names the volume.
+  session that would outlive it; `up` and `status` delete an overdue volume first, `down` after its pods, which may
+  hold it (`0010·R2`); `status` names the volume.
 - `gpunit volume up --serve <model> --ceiling 4h` makes the row's window volume, of its `disk_gb`, and `serve` mounts
   it; `gpunit volume down --serve <model>` deletes it. `serve` never creates a volume.
 - `spend` bills a window volume under its project, a project with no pod showing `0 pods`, and names on stderr one
@@ -39,7 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `make live-volume`'s cards add the RTX PRO 4500 Blackwell and the RTX 4090, under `max_hourly = 0.90`.
 - A log read since the create holds the pod's lines: RunPod's `since` stream sends none, so the read takes the last
   5000 lines and keeps those from that second on. `serve`'s `pod.log`, the host-key fallback and the older-`boot.sh`
-  refusal read nothing on a real pod before.
+  refusal read nothing on a real pod before. The host-key poll now makes one read of the last 5000 lines, a key line
+  further back being lost, and judges an older `boot.sh` only on a read that holds the whole log (`0010·R3`).
 
 ## [0.6.0] - 2026-10-15
 

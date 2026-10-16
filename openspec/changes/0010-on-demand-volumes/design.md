@@ -49,16 +49,16 @@ being deleted; `status --json` naming the volume.
 | [D2](#d2) | `volume_gb`, `volume_ceiling`, `volume_datacenter` in the spec, refused as spec faults | *infra as config*; every spec fault is exit `1` | CLI flags |
 | [D3](#d3) | the data centre: the first placeable card's highest stock among standard-volume data centres | every pod of the window goes there | the cheapest data centre |
 | [D4](#d4) | `.gpunit/volume` and `.gpunit/volume.pending`, beside the pod's | one record per project, as the pod | a record in the ledger alone |
-| [D5](#d5) | `gpunit/volume.py`: `up` (create or extend, after the price) and `down` (delete, sweep by name) | the pod's lifecycle, for a volume | folding it into `lifecycle.py` |
+| [D5](#d5) | `gpunit/volume.py`: `up` (create or extend, after the price) and `down` (delete, sweep by name after a lost create) | the pod's lifecycle, for a volume | folding it into `lifecycle.py` |
 | [D6](#d6) | `up` mounts the window volume by setting `spec.volume`; refuses no record, or a session that outlives it | the mount path exists | a second mount path |
-| [D7](#d7) | `lifecycle.sweep_window` deletes an overdue volume first, in `up`, `down`, `status`, `volume up` and `volume down` | no chore to remember | a watcher pod |
+| [D7](#d7) | `lifecycle.sweep_window` deletes an overdue volume first, in `up`, `status`, `volume up` and `volume down`; `down` after its pods | no chore to remember | a watcher pod |
 | [D8](#d8) | `volume up --serve <row> --ceiling D`; `serve` mounts a recorded window volume | `serve` has no config file; no side effects | `serve` creating one |
 | [D9](#d9) | volume lines in the ledger; `spend` bills a window volume under its project, names an overdue one | a window's storage is its project's | a storage line for every volume |
 | [D10](#d10) | `make live-volume`; `live-serve` and `live-serve-dead` inside a window; `live-dead` asserts its reason | `v0.6`'s acceptance, in the window it now runs in | a dead image that reaches `EXITED` |
 | [D11](#d11) | `gpunit-vllm`, `gpunit-live` and `gpunit-live-dead` rebuilt from `boot.sh` at HEAD, before the live runs | `0009·R6`, `0009·S3` | editing `v0.6.0`'s released entry |
 | [D12](#d12) | README's *Working window*, the verbs, the exit `3` row; `CLAUDE.md`'s layout and live runs | the consumers' versions read it | — |
 | [D13](#d13) | `serve/Dockerfile`'s `CMD` sets `HF_HOME` with an `if`, tested by running it under `sh`; `gpunit-vllm` rebuilt as `v0.7-rc2` | the `${…:+…}` form breaks every mounted volume | carding it past this change |
-| [D14](#d14) | `RunPod.log` with `since` reads the last 5000 lines and keeps those stamped from that second on | RunPod's `since` stream sends no past line | callers moved to tail reads; `Last-Event-ID` |
+| [D14](#d14) | `RunPod.log` with `since` reads the last 5000 lines and keeps those stamped from that second on; the host-key poll makes one tail read, bounded at 5000 lines | RunPod's `since` stream sends no past line | a backfill; `Last-Event-ID` |
 
 ### D1
 
@@ -106,9 +106,17 @@ up:    sweep_window → pending? refuse → no volume_gb? refuse
                 ├─ Refused: clear pending, refuse with the provider's words
                 ├─ Lost: keep pending, say "run gpunit volume down", raise Lost (exit 3)
                 └─ id: write the window, ledger, clear pending; say id, data centre, end
-down:  sweep_window → delete the record's volume → volumes(gpunit-<project>) → delete each other
-       → every 204: clear the window and the pending mark, exit 0; else keep, say the answer, exit 1
+down:  sweep_window → delete the record's volume → 204: clear the window
+       → no pending mark: done, exit 0, or 1 when the record's delete failed
+       → pending: volumes(gpunit-<project>) → delete each other
+       → every 204: clear the pending mark, exit 0; else keep it, say the answer, exit 1
 ```
+
+**Amended in converge (`0010·S1`, `0010·R1`):** the name sweep runs only while `.gpunit/volume.pending` exists, the one
+case where a volume of this checkout can go unrecorded; without the mark, any other `gpunit-<project>` volume is
+another checkout's, a teammate's on the same account, or one made by hand, and a network volume's delete cannot be
+undone. The record is cleared on its own `204`, before the sweep, so a sweep that fails after it leaves no record of
+a deleted volume for every later `volume down` to 404 on; only the pending mark waits for the sweep.
 
 **The price:** `VOLUME_GB_MONTH = Decimal("0.07")`, `HOURS_A_MONTH = 730`; at most
 `size_gb × 0.07 × ceil(volume_ceiling_s / 3600) / 730`, up to the cent. It prints `price: $0.07/GB a month` and
@@ -130,6 +138,10 @@ built only for that delete. `up` then refuses naming `gpunit volume up` when `sp
 gone or still past its end. It is called first in `lifecycle.up`, `lifecycle.down`, `lifecycle.status`, `volume.up`
 and `volume.down`; `run` and `serve` reach it through `up`. So `status` builds the provider only when a window is
 overdue, keeping *no record needs no key*.
+
+**Amended in converge (`0010·R2`):** `lifecycle.down` sweeps the window after its pod delete and pod sweep, not first:
+a stopped pod still holds its volume, so a delete before the pod's is refused, and `down` would exit `0` with the
+volume billing. The sweep runs whatever the pods' outcome; its failure still only warns.
 
 ### D8
 
@@ -199,8 +211,24 @@ Found by a probe pod on 2026-10-16, after `make live-serve-dead` kept no `pod:` 
 RunPod's docs say `since` drives the backfill; live, it sends none. So every `since` read gpunit made was empty: the
 host-key fallback, the older-`boot.sh` judgment and `serve`'s `pod.log`. `RunPod.log` keeps the `Provider` contract
 — with `since`, the lines from then on — by sending `tail=5000&source=container` and keeping each event whose `ts`,
-to the second, is at or after `since`; an event with no `ts` is kept. The callers and the specs do not change. The
-cost: a log longer than 5000 lines since the create is read from its last 5000.
+to the second, is at or after `since`; an event with no `ts` is kept. The cost: a log longer than 5000 lines since
+the create is read from its last 5000.
+
+**Amended in converge (`0010·R3`):** a `since` read is then a subset of the host-key poll's own `tail=5000` read, so
+the fallback to it could never find a key line the tail had lost; `session:hostkey:since-fallback` held only because
+`FakeProvider` scripted `since_logs` apart from `logs` within one poll. A true backfill was rejected: RunPod's `since` sends no
+past line (the probe above), and `Last-Event-ID` stays rejected. So the bound is stated, not hidden:
+
+- `_verify_host_key` makes one read a poll, the last 5000 lines with no `since`; a key line further back is not read,
+  and the poll tears down at its 60 seconds, as for no line at all.
+- The older-`boot.sh` judgment runs only on a read of fewer than 5000 lines, which holds the whole log and so boot's
+  own lines; a full tail can hold only a command's echo of an older key line, and is not judged.
+- The session spec's host-key requirement is removed and re-added as *verified from the log's tail*, since OpenSpec
+  cannot drop a scenario through `MODIFIED`: `session:hostkey:tail-bound` replaces `session:hostkey:since-fallback`.
+- `Provider.log`'s and `RunPod.log`'s docstrings name the provider's tail as the bound of a `since` read; the
+  `created` comment in `lifecycle.up` says the same. `FakeProvider` keeps `since_logs` for `serve`'s reads, which
+  are later reads of the tail, and no test scripts a poll whose `since` read holds a line its tail read has lost.
+- `RunPod.log`'s `since` tests move to `serve:wait:log-kept`, `serve`'s `pod.log` being the one `since` reader left.
 
 ## Dependencies
 

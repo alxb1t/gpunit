@@ -63,9 +63,11 @@ window, and on `y` SHALL move the volume's end to now plus `volume_ceiling` in `
 
 ### Requirement: The window volume is deleted by its verb
 
-`gpunit volume down` SHALL delete the recorded volume, SHALL list the volumes named `gpunit-<project>` and delete each
-the record does not name, and SHALL remove `.gpunit/volume` and `.gpunit/volume.pending` only when every delete
-answered `204`; any other answer, a `404` among them, SHALL keep the record, say so, and exit `1`.
+`gpunit volume down` SHALL delete the recorded volume and remove `.gpunit/volume` once that delete answers `204`; SHALL,
+only while `.gpunit/volume.pending` exists, list the volumes named `gpunit-<project>` and delete each the record does not
+name, a lost create being the one way a volume of this checkout goes unrecorded; and SHALL remove
+`.gpunit/volume.pending` only when every delete answered `204`. Any other answer, a `404` among them, SHALL keep the
+record or the mark it concerns, say so, and exit `1`.
 
 #### Scenario: down deletes the volume
 - **Key:** `volume:down:deletes`
@@ -82,11 +84,21 @@ answered `204`; any other answer, a `404` among them, SHALL keep the record, say
 - **WHEN** the delete answers `409`, or `404`
 - **THEN** `.gpunit/volume` remains, stderr names the answer, and the command exits `1`
 
+#### Scenario: no pending mark, no sweep
+- **Key:** `volume:down:no-sweep-without-pending`
+- **WHEN** a volume `v1` is recorded, no `.gpunit/volume.pending` exists, and the provider lists `v1` and `v8` named `gpunit-<project>`
+- **THEN** `v1` alone is deleted, no volume is listed, and the command exits `0`
+
+#### Scenario: the record goes with its own delete
+- **Key:** `volume:down:record-cleared-on-its-delete`
+- **WHEN** a volume is recorded beside a pending mark, its delete answers `204`, and the listing's answer is lost
+- **THEN** `.gpunit/volume` is gone, `.gpunit/volume.pending` remains, and the command exits `1`
+
 ### Requirement: A window volume past its ceiling is deleted by the next command
 
-`up`, `run`, `down`, `status`, `volume up`, `volume down` and `serve` SHALL, before anything else, delete a recorded
-volume whose end has passed, saying so; a delete that fails SHALL keep the record and warn. `up`, `run` and `serve`
-SHALL then refuse, naming `gpunit volume up`.
+`up`, `run`, `status`, `volume up`, `volume down` and `serve` SHALL, before anything else, delete a recorded volume
+whose end has passed, saying so; `down` SHALL do so after it deletes its pods, which may hold the volume. A delete that
+fails SHALL keep the record and warn. `up`, `run` and `serve` SHALL then refuse, naming `gpunit volume up`.
 
 #### Scenario: an overdue volume is deleted first
 - **Key:** `volume:ceiling:overdue-deleted`
@@ -97,6 +109,11 @@ SHALL then refuse, naming `gpunit volume up`.
 - **Key:** `volume:ceiling:session-refuses`
 - **WHEN** the spec sets `volume_gb`, the recorded volume's end has passed, and `up` runs
 - **THEN** the volume is deleted, `up` refuses naming `gpunit volume up`, and no pod is created
+
+#### Scenario: down deletes the overdue volume after its pod
+- **Key:** `volume:ceiling:down-after-the-pod`
+- **WHEN** a pod is recorded, the recorded volume's end has passed, its delete is refused while the pod exists, and `down` runs
+- **THEN** the pod is deleted, then the volume, `.gpunit/volume` is gone, and the command exits `0`
 
 ### Requirement: Status names the window volume
 

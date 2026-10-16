@@ -98,7 +98,8 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
 
     pubkey = state.keygen(pod_name(spec.project))
     nonce = NONCE()
-    # Before the create, so a log read `since` it holds the whole boot (0003 design D2).
+    # Before the create, so a log read `since` it misses none of the pod's lines
+    # within the provider's tail (0003 design D2, 0010 design D14).
     created = log.utc()
     state.mark_pending()
     pod_id = _create(spec, provider, cards, pubkey, nonce)
@@ -171,8 +172,16 @@ def status(provider: Callable[[], Provider], state: State, *, as_json: bool) -> 
 
 
 def down(spec: Spec, provider: Provider, state: State) -> int:
-    """Delete the recorded pod, sweep every listed one; return 0, or 1 on a fault."""
+    """Delete the recorded pod, sweep every listed one; return 0, or 1 on a fault.
+
+    An overdue window volume is swept after the pods, which may hold it.
+    """
+    code = _delete_pods(spec, provider, state)
     sweep_window(state, lambda: provider)
+    return code
+
+
+def _delete_pods(spec: Spec, provider: Provider, state: State) -> int:
     failed = False
     record = state.read()
     if record is not None:
@@ -369,14 +378,14 @@ def _verify_host_key(
     # The fingerprint comes over the authenticated API, never over the connection
     # it vouches for; nothing connects until the two agree.
     def read() -> str | None:
-        # A boot that logs heavily pushes the key line out of the tail.
-        for since in (None, record.created):
-            lines = provider.log(record.id, tail=LOG_TAIL, since=since)
-            if printed := fingerprint(lines, nonce):
-                return printed
-        # Judged on the log since the create alone, whose key line is boot's own: the
-        # tail can hold only a command's echo of an older one.
-        if old_boot(lines):
+        # The last LOG_TAIL lines alone: RunPod's `since` reads the same tail (0010
+        # design D14), so a key line a heavy boot pushes out of it is not read.
+        lines = provider.log(record.id, tail=LOG_TAIL)
+        if printed := fingerprint(lines, nonce):
+            return printed
+        # Judged on a read that holds the whole log, whose key line is boot's own: a
+        # full tail can hold only a command's echo of an older one.
+        if len(lines) < LOG_TAIL and old_boot(lines):
             _tear_down(
                 spec,
                 provider,

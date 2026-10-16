@@ -219,7 +219,8 @@ def test_down_deletes_the_volume(cwd: Path, capsys: pytest.CaptureFixture[str]) 
 
     assert gpunit(["volume", "down"], provider=provider) == 0
     assert provider.named("delete_volume") == [("v1",)]
-    assert provider.named("volumes") == [("gpunit-isekai",)]
+    # No pending mark: nothing is swept by name.
+    assert provider.named("volumes") == []
     assert not state.volume.exists()
     assert "volume v1 deleted" in capsys.readouterr().err
 
@@ -266,4 +267,29 @@ def test_a_failed_sweep_keeps_the_pending_mark(cwd: Path) -> None:
     provider = FakeProvider(volume_listings=[["v9"]], volume_deletes={"v9": 500})
 
     assert gpunit(["volume", "down"], provider=provider) == 1
+    assert state.volume_pending.exists()
+
+
+@pytest.mark.spec("volume:down:no-sweep-without-pending")
+def test_down_leaves_a_volume_of_its_name_it_did_not_make(cwd: Path) -> None:
+    # Another checkout of the project, on the same account, holds `v8`.
+    state = open_window(cwd, 3600)
+    provider = FakeProvider(volume_listings=[["v1", "v8"]])
+
+    assert gpunit(["volume", "down"], provider=provider) == 0
+    assert provider.named("delete_volume") == [("v1",)]
+    assert provider.named("volumes") == []
+    assert not state.volume.exists()
+
+
+@pytest.mark.spec("volume:down:record-cleared-on-its-delete")
+def test_the_records_own_delete_clears_it_when_the_sweep_fails(cwd: Path) -> None:
+    # A run stopped between the window's write and the mark's clear leaves both.
+    state = open_window(cwd, 3600)
+    state.mark_volume_pending()
+    provider = FakeProvider(volume_listings=[Lost("volume listing returned HTTP 500")])
+
+    assert gpunit(["volume", "down"], provider=provider) == 1
+    assert provider.named("delete_volume") == [("v1",)]
+    assert state.window() is None
     assert state.volume_pending.exists()

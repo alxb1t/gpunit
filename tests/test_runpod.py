@@ -208,7 +208,7 @@ def stamped(*events: tuple[str | None, str]) -> bytes:
     return "".join(body).encode()
 
 
-@pytest.mark.spec("session:hostkey:since-fallback")
+@pytest.mark.spec("serve:wait:log-kept")
 def test_a_since_read_takes_the_tail_from_that_second_on() -> None:
     # RunPod's own `since` sends no past line (0010 design D14): the read is the tail's.
     provider, opener = runpod(
@@ -237,7 +237,7 @@ def test_a_since_read_takes_the_tail_from_that_second_on() -> None:
     ]
 
 
-@pytest.mark.spec("session:hostkey:since-fallback")
+@pytest.mark.spec("serve:wait:log-kept")
 def test_a_tail_read_keeps_every_stamp() -> None:
     # The twin: without `since`, the line stamped before it is read too.
     provider, opener = runpod(

@@ -219,11 +219,12 @@ uv run gpunit volume down --serve qwen3-4b
   ceiling plus its wait for SSH would end after the volume.
 - **`volume up` again extends** a live volume to now plus `volume_ceiling`, after the price.
 - **The ceiling:** `up`, `run`, `serve`, `down`, `status`, `volume up` and `volume down` each delete a volume past its
-  end before anything else. `status` names the volume and its end.
+  end before anything else, `down` after its pods, which may hold it. `status` names the volume and its end.
 - **The residual:** a volume no command reaches after its ceiling bills $0.07/GB a month until one does; `spend` names
   it once its billing shows it.
 - **A lost create exits `3`.** `.gpunit/volume.pending` stays, and `volume down` deletes every `gpunit-<project>`
-  volume.
+  volume. Only that mark sweeps by name: without it, `volume down` deletes the recorded volume alone, so another
+  checkout's volume of the same project is never touched.
 - **`volume = "<id>"` keeps its meaning:** a volume you keep, never set with `volume_gb`.
 
 ## What it cost
@@ -273,7 +274,7 @@ Each verb reads `gpunit.toml` from the working directory, or the file `--spec <p
 | `gpunit down --serve <model>` | `down` for the session `serve` left for `<model>` |
 | `gpunit spend [--days N] [--json]` | the provider's billing over the last N UTC days, by project ([how](#what-it-cost)) |
 | `gpunit volume up [--yes]` | the price and `[y/N]`, then creates the window volume, or extends a live one ([how](#working-window)) |
-| `gpunit volume down` | deletes the window volume, then every other `gpunit-<project>` volume |
+| `gpunit volume down` | deletes the window volume, then, after a lost create, every other `gpunit-<project>` volume |
 | `gpunit volume up --serve <model> --ceiling <d>` | `volume up` for the row's volume, which `serve` mounts |
 | `gpunit volume down --serve <model>` | `volume down` for the row's volume |
 

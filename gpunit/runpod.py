@@ -179,7 +179,8 @@ class RunPod:
     def log(self, pod_id: str, *, tail: int, since: str | None = None) -> list[str]:
         """Return the container log's last `tail` lines; empty on a failed read.
 
-        With `since`, an RFC 3339 time, return the lines from then on instead.
+        With `since`, an RFC 3339 time, return the lines from then on instead, among
+        the provider's longest tail: RunPod's last 5000, so a line before them is lost.
         """
         # RunPod's own `since` sends no past line, so it is the tail's: 0010 design D14.
         query = urllib.parse.urlencode(

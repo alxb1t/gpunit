@@ -254,18 +254,25 @@ def test_a_running_pod_keeps_the_wait(
 
 @pytest.mark.spec("serve:wait:log-kept")
 def test_the_pods_log_is_kept_and_the_next_session_starts_without_it(
-    home: Path,
+    home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Reads at 30s and 60s, the second shorter; the model answers at 65s.
     provider = FakeProvider(since_logs=[["a", "b", "c"], ["a"]])
     opener = FakeOpener(*[NOT_YET] * 13, MODELS)
+    # The stamp says whether the create had been asked when it was taken.
+    utc = log.utc
+    monkeypatch.setattr(
+        log, "utc", lambda _=0: "after" if provider.named("create") else "before"
+    )
 
     assert served(provider, opener) == 0
 
     kept = kept_path()
     assert kept.read_text(encoding="utf-8") == "a\nb\nc\n"
     assert kept.stat().st_mode & 0o777 == 0o600
-    assert len([call for call in provider.named("log") if call[2] is not None]) == 2
+    since = [call[2] for call in provider.named("log") if call[2] is not None]
+    assert since == ["before", "before"]
+    monkeypatch.setattr(log, "utc", utc)
 
     assert served(FakeProvider(), FakeOpener(MODELS)) == 0
     assert not kept.exists()
@@ -569,6 +576,7 @@ def test_volume_down_serve_deletes_the_rows_volume(
 
     assert gpunit(["volume", "down", "--serve", "qwen3-4b"], provider=provider) == 0
     assert provider.named("delete_volume") == [("v3",)]
-    assert provider.named("volumes") == [("gpunit-serve-qwen3-4b",)]
+    # No pending mark: nothing is swept by name.
+    assert provider.named("volumes") == []
     assert State(session.home("qwen3-4b")).window() is None
     assert "volume v3 deleted" in capsys.readouterr().err

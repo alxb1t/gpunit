@@ -70,13 +70,15 @@ def up(
 
 
 def down(spec: Spec, provider: Provider, state: State) -> int:
-    """Delete the recorded volume, sweep every one of its name; return 0, or 1."""
+    """Delete the recorded volume, then sweep its name after a lost create; 0, or 1."""
     lifecycle.sweep_window(state, lambda: provider)
     failed = False
     window = state.window()
     if window is not None:
         code = provider.delete_volume(window.id)
         if code == 204:
+            # Cleared on its own delete: a sweep that fails after it names no ghost.
+            state.clear_window()
             log.say(f"volume {window.id} deleted")
         else:
             # A 404 is never gone: a wrong key gets one too.
@@ -84,6 +86,10 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
                 f"delete of volume {window.id} answered HTTP {code}; the record is kept"
             )
             failed = True
+    # Only a lost create leaves a volume of this checkout unrecorded; any other of
+    # the name is another checkout's, or made by hand.
+    if not state.volume_pending.exists():
+        return 1 if failed else 0
     try:
         listed = provider.volumes(pod_name(spec.project))
     except Lost as fault:
@@ -100,7 +106,6 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
             failed = True
     if failed:
         return 1
-    state.clear_window()
     state.clear_volume_pending()
     return 0
 
