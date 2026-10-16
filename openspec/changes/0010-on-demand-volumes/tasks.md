@@ -16,7 +16,7 @@ names.
 - [x] 8 — ⚠️ **HUMAN** — the images
 - [x] 9 — The serve image's volume
 - [x] 10 — ⚠️ **HUMAN** — the serve image, again
-- [ ] 11 — The log since the create
+- [x] 11 — The log since the create
 - [ ] 12 — ⚠️ **HUMAN · METERED** — make live-volume, make live-serve, make live-serve-dead, make live-dead
 
 ## 1 — The seam
@@ -85,7 +85,7 @@ names.
 
 ## 11 — The log since the create
 
-- [ ] 11.1 In `gpunit/runpod.py`, make `RunPod.log` with `since` send `tail=5000` and keep the events stamped from `since`'s second on, per [D14](design.md#d14); in `tests/test_runpod.py`, rebind `session:hostkey:since-fallback` to that read, with a twin event stamped before `since`.
+- [x] 11.1 In `gpunit/runpod.py`, make `RunPod.log` with `since` send `tail=5000` and keep the events stamped from `since`'s second on, per [D14](design.md#d14); in `tests/test_runpod.py`, rebind `session:hostkey:since-fallback` to that read, with a twin event stamped before `since`.
   Verify: `grep -c '{"since": since}' gpunit/runpod.py` prints `0`, and `uv run pytest -q tests/test_runpod.py` exits 0.
 
 ## 12 — ⚠️ **HUMAN · METERED** — make live-volume, make live-serve, make live-serve-dead, make live-dead

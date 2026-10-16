@@ -34,6 +34,8 @@ TIMEOUT_S = 30
 LOG_READ_S = 10
 LOG_IDLE_S = 3
 MAX_PAGES = 100
+# The most lines a log read backfills.
+MAX_TAIL = 5000
 VOLUME_PATH = "/runpod-volume"
 
 T = TypeVar("T")
@@ -179,10 +181,12 @@ class RunPod:
 
         With `since`, an RFC 3339 time, return the lines from then on instead.
         """
-        start = {"tail": tail} if since is None else {"since": since}
-        query = urllib.parse.urlencode(start | {"source": "container"})
+        # RunPod's own `since` sends no past line, so it is the tail's: 0010 design D14.
+        query = urllib.parse.urlencode(
+            {"tail": tail if since is None else MAX_TAIL, "source": "container"}
+        )
         request = self._request("GET", f"/pods/{_quote(pod_id)}/logs?{query}")
-        lines: list[str] = []
+        events: list[tuple[str | None, str]] = []
         deadline = time.monotonic() + LOG_READ_S
         try:
             # A quiet stream raises `TimeoutError`, an `OSError`, after LOG_IDLE_S.
@@ -191,10 +195,15 @@ class RunPod:
                     raw = stream.readline()
                     if not raw:
                         break
-                    lines.extend(_event_line(raw))
+                    events.extend(_event(raw))
         except (OSError, ValueError):
             pass  # what arrived before the fault is what was read
-        return lines
+        # To the second: `since` is stamped in seconds, `ts` in nanoseconds.
+        return [
+            line
+            for ts, line in events
+            if since is None or ts is None or ts[:19] >= since[:19]
+        ]
 
     def pod_billing(self, start: str, end: str) -> list[PodCost]:
         """Return each pod's charge per UTC day in `[start, end)`; raise `Lost`."""
@@ -374,15 +383,19 @@ def _amount(record: dict[str, object]) -> float:
     return float(amount)
 
 
-def _event_line(raw: bytes) -> list[str]:
+def _event(raw: bytes) -> list[tuple[str | None, str]]:
+    """Return the event's `ts` and line, e.g. b'data: {"line": "x"}' → [(None, "x")]."""
     text = raw.decode("utf-8", errors="replace").rstrip("\r\n")
     if not text.startswith("data: "):
         return []
     try:
-        line = json.loads(text[len("data: ") :]).get("line")
+        event = json.loads(text[len("data: ") :])
+        line, ts = event.get("line"), event.get("ts")
     except (ValueError, AttributeError):
         return []
-    return [line] if isinstance(line, str) else []
+    if not isinstance(line, str):
+        return []
+    return [(ts if isinstance(ts, str) else None, line)]
 
 
 def _report(call: str, answer: _Answer) -> str:

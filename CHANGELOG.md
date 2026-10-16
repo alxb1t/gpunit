@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The serve image starts vLLM with a volume mounted: its `CMD` set `HF_HOME` inside `${…:+…}`, whose `;` is a word,
   so `sh` ran one `export` over vLLM's arguments and exited `2`. `serve --volume` broke the same way since `v0.3`.
   `make live-volume`'s cards add the RTX PRO 4500 Blackwell and the RTX 4090, under `max_hourly = 0.90`.
+- A log read since the create holds the pod's lines: RunPod's `since` stream sends none, so the read takes the last
+  5000 lines and keeps those from that second on. `serve`'s `pod.log`, the host-key fallback and the older-`boot.sh`
+  refusal read nothing on a real pod before.
 
 ## [0.6.0] - 2026-10-15
 

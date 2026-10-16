@@ -199,18 +199,54 @@ def test_the_logs_last_fingerprint_wins() -> None:
     assert fingerprint(["echo gpunit host key: SHA256:abc"], NONCE) is None
 
 
-@pytest.mark.spec("session:hostkey:since-fallback")
-def test_a_since_read_starts_there_and_sends_no_tail() -> None:
-    provider, opener = runpod((200, fixture("log.txt")))
+def stamped(*events: tuple[str | None, str]) -> bytes:
+    """Return a log stream whose events carry RunPod's `ts`, as a live pod's do."""
+    body = []
+    for ts, line in events:
+        event = {"source": "container", "line": line} | ({"ts": ts} if ts else {})
+        body.append(f"data: {json.dumps(event)}\n\n")
+    return "".join(body).encode()
 
-    lines = provider.log("pod-abc123", tail=5000, since="2026-10-07T00:00:00Z")
+
+@pytest.mark.spec("session:hostkey:since-fallback")
+def test_a_since_read_takes_the_tail_from_that_second_on() -> None:
+    # RunPod's own `since` sends no past line (0010 design D14): the read is the tail's.
+    provider, opener = runpod(
+        (
+            200,
+            stamped(
+                ("2026-10-07T09:59:59.999999999Z", "an earlier boot's line"),
+                ("2026-10-07T10:00:00.250000000Z", "2026-10-07T10:00:00Z step: sshd"),
+                (None, "a line with no stamp"),
+                (
+                    "2026-10-07T10:00:05.000000000Z",
+                    "2026-10-07T10:00:05Z step: the command",
+                ),
+            ),
+        )
+    )
+
+    lines = provider.log("pod-abc123", tail=50, since="2026-10-07T10:00:00Z")
 
     query = urllib.parse.urlsplit(opener.requests[0].full_url).query
-    assert query == "since=2026-10-07T00%3A00%3A00Z&source=container"
-    assert (
-        fingerprint(lines, NONCE)
-        == "SHA256:LastKeyWins+/111111111111111111111111111111"
+    assert query == "tail=5000&source=container"
+    assert lines == [
+        "2026-10-07T10:00:00Z step: sshd",
+        "a line with no stamp",
+        "2026-10-07T10:00:05Z step: the command",
+    ]
+
+
+@pytest.mark.spec("session:hostkey:since-fallback")
+def test_a_tail_read_keeps_every_stamp() -> None:
+    # The twin: without `since`, the line stamped before it is read too.
+    provider, opener = runpod(
+        (200, stamped(("2026-10-07T09:59:59Z", "an earlier boot's line")))
     )
+
+    assert provider.log("pod-abc123", tail=50) == ["an earlier boot's line"]
+    query = urllib.parse.urlsplit(opener.requests[0].full_url).query
+    assert query == "tail=50&source=container"
 
 
 @pytest.mark.spec("session:hostkey:quiet-stream-ends-read")
