@@ -14,7 +14,7 @@ names.
 - [x] 6 — Spend
 - [x] 7 — The live runs and the handover
 - [x] 8 — ⚠️ **HUMAN** — the images
-- [ ] 9 — The serve image's volume
+- [x] 9 — The serve image's volume
 - [ ] 10 — ⚠️ **HUMAN** — the serve image, again
 - [ ] 11 — ⚠️ **HUMAN · METERED** — make live-volume, make live-serve, make live-serve-dead, make live-dead
 
@@ -72,9 +72,9 @@ names.
 
 ## 9 — The serve image's volume
 
-- [ ] 9.1 In `serve/Dockerfile`, set `HF_HOME` in the `CMD` with an `if`, per [D13](design.md#d13); in `tests/test_serve_image.py`, run the `CMD` under `sh` with a stub `vllm`, with and without `GPUNIT_VOLUME_PATH`, under `serve:volume:weights-on-the-volume`.
+- [x] 9.1 In `serve/Dockerfile`, set `HF_HOME` in the `CMD` with an `if`, per [D13](design.md#d13); in `tests/test_serve_image.py`, run the `CMD` under `sh` with a stub `vllm`, with and without `GPUNIT_VOLUME_PATH`, under `serve:volume:weights-on-the-volume`.
   Verify: `grep -c 'GPUNIT_VOLUME_PATH:+' serve/Dockerfile` prints `0`, and `uv run pytest -q tests/test_serve_image.py` exits 0.
-- [ ] 9.2 In `live/gpunit.volume.toml`, follow the cheap cards with `NVIDIA RTX PRO 4500 Blackwell` and `NVIDIA GeForce RTX 4090`, and raise `max_hourly` to `0.90`: a window needs a card in stock where standard volumes are, per [D10](design.md#d10).
+- [x] 9.2 In `live/gpunit.volume.toml`, follow the cheap cards with `NVIDIA RTX PRO 4500 Blackwell` and `NVIDIA GeForce RTX 4090`, and raise `max_hourly` to `0.90`: a window needs a card in stock where standard volumes are, per [D10](design.md#d10).
   Verify: `grep -c 'NVIDIA GeForce RTX 4090' live/gpunit.volume.toml` prints `1`.
 
 ## 10 — ⚠️ **HUMAN** — the serve image, again
