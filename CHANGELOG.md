@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-17
+
 ### Fixed
 
 - `volume up` on a live volume never moves its end earlier, so a running session keeps its volume (`0010·R4`).

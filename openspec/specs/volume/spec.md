@@ -59,12 +59,18 @@ cards. A create whose answer did not arrive SHALL keep the pending mark and exit
 ### Requirement: A live window volume is extended
 
 `gpunit volume up` on a recorded volume whose end has not passed SHALL create nothing, SHALL ask the price of the new
-window, and on `y` SHALL move the volume's end to now plus `volume_ceiling` in `.gpunit/volume` and the ledger.
+window, and on `y` SHALL set the volume's end to the later of its recorded end and now plus `volume_ceiling`, in
+`.gpunit/volume` and the ledger. It SHALL never move the end earlier: `gpunit volume down` ends a window early.
 
 #### Scenario: up again extends
 - **Key:** `volume:extend:moves-the-end`
 - **WHEN** a volume is recorded with its end an hour away, and `volume up` runs with `volume_ceiling = "4h"` and `--yes`
 - **THEN** no create is made, and `.gpunit/volume`'s end is four hours from now
+
+#### Scenario: up again never pulls the end in
+- **Key:** `volume:extend:never-earlier`
+- **WHEN** a volume is recorded with its end four hours away, and `volume up` runs with `volume_ceiling = "30m"` and `--yes`
+- **THEN** no create is made, and `.gpunit/volume`'s end and the ledger's last line for the volume keep the end four hours away
 
 ### Requirement: The window volume is deleted by its verb
 
@@ -74,8 +80,10 @@ Only while the mark exists and no volume is recorded, a lost create being the on
 unrecorded, SHALL it list the volumes named `gpunit-<project>`, skip each the home directory's ledger records, and
 name each other one and ask `delete volume <id>, named gpunit-<project> but in no record? [y/N]`, deleting it on `y`
 alone; it SHALL remove `.gpunit/volume.pending` only when every such volume was answered and every delete answered
-`204`. No answer SHALL keep the volume and the mark, name `gpunit volume down`, and exit `1`. Any other delete answer,
-a `404` among them, SHALL keep the record or the mark it concerns, say so, and exit `1`.
+`204`. A stdin that is not a terminal SHALL be no answer, and SHALL be asked nothing. No answer SHALL keep the volume
+and the mark, name `gpunit volume down`, and exit `1`. Ctrl-C at the question SHALL end the sweep: it SHALL keep that
+volume, every volume not yet asked about and the mark, name `gpunit volume down`, and exit `130`. Any other delete
+answer, a `404` among them, SHALL keep the record or the mark it concerns, say so, and exit `1`.
 
 #### Scenario: down deletes the volume
 - **Key:** `volume:down:deletes`
@@ -114,11 +122,24 @@ a `404` among them, SHALL keep the record or the mark it concerns, say so, and e
 - **THEN** `volume down` asks `delete volume v9, … [y/N]`; `y` deletes it, any other answer keeps it, and either removes
   the mark and exits `0`; no answer keeps `v9` and the mark, names `gpunit volume down`, and exits `1`
 
+#### Scenario: no terminal, no answer
+- **Key:** `volume:down:sweep-needs-a-terminal`
+- **WHEN** `.gpunit/volume.pending` exists, no volume is recorded, the provider lists `v9`, and stdin is not a terminal and holds `y`
+- **THEN** `v9` is not deleted, the mark remains, stderr names `v9` and `gpunit volume down` at a terminal or a delete by
+  hand, and the command exits `1`
+
+#### Scenario: Ctrl-C ends the sweep
+- **Key:** `volume:down:ctrl-c-ends-the-sweep`
+- **WHEN** `.gpunit/volume.pending` exists, no volume is recorded, the provider lists `v8` and `v9`, and Ctrl-C answers the question about `v8`
+- **THEN** no question names `v9`, no volume is deleted, the mark remains, stderr names `gpunit volume down`, and the command exits `130`
+
 ### Requirement: A window volume past its ceiling is deleted by the next command
 
 `up`, `run`, `status`, `volume up`, `volume down` and `serve` SHALL, before anything else, delete a recorded volume
-whose end has passed, saying so; `down` SHALL do so after it deletes its pods, which may hold the volume. A delete that
-fails SHALL keep the record and warn. `up`, `run` and `serve` SHALL then refuse, naming `gpunit volume up`.
+whose end has passed, saying so, `serve` before its price; `down` SHALL do so after it deletes its pods, which may hold
+the volume. A delete that answers `204` beside `.gpunit/volume.pending` SHALL remove the mark too: the create came
+back. A delete that fails SHALL keep the record and warn. `up`, `run` and `serve` SHALL then refuse, naming
+`gpunit volume up`, `serve` before its price.
 
 #### Scenario: an overdue volume is deleted first
 - **Key:** `volume:ceiling:overdue-deleted`
@@ -134,6 +155,16 @@ fails SHALL keep the record and warn. `up`, `run` and `serve` SHALL then refuse,
 - **Key:** `volume:ceiling:down-after-the-pod`
 - **WHEN** a pod is recorded, the recorded volume's end has passed, its delete is refused while the pod exists, and `down` runs
 - **THEN** the pod is deleted, then the volume, `.gpunit/volume` is gone, and the command exits `0`
+
+#### Scenario: the sweep clears a mark beside the record
+- **Key:** `volume:ceiling:overdue-clears-the-mark`
+- **WHEN** a volume `v1` is recorded beside `.gpunit/volume.pending` with its end passed, the provider lists `v1` and `v8` named `gpunit-<project>`, and `volume down` runs
+- **THEN** `v1` alone is deleted, the pending mark is removed, no volume is listed, nothing is asked, and the command exits `0`
+
+#### Scenario: serve sweeps before its price
+- **Key:** `volume:ceiling:serve-sweeps-first`
+- **WHEN** a row's window volume is recorded with its end passed, and `serve` runs on that row
+- **THEN** the volume is deleted, `serve` refuses naming `gpunit volume up` and exits `1`, and no price is read or asked
 
 ### Requirement: Status names the window volume
 

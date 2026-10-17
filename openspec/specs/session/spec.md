@@ -233,9 +233,11 @@ no scan answers within 180 seconds, or the two differ. Each read of the log SHAL
 for 3 seconds, or after 10 seconds in all, taking the last host-key line of what arrived that boot's own
 `step: the command` line followed — the command starts after that line, so a line it echoes before it is not the key.
 Each poll SHALL read the log's last 5000 lines once; a host-key line further back is not read, RunPod's log since a time
-being read from the same tail, and the poll goes on until its 60 seconds pass. When a read of fewer than 5000 lines,
-and so the whole log, holds a key line without a nonce that a step line follows, and no line with the session's nonce,
-the system SHALL tear the pod down and exit `1`, saying the image's `boot.sh` is older than `v0.6.0`.
+being read from the same tail, and the poll goes on until its 60 seconds pass. When a read of fewer than 5000 lines
+opens with boot's first line, `<UTC> step: the ceiling, <N>s`, and so holds the log from its start, and it holds a key
+line without a nonce that a step line follows, and no line with the session's nonce, the system SHALL tear the pod
+down and exit `1`, saying the image's `boot.sh` is older than `v0.6.0`. A read that opens with any other line — cut by
+its time bound or a fault, or a tail past boot's lines — SHALL judge nothing an older `boot.sh`.
 
 #### Scenario: a match is recorded
 - **Key:** `session:hostkey:match-recorded`
@@ -284,5 +286,10 @@ the system SHALL tear the pod down and exit `1`, saying the image's `boot.sh` is
 
 #### Scenario: an older boot.sh is refused
 - **Key:** `session:hostkey:old-boot-refused`
-- **WHEN** the log, under 5000 lines, holds `gpunit host key: SHA256:…` and boot's step line, and no line with the session's nonce
+- **WHEN** the log, under 5000 lines and opening with boot's `step: the ceiling` line, holds `gpunit host key: SHA256:…` and boot's step line, and no line with the session's nonce
 - **THEN** the pod is deleted, stderr names `boot.sh` from `v0.6.0`, and `up` exits `1` without waiting the 60 seconds
+
+#### Scenario: a read that misses the log's start judges nothing
+- **Key:** `session:hostkey:cut-read-not-judged`
+- **WHEN** a read of under 5000 lines opens with a command's output, not boot's `step: the ceiling` line, and holds `gpunit host key: SHA256:…` and a step line, and no line with the session's nonce
+- **THEN** nothing is judged an older `boot.sh`, and the pod is deleted and `up` exits `1` once the 60 seconds pass

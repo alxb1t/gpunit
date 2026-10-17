@@ -53,8 +53,9 @@ any network call.
 ### Requirement: The exit codes say what happened
 
 The system SHALL exit `0` when the verb did its work, `1` when it refused or failed, `2` on usage, `3` when a create's
-outcome is unknown, and `128 + n` when signal `n` ended a `run` or `serve`; and SHALL print every line it writes on
-its own behalf to stderr, each opening with the UTC time, so stdout belongs to the command `run` executes.
+outcome is unknown, and `128 + n` when signal `n` ended a `run` or `serve`, `130` when Ctrl-C ended `volume down`'s
+sweep; and SHALL print every line it writes on its own behalf to stderr, each opening with the UTC time, so stdout
+belongs to the command `run` executes.
 
 #### Scenario: a refusal exits 1 on stderr
 - **Key:** `cli:exits:refusal-exits-1`

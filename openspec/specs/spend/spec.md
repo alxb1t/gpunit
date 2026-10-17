@@ -11,8 +11,10 @@ The system SHALL append one JSON line to `~/.local/state/gpunit/ledger.jsonl` wh
 create answers, and when a sweep lists a pod no record names — holding the pod's id, the project, the card (null for a
 swept pod), the image and the UTC time, and nothing else. It SHALL append one line when `volume up` creates or extends a
 window volume, holding the volume's id, the project, `kind` `volume`, its UTC end and the UTC time, and nothing else;
-the last line for a volume's id gives its end. A ledger that cannot be written SHALL warn on stderr and SHALL NOT stop
-or alter the session, the volume or the teardown.
+the last such line for a volume's id gives its end. It SHALL append one line when a volume's delete answers `204` —
+`volume down`'s, the sweep's of a volume past its end, or the sweep's after a lost create — holding the volume's id,
+`kind` `deleted` and the UTC time, and nothing else. A ledger that cannot be written SHALL warn on stderr and SHALL
+NOT stop or alter the session, the volume or the teardown.
 
 #### Scenario: a create is recorded
 - **Key:** `spend:ledger:create-is-recorded`
@@ -39,6 +41,11 @@ or alter the session, the volume or the teardown.
 - **WHEN** `volume up` creates `v1` for `isekai` with `volume_ceiling = "4h"`, then extends it
 - **THEN** the ledger holds a line for each, with the keys `id`, `project`, `kind`, `ends` and `at`, and the volume's end is the second line's
 
+#### Scenario: a volume's delete is recorded
+- **Key:** `spend:ledger:delete-is-recorded`
+- **WHEN** `volume down` deletes the recorded `v1`, the next command deletes the overdue `v2`, or `volume down`'s sweep deletes `v9` on `y`
+- **THEN** the ledger holds a new line for that volume whose keys are `id`, `kind` and `at`, `kind` being `deleted`, and no project, host, key or path; a recorded volume's end is still its `volume` line's
+
 ### Requirement: Spend reports the provider's billing by project
 
 The system SHALL, on `spend`, read the pods' and the network volumes' billing from the provider for the window; SHALL
@@ -46,8 +53,8 @@ give each pod and each window volume its project from the ledger, the first line
 print one line per project with its pod count and amount, its window volumes' charges in that amount, one line for the
 pods the ledger does not name, one line per other volume, and a total, each amount the provider's own and never an
 estimate. A volume the ledger does not name SHALL never be attributed to a project. A window volume past its end that
-the current UTC day still bills SHALL be named on stderr with `gpunit volume down`. A billing or a ledger that cannot
-be read SHALL be an error, never a table.
+the current UTC day still bills, and that no `deleted` line names, SHALL be named on stderr with `gpunit volume down`.
+A billing or a ledger that cannot be read SHALL be an error, never a table.
 
 #### Scenario: pods are summed by project
 - **Key:** `spend:report:by-project`
@@ -73,6 +80,11 @@ be read SHALL be an error, never a table.
 - **Key:** `spend:report:overdue-volume-named`
 - **WHEN** the ledger gives window volume `v2` an end yesterday, and the provider bills `v2` today
 - **THEN** stderr names `v2`, its project and `gpunit volume down`
+
+#### Scenario: a deleted volume is not named
+- **Key:** `spend:report:deleted-volume-not-named`
+- **WHEN** the ledger gives window volume `v2` for `isekai` an end yesterday and a `deleted` line, and the provider bills `v2` today
+- **THEN** stderr does not name `v2`, and `isekai`'s amount holds `v2`'s charge
 
 #### Scenario: the total is the provider's
 - **Key:** `spend:report:total-is-the-providers`
