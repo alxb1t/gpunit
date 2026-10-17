@@ -13,7 +13,15 @@ import sys
 import urllib.request
 
 from live.tool_call import OPENER
-from live.window import LIVE, gpunit, run, serve_volume_up, serve_window
+from live.window import (
+    LIVE,
+    call,
+    gpunit,
+    run,
+    serve_volume_up,
+    serve_window,
+    waited,
+)
 
 CEILING = "30m"
 PROMPT = "What is 2 + 2? Answer with the number.\n"
@@ -70,26 +78,24 @@ def body(model: str) -> int:
     assert served.stdout is not None
     lines: list[str] = []
     found = None
-    for line in served.stdout:
-        lines.append(line.rstrip("\n"))
-        if found := endpoint(lines):
-            break
-    if found is None:
-        served.wait()
-        return 1
-    proved = _proved(*found, model)
-    served.terminate()
-    served.wait()
+    try:
+        for line in served.stdout:
+            lines.append(line.rstrip("\n"))
+            if found := endpoint(lines):
+                break
+        proved = found is not None and _proved(*found, model)
+    finally:
+        # However the proof ends, the hold ends with it: its pod bills until then.
+        if found is not None:
+            served.terminate()
+        waited(served)
     if not proved:
         return 1
     # The chat extends the window first: its 30m and 1200s wait must fit inside it.
     code = run(serve_volume_up(model))
     if code:
         return code
-    chatted = subprocess.run(
-        gpunit("serve", model, "--ceiling", CEILING, "--yes"), input=PROMPT, text=True
-    )
-    return chatted.returncode
+    return call(gpunit("serve", model, "--ceiling", CEILING, "--yes"), input=PROMPT)[0]
 
 
 def main(argv: list[str]) -> int:

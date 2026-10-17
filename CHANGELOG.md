@@ -30,6 +30,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `make live`, `make live-dead`, `make live-volume` and `make live-serve` passed on the `v0.8-rc2` images; their
   tails are in `live/last_run.txt` and `live/serve_last_run.txt` (`0012`).
 
+### Fixed
+
+- A Ctrl-C during a live script waits for gpunit's own teardown: `live/window.py`'s `call` starts each gpunit child
+  and waits through every interrupt before re-raising it, where `subprocess.run` killed the child 0.25s in, mid-delete
+  (`0012·R1`, `0012·S1`).
+- `live/serve.py` ends the `serve --api` hold however its proof ends: a non-`OSError` from the chat request or the
+  tool call no longer leaves the endpoint's pod held while the window's volume is deleted (`0012·S2`).
+
 ### Removed
 
 - `boot/boot.sh`: consumers keep it at `v0.7.0` by its tag URL, and gpunit still reads its lines (`0012`).

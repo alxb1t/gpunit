@@ -1,7 +1,11 @@
+import http.client
+import subprocess
+from collections.abc import Callable
+
 import pytest
 
 from live import dead, serve, volume
-from live.window import report, window
+from live.window import report, run, window
 
 UP = ["gpunit", "volume", "up"]
 DOWN = ["gpunit", "volume", "down"]
@@ -123,3 +127,115 @@ def test_a_failure_fails_the_run(capsys: pytest.CaptureFixture[str]) -> None:
     assert report([]) == 0
     assert report(["the first pod wrote nothing"]) == 1
     assert "check failed: the first pod wrote nothing" in capsys.readouterr().err
+
+
+class Child:
+    """A gpunit child, faked: `interrupts` Ctrl-Cs land in its waits before it exits.
+
+    Its first Ctrl-C lands while it runs, in `communicate`; `calls` logs what was asked.
+    """
+
+    def __init__(self, argv: list[str], interrupts: int) -> None:
+        self.argv = argv
+        self.calls: list[str] = []
+        self.interrupts = interrupts
+        self.returncode: int | None = None
+        self.stdout = iter(
+            ["OPENAI_BASE_URL=http://127.0.0.1:8000/v1\n", "OPENAI_API_KEY=k\n"]
+        )
+
+    def __enter__(self) -> "Child":
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self.calls.append("exit")
+
+    def communicate(
+        self, input: str | None = None, timeout: float | None = None
+    ) -> tuple[str, str]:
+        self.calls.append("communicate")
+        raise KeyboardInterrupt
+
+    def wait(self, timeout: float | None = None) -> int:
+        self.calls.append("wait")
+        if self.interrupts:
+            self.interrupts -= 1
+            raise KeyboardInterrupt
+        self.returncode = 0
+        return 0
+
+    def poll(self) -> int | None:
+        return self.returncode
+
+    def kill(self) -> None:
+        self.calls.append("kill")
+        self.returncode = -9
+
+    def terminate(self) -> None:
+        self.calls.append("terminate")
+
+
+class Children:
+    """`subprocess.Popen`, faked: its nth child takes `interrupts[n]` Ctrl-Cs."""
+
+    def __init__(self, *interrupts: int) -> None:
+        self.interrupts = list(interrupts)
+        self.started: list[Child] = []
+
+    def __call__(self, argv: list[str], **kwargs: object) -> Child:
+        child = Child(argv, self.interrupts[len(self.started)])
+        self.started.append(child)
+        return child
+
+
+def _chat(monkeypatch: pytest.MonkeyPatch) -> object:
+    """Reach `body`'s chat session: the endpoint proved, the window extended."""
+    monkeypatch.setattr(serve, "_proved", lambda base, key, model: True)
+    monkeypatch.setattr(serve, "run", lambda argv: 0)
+    return serve.body("qwen3-4b")
+
+
+@pytest.mark.spec("volume:down:deletes")
+@pytest.mark.parametrize(
+    ("start", "interrupts"),
+    [
+        (lambda monkeypatch: run(UP), (2,)),
+        (lambda monkeypatch: volume._said("true"), (2,)),
+        (_chat, (0, 2)),
+    ],
+    ids=["window-run", "volume-said", "serve-chat"],
+)
+def test_ctrl_c_waits_for_gpunits_teardown(
+    monkeypatch: pytest.MonkeyPatch,
+    start: Callable[[pytest.MonkeyPatch], object],
+    interrupts: tuple[int, ...],
+) -> None:
+    children = Children(*interrupts)
+    monkeypatch.setattr(subprocess, "Popen", children)
+
+    with pytest.raises(KeyboardInterrupt):
+        start(monkeypatch)
+
+    child = children.started[-1]
+    assert "kill" not in child.calls
+    assert child.returncode == 0
+
+
+@pytest.mark.spec("serve:api:prints-the-endpoint")
+def test_a_failed_proof_still_ends_the_api_hold(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    children = Children(0)
+    monkeypatch.setattr(subprocess, "Popen", children)
+
+    def cut_short(base: str, key: str, model: str) -> bool:
+        raise http.client.IncompleteRead(b"")
+
+    monkeypatch.setattr(serve, "_proved", cut_short)
+
+    with pytest.raises(http.client.IncompleteRead):
+        serve.body("qwen3-4b")
+
+    [served] = children.started
+    assert served.calls == ["terminate", "wait"]
+    assert served.returncode == 0

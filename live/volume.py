@@ -5,10 +5,9 @@ volume, writes the UTC time to it from one pod, reads it back from a second, and
 deletes it.
 """
 
-import subprocess
 import sys
 
-from live.window import LIVE, gpunit, price, report, run, window
+from live.window import LIVE, call, gpunit, price, report, run, window
 
 SPEC = str(LIVE / "gpunit.volume.toml")
 PROOF = "/runpod-volume/proof"
@@ -31,12 +30,10 @@ def check(wrote: str, read: str) -> list[str]:
 
 def _said(command: str) -> tuple[int, str]:
     """Run `command` on a pod of the spec; return its code and its stdout, stripped."""
-    done = subprocess.run(
-        gpunit("run", "--spec", SPEC, "--", "sh", "-c", command),
-        stdout=subprocess.PIPE,
-        text=True,
+    code, said = call(
+        gpunit("run", "--spec", SPEC, "--", "sh", "-c", command), capture=True
     )
-    return done.returncode, done.stdout.rstrip("\n")
+    return code, said.rstrip("\n")
 
 
 def body() -> int:
