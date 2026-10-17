@@ -60,7 +60,7 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    on the pod you would not trust with the key.
 
    ```sh
-   uv add --dev git+https://github.com/alxb1t/gpunit@v0.7.1
+   uv add --dev git+https://github.com/alxb1t/gpunit@v0.8.0
    echo .gpunit/ >> .gitignore
    export RUNPOD_API_KEY=...
    uv run gpunit run -- python3 render.py

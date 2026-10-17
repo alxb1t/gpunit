@@ -169,15 +169,15 @@ printed after the kept log's last 30 lines and the file's name, and the session 
 
 ### Requirement: The serve image is built on request and pinned
 
-The serve image SHALL be built from vLLM's image named by digest, with an SSH server, `curl`, no baked host key,
-telemetry off and gpunit's boot script as its entry point; SHALL be built only on a manual request naming a tag other
-than `latest`; and its digest SHALL be the one the model table records.
+The serve image SHALL be built from vLLM's image named by digest, with an SSH server, `ca-certificates`, no baked host
+key, telemetry off, gpunit's boot script as its entry point and gpunit's launch script as its command; SHALL be built
+only on a manual request naming a tag other than `latest`; and its digest SHALL be the one the model table records.
 
 #### Scenario: the image is built from pinned inputs
 - **Key:** `serve:image:pinned-inputs`
 - **WHEN** the serve image's build file is read
-- **THEN** its base carries a digest, the SSH server's install deletes its host keys, and its entry point is the boot
-  script
+- **THEN** its base carries a digest, the SSH server's install deletes its host keys and holds no `curl`, its entry
+  point is `python3` running the boot script, and its command is `python3` running the launch script
 
 #### Scenario: only a request builds
 - **Key:** `serve:image:only-a-request-builds`
