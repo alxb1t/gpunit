@@ -29,7 +29,7 @@ The window, the sweep, the ledger and the boot, then the metered run, per [desig
 `0010·S3`, `0010·R9`, `0010·R10`, `0010·R11`.
 
 - [x] 2.1 Add `TtyInput` to `tests/fakes.py`, per [D5](design.md#d5), and feed it as stdin in `test_a_lost_create_is_swept`, `test_a_failed_sweep_keeps_the_pending_mark`, `test_a_volume_the_ledger_records_is_not_swept` and `test_the_sweep_asks_before_each_delete` in `tests/test_volume.py`.
-  Verify: `grep -c '^class TtyInput' tests/fakes.py` prints `1`, `grep -c 'TtyInput(' tests/test_volume.py` prints `4`, and `uv run pytest -q tests/test_volume.py` exits 0.
+  Verify: `grep -c '^class TtyInput' tests/fakes.py` prints `1`, `grep -A10 -E '^def test_(a_lost_create_is_swept|a_failed_sweep_keeps_the_pending_mark|a_volume_the_ledger_records_is_not_swept|the_sweep_asks_before_each_delete)\(' tests/test_volume.py | grep -c 'TtyInput('` prints `4`, and `uv run pytest -q tests/test_volume.py` exits 0.
 - [x] 2.2 In `gpunit/volume.py`'s `_sweep`, ask only when `sys.stdin.isatty()`, per [D5](design.md#d5); in `tests/test_volume.py` bind `volume:down:sweep-needs-a-terminal` with a `StringIO` stdin holding `y`.
   Verify: `grep -c 'sys.stdin.isatty()' gpunit/volume.py` prints `1`, `grep -c 'volume:down:sweep-needs-a-terminal' tests/test_volume.py` prints `1`, and `uv run pytest -q tests/test_volume.py` exits 0.
 - [x] 2.3 In `gpunit/volume.py`, make `_ask` re-raise `KeyboardInterrupt`, `_agree` refuse on it, and `_sweep` return `128 + signal.SIGINT`, per [D4](design.md#d4); in `tests/test_volume.py` bind `volume:down:ctrl-c-ends-the-sweep`, `input` raising `KeyboardInterrupt`.

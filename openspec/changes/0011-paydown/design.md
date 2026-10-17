@@ -115,7 +115,8 @@ The mark is kept: the return comes before `clear_volume_pending`. A volume delet
 
 In `_sweep`, the question is put only to a terminal: `answer = _ask(question) if sys.stdin.isatty() else None`.
 
-- **`None` is today's no answer:** `volume <id> kept: no answer; run gpunit volume down`, the mark kept, exit `1`.
+- **`None` is today's no answer:** `volume <id> kept: no answer; run gpunit volume down`, the mark kept, exit `1`;
+  off a terminal the line adds `at a terminal, or delete it by hand`, since a rerun there can never answer.
 - **`_agree` is unchanged:** `volume up --yes` already serves a script.
 - **An unrecorded volume no person answers for at a terminal** goes through the RunPod console or the RunPod MCP by
   hand.

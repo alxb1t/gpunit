@@ -110,7 +110,10 @@ def volume_up(name: str, ceiling_s: int, *, yes: bool, provider: Provider) -> in
 
 
 def volume_down(name: str, provider: Provider) -> int:
-    """Delete the window volume `volume_up` made for `name`; return 0, or 1."""
+    """Delete the window volume `volume_up` made for `name`.
+
+    Return 0, 1, or 130 on Ctrl-C at the sweep.
+    """
     return volume.down(_window_spec(name, 0), provider, State(home(name)))
 
 

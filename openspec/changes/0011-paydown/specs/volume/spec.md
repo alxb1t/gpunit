@@ -69,7 +69,8 @@ answer, a `404` among them, SHALL keep the record or the mark it concerns, say s
 #### Scenario: no terminal, no answer
 - **Key:** `volume:down:sweep-needs-a-terminal`
 - **WHEN** `.gpunit/volume.pending` exists, no volume is recorded, the provider lists `v9`, and stdin is not a terminal and holds `y`
-- **THEN** `v9` is not deleted, the mark remains, stderr names `v9` and `gpunit volume down`, and the command exits `1`
+- **THEN** `v9` is not deleted, the mark remains, stderr names `v9` and `gpunit volume down` at a terminal or a delete by
+  hand, and the command exits `1`
 
 #### Scenario: Ctrl-C ends the sweep
 - **Key:** `volume:down:ctrl-c-ends-the-sweep`

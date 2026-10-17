@@ -71,7 +71,10 @@ def up(
 
 
 def down(spec: Spec, provider: Provider, state: State) -> int:
-    """Delete the recorded volume, then sweep its name after a lost create; 0, or 1."""
+    """Delete the recorded volume, then sweep its name after a lost create.
+
+    Return 0, 1, or 130 on Ctrl-C at the sweep.
+    """
     lifecycle.sweep_window(state, lambda: provider)
     failed = False
     window = state.window()
@@ -98,9 +101,9 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
 
 
 def _sweep(name: str, provider: Provider, state: State) -> int:
-    """Offer each unrecorded volume `name` lists for deletion; clear the mark; 0, or 1.
+    """Offer each unrecorded volume `name` lists for deletion; clear the mark.
 
-    Ctrl-C at a question ends the sweep, the mark kept, and returns 130.
+    Return 0, 1, or 130 on Ctrl-C at a question, which ends the sweep, the mark kept.
 
     A volume this machine's ledger records is another checkout's, and is skipped;
     any other is named and deleted on a yes alone, since a teammate's on the
@@ -117,10 +120,11 @@ def _sweep(name: str, provider: Provider, state: State) -> int:
         if volume_id in known:
             continue
         # No script or agent answers for an unrecorded volume: 0011 design D5.
+        tty = sys.stdin.isatty()
         try:
             answer = (
                 _ask(f"delete volume {volume_id}, named {name} but in no record?")
-                if sys.stdin.isatty()
+                if tty
                 else None
             )
         except KeyboardInterrupt:
@@ -130,7 +134,8 @@ def _sweep(name: str, provider: Provider, state: State) -> int:
             )
             return 128 + signal.SIGINT
         if answer is None:
-            log.say(f"volume {volume_id} kept: no answer; run gpunit volume down")
+            hint = "" if tty else " at a terminal, or delete it by hand"
+            log.say(f"volume {volume_id} kept: no answer; run gpunit volume down{hint}")
             settled = False
         elif not answer:
             log.say(f"volume {volume_id} kept")

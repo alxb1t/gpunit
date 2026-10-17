@@ -434,6 +434,25 @@ def test_the_sweep_asks_only_a_terminal(
         assert "volume v9 kept: no answer; run gpunit volume down" in captured.err
 
 
+@pytest.mark.spec("volume:down:sweep-needs-a-terminal")
+@pytest.mark.parametrize("tty", [False, True], ids=["pipe", "twin-terminal-eof"])
+def test_no_answer_off_a_terminal_sends_you_to_one(
+    tty: bool,
+    cwd: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # Off a terminal, `volume down` again can never answer; say where it can.
+    State(cwd).mark_volume_pending()
+    monkeypatch.setattr("sys.stdin", TtyInput("") if tty else io.StringIO("y\n"))
+    provider = FakeProvider(volume_listings=[["v9"]])
+
+    assert gpunit(["volume", "down"], provider=provider) == 1
+    err = capsys.readouterr().err
+    assert "run gpunit volume down" in err
+    assert ("at a terminal, or delete it by hand" in err) is not tty
+
+
 @pytest.mark.spec("volume:down:ctrl-c-ends-the-sweep")
 @pytest.mark.parametrize("ctrl_c", [True, False], ids=["ctrl-c", "twin-no"])
 def test_ctrl_c_ends_the_sweep(

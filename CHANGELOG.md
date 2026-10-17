@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `volume down`'s lost-create sweep asks only a terminal, so a piped `y` deletes nothing (`0010·S3`), and Ctrl-C ends
   it with exit `130`, the rest and the mark kept (`0010·R9`); its message and ledger-skip test match it (`0010·R10`,
   `0010·R11`).
+- Off a terminal, the sweep's no-answer line says to run `gpunit volume down` at a terminal or delete the volume by
+  hand, since a rerun off one can never answer (0011 review `R3`).
 - Each volume delete that answers `204` appends a `deleted` line to the ledger, and `spend` names no deleted volume as
   still billing past its end (`0010·R5`).
 - An older `boot.sh` is judged only on a log read that opens with boot's `step: the ceiling` line, so a read cut
