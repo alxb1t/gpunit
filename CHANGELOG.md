@@ -67,6 +67,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `S2` at `65a8f39`).
 - `tests/test_live.py` checks that `live/dead.py` waits `up` to its exit before `gpunit down` starts, where the
   Ctrl-C test checked only the `down` (review `R2` at `65a8f39`).
+- `live/dead.py` refuses at once, with no `up` and no `down`, when this checkout's `.gpunit/` already records a pod
+  (`pod` or `pending`), naming `gpunit down`: its `down` deleted that session's pod, and the run passed on `up`'s
+  refusal; `tests/test_live.py` runs each test in a checkout of its own (security `S4` at `beef206`).
 
 ### Removed
 

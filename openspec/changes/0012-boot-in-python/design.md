@@ -228,7 +228,7 @@ A script per target, named for it: `live-volume` → `live/volume.py`, `live-ser
 volume.py      price → volume up → run (write) → run (read) → check(wrote, read) → status   window
 serve.py       serve --api ─ OPENAI_BASE_URL, OPENAI_API_KEY ─ a chat request ─ tool_call.py ─ SIGTERM   window
                → volume up again → a chat of one prompt
-dead.py        price → up → down → "up exited <code> after <s>s", "reason: <line>" → status
+dead.py        no recorded pod → price → up → down → "up exited <code> after <s>s", "reason: <line>" → status
                → check(code, lines, down)
 serve_dead.py  today's main                                                                 window
 ```
@@ -241,6 +241,8 @@ serve_dead.py  today's main                                                     
 - **`live/dead.py`** runs `gpunit down` in a `finally` after `up`, however `up` ends, under `hangups_interrupt`: the
   dead image never starts `boot.py`, so no ceiling stops a pod a lost create or a failed teardown leaves; a failed
   `down` fails `check`. On a Ctrl-C it waits `up` out first, as `up` may still write its record.
+  It runs only in a checkout whose `.gpunit/` records no pod, neither `pod` nor `pending`: else it exits 1 naming
+  `gpunit down`, with no `up` and no `down`, as that `down` would delete another session's pod.
 - **`serve.py`'s chat request** goes over `urllib`, the key in a header, as `tool_call.py`'s does.
 - **Offline, in `tests/test_live.py`:** `volume.check` under `session:volume:window-mounted`, `dead.check` under
   `session:wait:dead-pod-tears-down`, `serve.py`'s reading of the `OPENAI_BASE_URL` and `OPENAI_API_KEY` lines under `serve:api:prints-the-endpoint`,

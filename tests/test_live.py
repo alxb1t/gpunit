@@ -17,6 +17,13 @@ DOWN = ["gpunit", "volume", "down"]
 STAMP = "2026-10-17T09:00:00Z"
 
 
+@pytest.fixture(autouse=True)
+def checkout(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Run each test in a checkout of its own, whose `.gpunit/` records nothing."""
+    monkeypatch.chdir(tmp_path)
+    return tmp_path
+
+
 @pytest.mark.spec("session:volume:window-mounted")
 @pytest.mark.parametrize(
     ("wrote", "read", "failures"),
@@ -100,6 +107,43 @@ def test_dead_deletes_ups_pod_however_up_ends(
     assert dead.main() == result
 
     assert order == ["up", "down", "status"]
+
+
+@pytest.mark.spec("session:wait:dead-pod-tears-down")
+@pytest.mark.parametrize("held", ["pod", "pending"])
+def test_dead_leaves_a_recorded_pod_alone(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    checkout: Path,
+    held: str,
+) -> None:
+    # Another session's record: `up` would refuse on it, and `down` delete its pod.
+    record = checkout / ".gpunit" / held
+    record.parent.mkdir()
+    record.write_text("another session's\n")
+    order: list[str] = []
+
+    def popen(argv: list[str], **kwargs: object) -> Ended:
+        order.append(argv[-3])
+        return Ended(1, REFUSED)
+
+    def run(argv: list[str]) -> int:
+        order.append(argv[-3])
+        return 0
+
+    def price(spec: str) -> int:
+        order.append("price")
+        return 0
+
+    monkeypatch.setattr(subprocess, "Popen", popen)
+    monkeypatch.setattr(dead, "price", price)
+    monkeypatch.setattr(dead, "run", run)
+
+    assert dead.main() == 1
+
+    assert order == []
+    assert record.read_text() == "another session's\n"
+    assert "gpunit down" in capsys.readouterr().err
 
 
 @pytest.mark.spec("session:wait:dead-pod-tears-down")

@@ -42,6 +42,7 @@ live-serve:
 # The dead-boot proof: a container that exits at once ends `up`'s wait (0006 design D6).
 # Not part of the gate: it rents a pod with RUNPOD_API_KEY, for at most its 120s wait.
 # `up` must exit 1 and say why; `down` runs however it ends, then status, to show no pod is left.
+# It refuses, renting nothing, when this checkout already records a pod: `down` would delete it.
 live-dead:
 	uv run python live/dead.py
 
