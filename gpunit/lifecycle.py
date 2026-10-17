@@ -386,8 +386,9 @@ def _verify_host_key(
         lines = provider.log(record.id, tail=LOG_TAIL)
         if printed := fingerprint(lines, nonce):
             return printed
-        # Judged on a read that holds the whole log, whose key line is boot's own: a
-        # full tail can hold only a command's echo of an older one.
+        # Judged on a read that holds the whole log, its first line boot's
+        # `step: the ceiling`, whose key line is boot's own: a full tail can hold
+        # only a command's echo of an older one.
         if len(lines) < LOG_TAIL and old_boot(lines):
             _tear_down(
                 spec,

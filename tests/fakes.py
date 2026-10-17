@@ -29,6 +29,8 @@ KEY_LINE = f"gpunit host key {NONCE}: {SERVED}"
 # Boot prints it once the key line is out, just before the command starts.
 STEP_LINE = "2026-10-07T00:00:05Z step: the command"
 BOOT_LOG = [KEY_LINE, STEP_LINE]
+# Boot's first line: a read that opens with it holds the log from its start.
+CEILING_LINE = "2026-10-07T00:00:00Z step: the ceiling, 3600s"
 
 
 class TtyInput(io.StringIO):

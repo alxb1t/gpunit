@@ -8,7 +8,7 @@ The window, the sweep, the ledger and the boot, then the metered run, per [desig
 - [x] 1 — The window
 - [x] 2 — The sweep
 - [x] 3 — The ledger
-- [ ] 4 — The boot
+- [x] 4 — The boot
 - [ ] 5 — ⚠️ **HUMAN · METERED** — make live-volume
 
 ## 1 — The window
@@ -56,9 +56,9 @@ The window, the sweep, the ledger and the boot, then the metered run, per [desig
 
 `0010·R7`.
 
-- [ ] 4.1 In `gpunit/provider.py`, add `_BOOT_START` and make `old_boot` need it on the first line; in `gpunit/lifecycle.py`, make `_verify_host_key.read`'s comment name that line, per [D8](design.md#d8).
+- [x] 4.1 In `gpunit/provider.py`, add `_BOOT_START` and make `old_boot` need it on the first line; in `gpunit/lifecycle.py`, make `_verify_host_key.read`'s comment name that line, per [D8](design.md#d8).
   Verify: `grep -c '^_BOOT_START = ' gpunit/provider.py` prints `1`, and `grep -c 'step: the ceiling' gpunit/lifecycle.py` prints `1`.
-- [ ] 4.2 Add `CEILING_LINE` to `tests/fakes.py`; open the reads of the `twin-whole-log` case in `test_an_old_key_line_echoed_into_a_full_tail_is_no_older_boot` and the `step` case in `test_an_older_boot_is_refused_at_once` with it; bind `session:hostkey:cut-read-not-judged` in `tests/test_hostkey.py`.
+- [x] 4.2 Add `CEILING_LINE` to `tests/fakes.py`; open the reads of the `twin-whole-log` case in `test_an_old_key_line_echoed_into_a_full_tail_is_no_older_boot` and the `step` case in `test_an_older_boot_is_refused_at_once` with it; bind `session:hostkey:cut-read-not-judged` in `tests/test_hostkey.py`.
   Verify: `grep -c '^CEILING_LINE = ' tests/fakes.py` prints `1`, `grep -c 'session:hostkey:cut-read-not-judged' tests/test_hostkey.py` prints `1`, and `uv run pytest -q tests/test_hostkey.py tests/test_runpod.py tests/test_up.py` exits 0.
 
 ## 5 — ⚠️ **HUMAN · METERED** — make live-volume

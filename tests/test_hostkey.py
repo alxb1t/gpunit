@@ -7,6 +7,7 @@ import pytest
 from gpunit import lifecycle
 from tests.fakes import (
     BOOT_LOG,
+    CEILING_LINE,
     KEY_LINE,
     NONCE,
     SERVED,
@@ -93,8 +94,10 @@ def test_an_old_key_line_echoed_into_a_full_tail_is_no_older_boot(
 ) -> None:
     # Boot's lines have left a full tail; a command's echo of an older boot's is in it.
     echoed = ["gpunit host key: SHA256:forged", "x step: the command"]
-    filler = ["command output"] * (5000 - len(echoed) - (0 if full else 1))
-    provider = FakeProvider(logs=[[*filler, *echoed]])
+    # The twin's read is a line short of the bound, and opens with boot's first line.
+    head = [] if full else [CEILING_LINE]
+    filler = ["command output"] * (5000 - len(echoed) - len(head) - (0 if full else 1))
+    provider = FakeProvider(logs=[[*head, *filler, *echoed]])
 
     assert gpunit(["up"], provider=provider) == 1
 
@@ -172,8 +175,8 @@ def test_an_older_boot_is_refused_at_once(
     step: bool, cwd: Path, clock: FakeClock, capsys: pytest.CaptureFixture[str]
 ) -> None:
     old = f"gpunit host key: {SERVED}"
-    lines = [old, STEP_LINE] if step else [old]
-    # Judged on a read short of the tail's bound, which holds boot's own lines.
+    lines = [CEILING_LINE, old, STEP_LINE] if step else [CEILING_LINE, old]
+    # Judged on a read short of the tail's bound that opens with boot's first line.
     provider = FakeProvider(logs=[lines])
 
     assert gpunit(["up"], provider=provider) == 1
@@ -187,3 +190,27 @@ def test_an_older_boot_is_refused_at_once(
     # The twin: without boot's step line it is no older boot, and the wait runs out.
     assert "v0.6.0" not in err
     assert 60 <= clock.now < 70
+
+
+@pytest.mark.spec("session:hostkey:cut-read-not-judged")
+@pytest.mark.parametrize("cut", [True, False], ids=["cut", "twin-from-start"])
+def test_a_read_that_misses_the_logs_start_judges_nothing(
+    cut: bool, cwd: Path, clock: FakeClock, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # A read cut by its time bound, or a fault, ends before boot's first line arrives.
+    head = ["command output"] if cut else [CEILING_LINE]
+    lines = [*head, f"gpunit host key: {SERVED}", STEP_LINE]
+    provider = FakeProvider(logs=[lines])
+
+    assert gpunit(["up"], provider=provider) == 1
+
+    assert provider.named("delete") == [("pod-1",)]
+    err = capsys.readouterr().err
+    if cut:
+        assert "v0.6.0" not in err
+        assert "no host-key line within 60s" in err
+        assert 60 <= clock.now < 70
+        return
+    # The twin: the read opens with boot's first line, so it holds the whole log.
+    assert "ADD boot.sh from gpunit v0.6.0" in err
+    assert clock.now == 0
