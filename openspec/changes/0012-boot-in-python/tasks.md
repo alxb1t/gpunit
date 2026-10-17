@@ -26,7 +26,7 @@ task names.
 ## 2 — The proof
 
 - [ ] 2.1 Run `uv add --dev 'pytest-cov>=7.1,<8'`; add `[tool.coverage.run]` and `[tool.coverage.report]` to `pyproject.toml`, and `.coverage` to `.gitignore`, per [D7](design.md#d7).
-  Verify: `grep -c '"pytest-cov>=7.1,<8"' pyproject.toml` prints `1`, `grep -c '^fail_under = 100$' pyproject.toml` prints `1`, `grep -c -x '.coverage' .gitignore` prints `1`, and `uv run pytest -q --cov tests/test_boot_steps.py` exits 0.
+  Verify: `grep -c '"pytest-cov>=7.1,<8"' pyproject.toml` prints `1`, `grep -c '^fail_under = 100$' pyproject.toml` prints `1`, `grep -c -x '.coverage' .gitignore` prints `1`, and `uv run pytest -q tests/test_boot_steps.py --cov` exits 0.
 - [ ] 2.2 In the `Makefile`'s `gate` recipe, `uv run pytest` → `uv run pytest --cov`, and add `uv run ty check --python-version 3.10 boot/boot.py` after `uv run ty check`, per [D7](design.md#d7).
   Verify: `make -n gate | grep -c -x 'uv run pytest --cov'` prints `1`, and `make -n gate | grep -c -x 'uv run ty check --python-version 3.10 boot/boot.py'` prints `1`.
 - [ ] 2.3 Port `tests/test_boot.py` to run `boot/boot.py` per [D6](design.md#d6), keeping every key it binds and `test_the_commands_end_stops_the_pod`'s name.
