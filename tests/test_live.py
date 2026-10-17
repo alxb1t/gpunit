@@ -221,7 +221,7 @@ def _dead_up(monkeypatch: pytest.MonkeyPatch) -> object:
         (lambda monkeypatch: run(UP), (2,)),
         (lambda monkeypatch: volume._said("true"), (2,)),
         (_chat, (0, 2)),
-        (_dead_up, (1,)),
+        (_dead_up, (1, 0)),
     ],
     ids=["window-run", "volume-said", "serve-chat", "dead-up"],
 )
@@ -239,6 +239,23 @@ def test_ctrl_c_waits_for_gpunits_teardown(
     child = children.started[-1]
     assert "kill" not in child.calls
     assert child.returncode == 0
+
+
+@pytest.mark.spec("session:wait:dead-pod-tears-down")
+def test_a_ctrl_c_in_dead_still_deletes_ups_pod(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # `gpunit up` has no SIGINT teardown. The Ctrl-C lands in the read, then the wait.
+    children = Children(1, 0)
+    monkeypatch.setattr(subprocess, "Popen", children)
+
+    with pytest.raises(KeyboardInterrupt):
+        _dead_up(monkeypatch)
+
+    up, down = children.started
+    assert up.argv[-3:] == ["up", "--spec", dead.SPEC]
+    assert "kill" not in up.calls
+    assert down.argv[-3:] == ["down", "--spec", dead.SPEC]
 
 
 @pytest.mark.spec("serve:api:prints-the-endpoint")

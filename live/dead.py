@@ -55,8 +55,11 @@ def main() -> int:
             lines.append(line.rstrip("\n"))
         code = up.wait()
     except KeyboardInterrupt:
-        # gpunit has the SIGINT too and is deleting its pod: wait for it.
-        waited(up)
+        # `up` has no SIGINT teardown, so its pod outlives it: wait it out, then delete.
+        try:
+            waited(up)
+        finally:
+            run(gpunit("down", "--spec", SPEC))
         raise
     print(f"up exited {code} after {int(time.monotonic() - start)}s")
     print(f"reason: {reason(lines)}", flush=True)

@@ -35,7 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A Ctrl-C during a live script waits for gpunit's own teardown: `live/window.py`'s `call` starts each gpunit child
   and waits through every interrupt before re-raising it, where `subprocess.run` killed the child 0.25s in, mid-delete;
-  `live/dead.py` waits on its own `up` the same way (`0012·R1`, `0012·S1`, `0012·R5`).
+  `live/dead.py` waits on its own `up` the same way, then runs `gpunit down`, since `up` has no SIGINT teardown of its
+  own (`0012·R1`, `0012·S1`, `0012·R5`).
 - `live/serve.py` ends the `serve --api` hold however its proof ends: a non-`OSError` from the chat request or the
   tool call no longer leaves the endpoint's pod held while the window's volume is deleted (`0012·S2`).
 - `boot.py`'s stop follows no redirect, as `runpod.py`'s `_NoRedirect` already guards the laptop's side: a 3xx from
