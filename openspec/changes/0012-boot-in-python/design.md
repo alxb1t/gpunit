@@ -243,8 +243,9 @@ records what was checked then (`0008·R5`).
 ### D12
 
 - **`gpunit-vllm`:** `.github/workflows/build-serve-image.yml` with the tag `v0.8-rc1`, rebuilt as `v0.8-rc2`
-  after `4ee00fd`'s key pause, the shipped build; its digest replaces the old at
-  `gpunit/serve/models.toml:2`.
+  after `4ee00fd`'s key pause, and as `v0.8-rc3` at `fa98cdf` after `3209e68` and `fa98cdf` changed `boot.py`'s
+  stop, the shipped build; its digest replaces the old at `gpunit/serve/models.toml:2`. `gpunit-live` and
+  `gpunit-live-dead` are rebuilt with it, at the same tags.
 - **`gpunit-vllm`'s install line:** `openssh-server curl` → `openssh-server ca-certificates`.
 - **`gpunit-live`:** `live/Dockerfile` installs `openssh-server python3 ca-certificates`, no `curl`: `python3`, not
   `python3-minimal`, whose module set lacks `http.client`, `json` and `shutil` (settled at the cut).
@@ -258,6 +259,9 @@ records what was checked then (`0008·R5`).
 With `RUNPOD_API_KEY` set, the human runs `make live`, `make live-dead`, `make live-volume` and `make live-serve`, and
 appends each tail under a header `<date> — make <target>, 0012-boot-in-python`: `make live`'s, `make live-dead`'s and `make live-volume`'s to
 `live/last_run.txt`, `make live-serve`'s to `live/serve_last_run.txt`. About $0.40 in all.
+
+- **They ran on the `v0.8-rc2` images, at `01ba5d9`.** The `v0.8-rc3` rebuild changed only `boot.py`'s stop and its
+  log lines, held offline at 100 % coverage, so the human chose not to re-run them.
 
 ### D14
 

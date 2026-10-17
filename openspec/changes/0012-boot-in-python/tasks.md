@@ -63,7 +63,7 @@ task names.
 
 ## 6 — ⚠️ **HUMAN** — the images
 
-- [x] 6.1 **HUMAN** — push the branch, run `.github/workflows/build-serve-image.yml` on it with the tag `v0.8-rc1`, and write its digest into `gpunit/serve/models.toml`'s `image` line, per [D12](design.md#d12). `4ee00fd`'s key pause made the shipped build `v0.8-rc2`.
+- [x] 6.1 **HUMAN** — push the branch, run `.github/workflows/build-serve-image.yml` on it with the tag `v0.8-rc1`, and write its digest into `gpunit/serve/models.toml`'s `image` line, per [D12](design.md#d12). `4ee00fd`'s key pause made it `v0.8-rc2`; `3209e68` and `fa98cdf` changed `boot.py`'s stop, so the shipped build is `v0.8-rc3`, at `fa98cdf`, with `gpunit-live` and `gpunit-live-dead` rebuilt beside it.
   Verify: `grep -c '2fbfee03334addadf57a39a6f71dd7f13e7c59160b8714eb0128ecbc32bc72e2' gpunit/serve/models.toml` prints `0`.
 - [x] 6.2 **HUMAN** — build `live/Dockerfile` and `live/Dockerfile.dead` for `linux/amd64` from the repository root, push them as `ghcr.io/alxb1t/gpunit-live` and `ghcr.io/alxb1t/gpunit-live-dead`, and write their digests into `live/gpunit.toml`, `live/gpunit.volume.toml` and `live/gpunit.dead.toml`, per [D12](design.md#d12).
   Verify: `grep -c '7b5285e8cef998b5c0a39da5b2912d65010910929f8beb36d25a07315c87384d' live/gpunit.toml live/gpunit.volume.toml | grep -v ':0$' | wc -l | tr -d ' '` prints `0`, and `grep -c '1cc99d82a4f47bbbfb2d4e832fb3b46be8208cd72c1609b8e13a9c3ebbe0aa71' live/gpunit.dead.toml` prints `0`.

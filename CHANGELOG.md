@@ -25,10 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `live/window.py`, tested offline in `tests/test_live.py` (`0012`).
 - README's step 2 adds `boot.py` from `v0.8.0` on `python3` 3.10 or newer; `CLAUDE.md` and the boot spec's Purpose
   name the Python files (`0012`).
-- `gpunit-vllm`, `gpunit-live` and `gpunit-live-dead` rebuilt on `boot.py` at `v0.8-rc2` and re-pinned by digest
-  (`0012`).
+- `gpunit-vllm`, `gpunit-live` and `gpunit-live-dead` rebuilt on `boot.py` at `v0.8-rc3`, after its stop's fixes, and
+  re-pinned by digest (`0012`).
 - `make live`, `make live-dead`, `make live-volume` and `make live-serve` passed on the `v0.8-rc2` images; their
-  tails are in `live/last_run.txt` and `live/serve_last_run.txt` (`0012`).
+  tails are in `live/last_run.txt` and `live/serve_last_run.txt`. The `v0.8-rc3` rebuild changed only `boot.py`'s stop
+  and its log lines, held offline, and was not re-run (`0012`).
 
 ### Fixed
 
@@ -45,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A watchdog whose stop raises an error it did not expect says the ceiling's stop failed, prints the traceback and
   exits `1`, where it exited `0` without a line (`0012·R6`).
 - README says the serve proof sends one chat request, not one `curl`; design D12 and task 6.1 say the shipped images
-  are `v0.8-rc2`; `test_the_cmd_is_launch_py` is bound to `serve:image:pinned-inputs`, whose scenario it checks
+  are `v0.8-rc3`; `test_the_cmd_is_launch_py` is bound to `serve:image:pinned-inputs`, whose scenario it checks
   (`0012·R2`, `0012·R3`, `0012·R4`).
 
 ### Removed
