@@ -96,6 +96,10 @@ main(argv)
   `<UTC as %Y-%m-%dT%H:%M:%SZ> <text>` to stderr.
 - **Every line is flushed when written**, stdout and stderr, as bash's `echo` is: gpunit reads the key line before
   `step: the command`, and a buffered line would reach the log late. Stdout and stderr are flushed before the fork.
+- **`KEY_GAP_S = 1`:** boot sleeps 1 s after the key line, before `step: the command`. Stdout and stderr reach
+  RunPod's log on separate pipes, and two lines written microseconds apart can merge swapped; gpunit then never
+  accepts the key. Found by `make live-volume` in phase 7: the log read `step: the command`, then the key line.
+  `boot.sh`'s `$(date …)` in `say` put milliseconds between them.
 - **`sshd`** keeps `boot.sh`'s order and config text: `~/.ssh` at `0700`, `authorized_keys` written under umask `077`
   then `0600`, `/run/sshd` made with errors ignored, a `tempfile.mkdtemp` directory, `ssh-keygen -q -t ed25519 -N ''
   -f <dir>/ssh_host_ed25519_key`, the same `sshd_config`, `sshd` by its absolute path from `shutil.which`.

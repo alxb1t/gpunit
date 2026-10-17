@@ -27,6 +27,7 @@ FINGERPRINT = "SHA256:fromTheFake+/0"
 SSHD = "/usr/sbin/sshd"
 CEILING = "7"
 GRACE = f"sleep {boot.GRACE_S}"
+KEY_GAP = f"sleep {boot.KEY_GAP_S}"
 
 
 class Exited(Exception):
@@ -117,8 +118,10 @@ class Pod:
         self.handlers[signum] = handler
 
     def after_the_ceiling(self) -> list[str]:
-        """Return the stops and the waits, but none of the ceiling's own."""
-        return [step for step in self.order if step != f"sleep {CEILING}"]
+        """Return the stops and the waits, but the ceiling's own and the key's pause."""
+        return [
+            step for step in self.order if step not in (f"sleep {CEILING}", KEY_GAP)
+        ]
 
 
 class Answered:
@@ -474,6 +477,40 @@ def test_the_fingerprint_line(pod: Pod, capsys: pytest.CaptureFixture[str]) -> N
     assert ["ssh-keygen", "-lf", f"{host_key}.pub"] in pod.runs
     hostkeys = [line for line in config_of(pod) if line.lower().startswith("hostkey")]
     assert hostkeys == [f'HostKey "{host_key}"']
+
+
+@pytest.mark.spec("boot:sshd:fingerprint-printed")
+@pytest.mark.parametrize(
+    ("gap", "paused"),
+    [(boot.KEY_GAP_S, True), (0, False)],
+    ids=["pause", "twin-no-pause"],
+)
+def test_a_pause_parts_the_key_line_from_the_step(
+    pod: Pod,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    gap: int,
+    paused: bool,
+) -> None:
+    # RunPod merges stdout and stderr out of order when lines come together.
+    monkeypatch.setattr(boot, "KEY_GAP_S", gap)
+    waits: list[tuple[float, str, str]] = []
+
+    def sleep(seconds: float) -> None:
+        if not waits:
+            out, err = capsys.readouterr()
+            waits.append((seconds, out, err))
+
+    monkeypatch.setattr(boot.time, "sleep", sleep)
+
+    boot.main(["--", "true"])
+
+    # The first wait in boot: the key line is out, the step not yet.
+    [(seconds, out, err)] = waits
+    assert f"gpunit host key {NONCE}: " in out
+    assert "step: the command" not in err
+    # The twin: with no pause, the two lines are written together.
+    assert (seconds >= 1) is paused
 
 
 @pytest.mark.spec("boot:sshd:authorized-key")

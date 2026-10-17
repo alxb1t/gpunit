@@ -26,6 +26,10 @@ RETRY_S = 30
 MAX_RETRY_S = 300
 # The command's exit line must reach gpunit's log read, every 30s, before the stop.
 GRACE_S = 60
+# stdout and stderr reach RunPod's log on separate pipes, and lines written together
+# can merge swapped: the pause keeps the key line before `step: the command`, which
+# gpunit needs after it (0012 design D1). Remove when gpunit reads them in any order.
+KEY_GAP_S = 1
 NEEDED = ("RUNPOD_API_KEY", "RUNPOD_POD_ID", "PUBLIC_KEY", "GPUNIT_CEILING")
 # The stop key and the nonce are boot's: the command does not inherit them, though a
 # root command can still read them from boot's /proc.
@@ -222,6 +226,7 @@ def main(argv: list[str]) -> int:
         host_key = sshd(Path.home(), environ["PUBLIC_KEY"])
         # The line the laptop checks the scanned key against; the nonce marks it boot's.
         print(f"gpunit host key {nonce}: {_fingerprint(host_key)}", flush=True)
+        time.sleep(KEY_GAP_S)
         code = run(command, environ)
         # The ceiling and a refusal stop without it: neither reaches this line.
         time.sleep(GRACE_S)

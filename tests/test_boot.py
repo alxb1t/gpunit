@@ -19,6 +19,7 @@ FINGERPRINT = "SHA256:fromTheStub+/0"
 NONCE = "0123456789abcdef0123456789abcdef"
 CEILING = "7"
 GRACE = "60"
+KEY_GAP = "sleep 1"
 
 # First on boot's PYTHONPATH: the stop answers from $STOP_CODES, one line a call (200
 # when empty), and logs whether the header held the key; each wait returns at once, but
@@ -211,8 +212,8 @@ def boot(env: dict[str, str], *command: str, merged: bool = False) -> Boot:
 
 
 def after_the_ceiling(result: Boot) -> list[str]:
-    """Return the stops and the waits in order, but the ceiling's own wait."""
-    return [step for step in result.order if step != f"sleep {CEILING}"]
+    """Return the stops and the waits in order, but the ceiling's and the key's."""
+    return [step for step in result.order if step not in (f"sleep {CEILING}", KEY_GAP)]
 
 
 def only_stubs(pod: dict[str, str], bin_dir: Path, *tools: str) -> None:
@@ -448,6 +449,8 @@ def test_the_fingerprint_line(pod: dict[str, str]) -> None:
     assert "UsePAM yes" in config.splitlines()
     assert "AllowUsers root" in config.splitlines()
     assert f"-lf {host_key}.pub" in result.keygen
+    # The pause that keeps the key line ahead of `step: the command` in RunPod's log.
+    assert KEY_GAP in result.order
 
 
 @pytest.mark.spec("boot:sshd:fingerprint-printed")
