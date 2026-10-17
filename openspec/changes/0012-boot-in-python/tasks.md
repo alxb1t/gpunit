@@ -8,7 +8,7 @@ task names.
 
 - [x] 1 — boot.py
 - [x] 2 — The proof
-- [ ] 3 — The launch
+- [x] 3 — The launch
 - [ ] 4 — The live scripts
 - [ ] 5 — The handover
 - [ ] 6 — ⚠️ **HUMAN** — the images
@@ -40,7 +40,7 @@ task names.
 
 ## 3 — The launch
 
-- [ ] 3.1 Write `serve/launch.py`, and make it `serve/Dockerfile`'s `COPY` and `CMD`, per [D9](design.md#d9); in `tests/test_serve_image.py`, run it with a stub `vllm` under `serve:volume:weights-on-the-volume`, the twin an empty `GPUNIT_VOLUME_PATH`.
+- [x] 3.1 Write `serve/launch.py`, and make it `serve/Dockerfile`'s `COPY` and `CMD`, per [D9](design.md#d9); in `tests/test_serve_image.py`, run it with a stub `vllm` under `serve:volume:weights-on-the-volume`, the twin an empty `GPUNIT_VOLUME_PATH`.
   Verify: `grep -c '"sh", "-c"' serve/Dockerfile` prints `0`, `grep -c -F 'CMD ["python3", "/opt/gpunit/launch.py"]' serve/Dockerfile` prints `1`, and `uv run pytest -q tests/test_serve_image.py` exits 0.
 
 ## 4 — The live scripts

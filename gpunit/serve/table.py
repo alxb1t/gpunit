@@ -65,7 +65,7 @@ class Row:
                 "SERVE_REPO": self.repo,
                 "SERVE_REVISION": self.revision,
                 "SERVE_NAME": self.served,
-                # `sh` word-splits it in the image's CMD; `load` refuses a space inside.
+                # `serve/launch.py` splits it on spaces; `load` refuses a space inside.
                 "SERVE_ARGS": " ".join(self.args),
                 "VLLM_API_KEY": key,
             },

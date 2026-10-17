@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `boot.py` is the entrypoint of `serve/Dockerfile`, `live/Dockerfile` and `live/Dockerfile.dead`; they install
   `ca-certificates`, not `curl`. `tests/test_boot.py` runs `boot.py` end to end (`0012`).
+- The serve image's `CMD` is `serve/launch.py`, in place of `sh -c`: it sets `HF_HOME` on a window volume and `exec`s
+  vLLM, with no shell to misparse (`0012`).
 
 ### Removed
 

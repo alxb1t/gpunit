@@ -8,6 +8,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssh-server 
 ENV DO_NOT_TRACK=1 HF_HUB_DISABLE_TELEMETRY=1 VLLM_NO_USAGE_STATS=1
 COPY boot/boot.py /opt/gpunit/boot.py
 ENTRYPOINT ["python3", "/opt/gpunit/boot.py", "--"]
-# Loopback only: the laptop reaches it over the session's tunnel. vLLM reads VLLM_API_KEY itself.
-# An `if`, not `${…:+…}`: an expansion's `;` is a word, not a separator (0010 design D13).
-CMD ["sh", "-c", "if [ -n \"${GPUNIT_VOLUME_PATH:-}\" ]; then export HF_HOME=\"$GPUNIT_VOLUME_PATH/huggingface\"; fi; exec vllm serve \"$SERVE_REPO\" --revision \"$SERVE_REVISION\" --served-model-name \"$SERVE_NAME\" --host 127.0.0.1 --port 8000 $SERVE_ARGS"]
+COPY serve/launch.py /opt/gpunit/launch.py
+CMD ["python3", "/opt/gpunit/launch.py"]
