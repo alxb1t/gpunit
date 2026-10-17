@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `live/window.py`, tested offline in `tests/test_live.py` (`0012`).
 - README's step 2 adds `boot.py` from `v0.8.0` on `python3` 3.10 or newer; `CLAUDE.md` and the boot spec's Purpose
   name the Python files (`0012`).
-- `gpunit-vllm`, `gpunit-live` and `gpunit-live-dead` rebuilt on `boot.py` at `v0.8-rc1` and re-pinned by digest
+- `gpunit-vllm`, `gpunit-live` and `gpunit-live-dead` rebuilt on `boot.py` at `v0.8-rc2` and re-pinned by digest
   (`0012`).
 
 ### Removed

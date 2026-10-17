@@ -1,7 +1,7 @@
 # The window `make live-volume` opens: a 10 GB volume for 30m, and two pods that mount it in turn.
 project = "live-volume"
 # Pushed by hand for linux/amd64; a rebuild moves the digest.
-image = "ghcr.io/alxb1t/gpunit-live@sha256:dc4c26e875a2871bcc8a1004ded0371dec362fddf77088f95a929afea3a9a2fc"
+image = "ghcr.io/alxb1t/gpunit-live@sha256:7491608329a54b8a3256737891d22da3ee216d86ed49747eee3a5a993b7c3655"
 # The cheapest secure-cloud cards in stock, tried in order; stock moves by the hour. A window
 # needs a card in stock where standard volumes are, so dearer cards follow the cheap ones.
 gpus = [
