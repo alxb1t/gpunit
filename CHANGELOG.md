@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   still billing past its end (`0010·R5`).
 - An older `boot.sh` is judged only on a log read that opens with boot's `step: the ceiling` line, so a read cut
   before boot's lines names no wrong reason (`0010·R7`).
+- `make live-volume` passed on a real volume: a pod wrote it, a new pod read it back, and its delete wrote the ledger's
+  `deleted` line (`live/last_run.txt`).
 
 ## [0.7.0] - 2026-10-16
 

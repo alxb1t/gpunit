@@ -9,7 +9,7 @@ The window, the sweep, the ledger and the boot, then the metered run, per [desig
 - [x] 2 — The sweep
 - [x] 3 — The ledger
 - [x] 4 — The boot
-- [ ] 5 — ⚠️ **HUMAN · METERED** — make live-volume
+- [x] 5 — ⚠️ **HUMAN · METERED** — make live-volume
 
 ## 1 — The window
 
@@ -63,5 +63,5 @@ The window, the sweep, the ledger and the boot, then the metered run, per [desig
 
 ## 5 — ⚠️ **HUMAN · METERED** — make live-volume
 
-- [ ] 5.1 **HUMAN · METERED** — with `RUNPOD_API_KEY` set, run `make live-volume` (~$0.10), and confirm no pod or network volume is left; append its tail and `tail -1 ~/.local/state/gpunit/ledger.jsonl` to `live/last_run.txt`, under a header `<date> — make live-volume, 0011-paydown`, per [D10](design.md#d10).
+- [x] 5.1 **HUMAN · METERED** — with `RUNPOD_API_KEY` set, run `make live-volume` (~$0.10), and confirm no pod or network volume is left; append its tail and `tail -1 ~/.local/state/gpunit/ledger.jsonl` to `live/last_run.txt`, under a header `<date> — make live-volume, 0011-paydown`, per [D10](design.md#d10).
   Verify: `grep -c '^20[0-9-]* — make live-volume, 0011-paydown' live/last_run.txt` prints `1`, and `grep -c '"kind": "deleted"' live/last_run.txt` prints `1`.
