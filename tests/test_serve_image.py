@@ -2,6 +2,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -41,8 +42,11 @@ def test_the_image_is_built_from_pinned_inputs() -> None:
     assert pinned(text)
     [install] = [line for line in lines if "openssh-server" in line]
     assert "/etc/ssh/ssh_host_*" in install
-    assert 'ENTRYPOINT ["/opt/gpunit/boot.sh", "--"]' in lines
-    assert "COPY boot/boot.sh /opt/gpunit/boot.sh" in lines
+    # boot.py's stop goes over urllib: the image needs TLS roots, not curl.
+    assert "ca-certificates" in install.split()
+    assert "curl" not in install.split()
+    assert 'ENTRYPOINT ["python3", "/opt/gpunit/boot.py", "--"]' in lines
+    assert "COPY boot/boot.py /opt/gpunit/boot.py" in lines
     [env] = [line for line in lines if line.startswith("ENV")]
     for off in (
         "DO_NOT_TRACK=1",
@@ -93,6 +97,9 @@ echo "args: $*"
 """
 
 
+LAUNCH = ROOT / "serve" / "launch.py"
+
+
 def command() -> list[str]:
     """Return the Dockerfile's CMD, the exec form's array."""
     [cmd] = [
@@ -103,9 +110,8 @@ def command() -> list[str]:
     return json.loads(cmd[len("CMD ") :])
 
 
-def started(
-    cmd: list[str], bin_dir: Path, volume: str | None
-) -> subprocess.CompletedProcess[str]:
+def started(bin_dir: Path, volume: str | None) -> subprocess.CompletedProcess[str]:
+    """Run the CMD's script from this tree under the test's Python, vLLM stubbed."""
     env = {
         "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
         "SERVE_REPO": "Qwen/Qwen3-4B",
@@ -115,7 +121,13 @@ def started(
     }
     if volume is not None:
         env["GPUNIT_VOLUME_PATH"] = volume
-    return subprocess.run(cmd, env=env, capture_output=True, text=True, check=False)
+    return subprocess.run(
+        [sys.executable, str(LAUNCH)],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
 
 ARGS = (
@@ -124,35 +136,31 @@ ARGS = (
 )
 
 
+@pytest.mark.spec("serve:image:pinned-inputs")
+@pytest.mark.spec("serve:volume:weights-on-the-volume")
+def test_the_cmd_is_launch_py() -> None:
+    lines = instructions(DOCKERFILE.read_text(encoding="utf-8"))
+
+    assert command() == ["python3", "/opt/gpunit/launch.py"]
+    assert "COPY serve/launch.py /opt/gpunit/launch.py" in lines
+
+
 @pytest.mark.spec("serve:volume:weights-on-the-volume")
 @pytest.mark.parametrize(
     ("volume", "home"),
-    [("/runpod-volume", "/runpod-volume/huggingface"), (None, "unset")],
-    ids=["volume", "no-volume"],
+    [
+        ("/runpod-volume", "/runpod-volume/huggingface"),
+        (None, "unset"),
+        ("", "unset"),
+    ],
+    ids=["volume", "no-volume", "twin-empty"],
 )
 def test_vllm_starts_with_the_weights_on_the_volume(
     volume: str | None, home: str, tmp_path: Path
 ) -> None:
     bin_dir = install_stubs(tmp_path / "bin", {"vllm": VLLM})
 
-    done = started(command(), bin_dir, volume)
+    done = started(bin_dir, volume)
 
     assert done.returncode == 0, done.stderr
     assert done.stdout.splitlines() == [f"HF_HOME={home}", ARGS]
-
-
-@pytest.mark.spec("serve:volume:weights-on-the-volume")
-def test_the_expansion_form_is_caught(tmp_path: Path) -> None:
-    # The twin: the check fails on a CMD that sets HF_HOME inside `${…:+…}`.
-    bin_dir = install_stubs(tmp_path / "bin", {"vllm": VLLM})
-    shell, flag, script = command()
-    broken = re.sub(
-        r"if \[ .*?; fi; ",
-        '${GPUNIT_VOLUME_PATH:+export HF_HOME="$GPUNIT_VOLUME_PATH/huggingface";} ',
-        script,
-    )
-    assert broken != script
-
-    done = started([shell, flag, broken], bin_dir, "/runpod-volume")
-
-    assert done.returncode != 0

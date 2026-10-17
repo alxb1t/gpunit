@@ -353,3 +353,115 @@ $ tail -1 ~/.local/state/gpunit/ledger.jsonl
 {"id": "38iuo34xfc", "kind": "deleted", "at": "2026-10-17T10:53:05Z"}
 
 The account's pod and network-volume listings (RunPod's REST v2, read after the run) were empty.
+
+2026-10-17 — make live, 0012-boot-in-python
+
+`boot.py` on `gpunit-live` at `v0.8-rc2`, at `01ba5d9`: the host key verified, `nvidia-smi` ran, the pod was deleted.
+
+NVIDIA RTX A4500: $0.25/h
+NVIDIA RTX A5000: $0.27/h
+NVIDIA A40: $0.59/h
+NVIDIA RTX A6000: $0.59/h
+at most $0.17 for 600s and a 420s wait for SSH
+uv run gpunit run --spec live/gpunit.toml -- sh -c '$GPUNIT_SSH nvidia-smi'
+2026-10-17T15:44:42Z creating on NVIDIA RTX A4500
+2026-10-17T15:44:43Z create on 'NVIDIA RTX A4500' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-17T15:44:43Z creating on NVIDIA RTX A5000
+2026-10-17T15:44:44Z pod thyixi9o579jmz created; waiting for SSH
+2026-10-17T15:45:27Z host key verified: SHA256:7X8yGnBNZsbCqPdfsx7cZAsiC6bLLXFU000ph/ky1QU
+2026-10-17T15:45:27Z session up: pod thyixi9o579jmz, root@69.30.85.242 -p 22002
+Sat Oct 17 15:45:29 2026
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.159.04             Driver Version: 580.159.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA RTX A5000               On  |   00000000:56:00.0 Off |                  Off |
+| 30%   28C    P8             23W /  230W |       1MiB /  24564MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+2026-10-17T15:45:30Z pod thyixi9o579jmz deleted
+uv run gpunit status --spec live/gpunit.toml
+no session is recorded
+
+2026-10-17 — make live-dead, 0012-boot-in-python
+
+`gpunit-live-dead` at `v0.8-rc2` has no `python3`, so `boot.py` cannot start. RunPod restarts the container, so the
+reason is the wait's deadline (0010 design D10).
+
+NVIDIA RTX A4500: $0.25/h
+NVIDIA RTX A5000: $0.27/h
+NVIDIA A40: $0.59/h
+NVIDIA RTX A6000: $0.59/h
+at most $0.07 for 300s and a 120s wait for SSH
+2026-10-17T15:45:35Z creating on NVIDIA RTX A4500
+2026-10-17T15:45:36Z create on 'NVIDIA RTX A4500' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-17T15:45:36Z creating on NVIDIA RTX A5000
+2026-10-17T15:45:37Z pod sfv6ql737yuakr created; waiting for SSH
+2026-10-17T15:47:38Z pod sfv6ql737yuakr got no host and port 22 within 120s; tearing the pod down
+2026-10-17T15:47:39Z pod sfv6ql737yuakr deleted
+2026-10-17T15:47:39Z refused: pod sfv6ql737yuakr got no host and port 22 within 120s
+up exited 1 after 126s
+reason: pod sfv6ql737yuakr got no host and port 22 within 120s
+no session is recorded
+
+2026-10-17 — make live-volume, 0012-boot-in-python
+
+Both pods on the Blackwell card, as the cheaper cards were out of stock; the second read the first's line. Three runs
+before it failed with `no host-key line within 60s`: the pod's log held `step: the command` before the key line,
+stdout and stderr merged out of order. `4ee00fd` pauses `boot.py` 1s between them (design D1).
+
+NVIDIA RTX A4500: $0.25/h
+NVIDIA RTX A5000: $0.27/h
+NVIDIA A40: $0.59/h
+NVIDIA RTX A6000: $0.59/h
+NVIDIA RTX PRO 4500 Blackwell: $0.72/h
+NVIDIA GeForce RTX 4090: $0.89/h
+at most $0.26 for 600s and a 420s wait for SSH
+2026-10-17T15:47:48Z data centre: EU-RO-1
+2026-10-17T15:47:48Z price: $0.07/GB a month
+2026-10-17T15:47:48Z at most $0.01 for 10 GB over 1h
+2026-10-17T15:47:49Z volume sn20lqh8wa up in EU-RO-1, 10 GB, until 2026-10-17T16:17:49Z
+2026-10-17T15:47:52Z creating on NVIDIA RTX A4500
+2026-10-17T15:47:53Z create on 'NVIDIA RTX A4500' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-17T15:47:53Z creating on NVIDIA RTX A5000
+2026-10-17T15:47:53Z create on 'NVIDIA RTX A5000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-17T15:47:53Z creating on NVIDIA A40
+2026-10-17T15:47:54Z create on 'NVIDIA A40' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-17T15:47:54Z creating on NVIDIA RTX A6000
+2026-10-17T15:47:55Z create on 'NVIDIA RTX A6000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-17T15:47:55Z creating on NVIDIA RTX PRO 4500 Blackwell
+2026-10-17T15:47:56Z pod lov8fssfgn368z created; waiting for SSH
+2026-10-17T15:48:12Z host key verified: SHA256:TNZDI55a/CxZWyvx5H3e/rWoTP+GTNNBdk37pRyWuP8
+2026-10-17T15:48:12Z session up: pod lov8fssfgn368z, root@213.173.107.35 -p 16387
+2026-10-17T15:48:14Z pod lov8fssfgn368z deleted
+2026-10-17T15:48:19Z creating on NVIDIA RTX A4500
+2026-10-17T15:48:20Z create on 'NVIDIA RTX A4500' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-17T15:48:20Z creating on NVIDIA RTX A5000
+2026-10-17T15:48:20Z create on 'NVIDIA RTX A5000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-17T15:48:20Z creating on NVIDIA A40
+2026-10-17T15:48:20Z create on 'NVIDIA A40' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-17T15:48:20Z creating on NVIDIA RTX A6000
+2026-10-17T15:48:21Z create on 'NVIDIA RTX A6000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-17T15:48:21Z creating on NVIDIA RTX PRO 4500 Blackwell
+2026-10-17T15:48:23Z pod hnroeuzisqzn0b created; waiting for SSH
+2026-10-17T15:49:03Z host key verified: SHA256:hqghJGFovJNhi6m0ZKOgUlO0++Qx4ofRs3nyLDoVzsg
+2026-10-17T15:49:03Z session up: pod hnroeuzisqzn0b, root@213.173.104.13 -p 11826
+2026-10-17T15:49:05Z pod hnroeuzisqzn0b deleted
+wrote: 2026-10-17T15:48:14Z
+read: 2026-10-17T15:48:14Z
+2026-10-17T15:49:06Z volume sn20lqh8wa deleted
+no session is recorded
+
+The account's pod listing (RunPod's REST v2, read after the runs) was empty; its network-volume listing held
+`gpunit-isekai` alone, isekai's own volume, made by none of these runs.

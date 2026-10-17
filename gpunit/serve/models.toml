@@ -1,5 +1,5 @@
 # The models `gpunit serve` knows, and the image every row serves on (0005 design D1).
-image = "ghcr.io/alxb1t/gpunit-vllm@sha256:2fbfee03334addadf57a39a6f71dd7f13e7c59160b8714eb0128ecbc32bc72e2"
+image = "ghcr.io/alxb1t/gpunit-vllm@sha256:1a83cf6c73421810210eabb14772c892bbf3086359486c1676da02725dd8ee8b"
 
 [models.qwen3-4b]
 repo = "Qwen/Qwen3-4B"

@@ -7,6 +7,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-17
+
+### Added
+
+- `boot/boot.py`: the pod's boot in stdlib Python 3.10, one function a step, every `boot:*` scenario unit-tested in
+  `tests/test_boot_steps.py`; it prints `boot.sh`'s lines and needs neither `curl` nor `env`. It pauses 1s after its
+  key line, so RunPod's log keeps it before `step: the command` (`0012`).
+- The gate holds `boot/boot.py` at 100 % line and branch coverage (`pytest-cov`) and type-checks it as Python 3.10.
+
+### Changed
+
+- `boot.py` is the entrypoint of `serve/Dockerfile`, `live/Dockerfile` and `live/Dockerfile.dead`; they install
+  `ca-certificates`, not `curl`. `tests/test_boot.py` runs `boot.py` end to end (`0012`).
+- The serve image's `CMD` is `serve/launch.py`, in place of `sh -c`: it sets `HF_HOME` on a window volume and `exec`s
+  vLLM, with no shell to misparse (`0012`).
+- `make live-volume`, `make live-serve`, `make live-dead` and `make live-serve-dead` are one line each: their logic is
+  `live/volume.py`, `live/serve.py`, `live/dead.py` and `live/serve_dead.py`, the window volume's teardown
+  `live/window.py`, tested offline in `tests/test_live.py` (`0012`).
+- README's step 2 adds `boot.py` from `v0.8.0` on `python3` 3.10 or newer; `CLAUDE.md` and the boot spec's Purpose
+  name the Python files (`0012`).
+- `gpunit-vllm`, `gpunit-live` and `gpunit-live-dead` rebuilt on `boot.py` at `v0.8-rc3`, after its stop's fixes, and
+  re-pinned by digest (`0012`).
+- `make live`, `make live-dead`, `make live-volume` and `make live-serve` passed on the `v0.8-rc2` images; their
+  tails are in `live/last_run.txt` and `live/serve_last_run.txt`. The `v0.8-rc3` rebuild changed only `boot.py`'s stop
+  and its log lines, held offline, and was not re-run (`0012`).
+
+### Fixed
+
+- A Ctrl-C during a live script waits for gpunit's own teardown: `live/window.py`'s `call` starts each gpunit child
+  and waits through every interrupt before re-raising it, where `subprocess.run` killed the child 0.25s in, mid-delete;
+  `live/dead.py` waits on its own `up` the same way, then runs `gpunit down`, since `up` has no SIGINT teardown of its
+  own (`0012·R1`, `0012·S1`, `0012·R5`).
+- `live/serve.py` ends the `serve --api` hold however its proof ends: a non-`OSError` from the chat request or the
+  tool call no longer leaves the endpoint's pod held while the window's volume is deleted (`0012·S2`).
+- `boot.py`'s stop follows no redirect, as `runpod.py`'s `_NoRedirect` already guards the laptop's side: a 3xx from
+  the stop endpoint is a failed stop and retried, where urllib carried the key to the host it named (`0012·S3`) and
+  read that host's 200 as the pod stopping, ending the ceiling while the pod billed (`0012·R8`, `0012·S5`).
+- A stop that gets no answer names its cause, `the stop answered HTTP 000 (<cause>)`: an image without
+  `ca-certificates` says its certificate check failed, where it said nothing (`0012·S4`).
+- A watchdog whose stop raises an error it did not expect says the ceiling's stop failed, prints the traceback and
+  exits `1`, where it exited `0` without a line (`0012·R6`).
+- Design D1, D3, D4, D5 and D6 say what `boot.py`'s stop does: an opener built with `_NoRedirect`, `000 (<cause>)`
+  on no answer, and the watchdog's failure line and exit `1`; a test comment names the watchdog's guard, not a
+  `finally` (`0012·R2`, `0012·R3`, `0012·R4`).
+- README says the serve proof sends one chat request, not one `curl`; design D12 and task 6.1 say the shipped images
+  are `v0.8-rc3`; `test_the_cmd_is_launch_py` is bound to `serve:image:pinned-inputs`, whose scenario it checks
+  (`0012·R2`, `0012·R3`, `0012·R4`).
+
+- `boot.py`'s stop sends `User-Agent: gpunit-boot`, as the laptop sends its own: RunPod's Cloudflare refuses urllib's
+  default agent with a 403 (code 1010), which would fail every stop, the ceiling's too (review `R1` at `65a8f39`).
+- `boot.py` refuses before the arm, `no CA store for the stop's TLS; install ca-certificates in the image`, when
+  OpenSSL finds no CA file and no CA directory holding a file: every stop would fail its certificate check, and the pod
+  would bill past its ceiling (security `S3` at `65a8f39`).
+- The `v0.8-rc3` images, `gpunit-vllm`, `gpunit-live` and `gpunit-live-dead`, predate the two `boot.py` fixes above:
+  their `boot.py` sends urllib's default agent and arms without a CA store. They are not rebuilt or re-pinned here.
+- `live/dead.py` runs `gpunit down` after `up` however `up` ends, and a failed `down` fails the run: a lost create or a
+  failed teardown left the dead image's pod, which no ceiling stops, billing (security `S1` at `65a8f39`).
+- A SIGHUP or SIGTERM during a live script is a Ctrl-C: `live/window.py`'s `hangups_interrupt` holds it while
+  `window` and `live/dead.py` run, so their `down` still runs, as the recipes' `trap … EXIT` did on both (security
+  `S2` at `65a8f39`).
+- `tests/test_live.py` checks that `live/dead.py` waits `up` to its exit before `gpunit down` starts, where the
+  Ctrl-C test checked only the `down` (review `R2` at `65a8f39`).
+- `live/dead.py` refuses at once, with no `up` and no `down`, when this checkout's `.gpunit/` already records a pod
+  (`pod` or `pending`), naming `gpunit down`: its `down` deleted that session's pod, and the run passed on `up`'s
+  refusal; `tests/test_live.py` runs each test in a checkout of its own (security `S4` at `beef206`).
+
+### Removed
+
+- `boot/boot.sh`: consumers keep it at `v0.7.0` by its tag URL, and gpunit still reads its lines (`0012`).
+
 ## [0.7.1] - 2026-10-17
 
 ### Fixed

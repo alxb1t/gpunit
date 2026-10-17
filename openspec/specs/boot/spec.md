@@ -1,49 +1,19 @@
 ## Purpose
 
-The pod's half of the session: one shell file a consumer's image runs as its entrypoint, so the pod stops itself
+The pod's half of the session: one Python file a consumer's image runs as its entrypoint, so the pod stops itself
 at its ceiling whatever happens to the machine that made it, and proves its host key before anything connects.
 
 ## Requirements
 
-### Requirement: Boot refuses what it cannot run on
-
-`boot.sh -- <command>` SHALL exit `1` naming the gap when `sshd`, `curl` or `env` is not on the image, or when any
-of `RUNPOD_API_KEY`, `RUNPOD_POD_ID`, `PUBLIC_KEY`, `GPUNIT_CEILING`, `GPUNIT_NONCE` is unset or empty, or when no
-command follows `--`; and SHALL stop the pod before exiting when the gap is found after the ceiling is armed.
-
-#### Scenario: no sshd
-- **Key:** `boot:refuse:no-sshd`
-- **WHEN** `sshd` is not on `PATH`
-- **THEN** boot exits `1` naming `openssh-server` and starts no command
-
-#### Scenario: no curl
-- **Key:** `boot:refuse:no-curl`
-- **WHEN** `curl` is not on `PATH`
-- **THEN** boot exits `1` naming `curl` and starts no command
-
-#### Scenario: no env
-- **Key:** `boot:refuse:no-env`
-- **WHEN** `env` is not on `PATH`
-- **THEN** boot exits `1` naming `coreutils` and starts no command
-
-#### Scenario: no ceiling
-- **Key:** `boot:refuse:no-ceiling`
-- **WHEN** `GPUNIT_CEILING` is unset
-- **THEN** boot exits `1` naming `GPUNIT_CEILING` and starts no command
-
-#### Scenario: no nonce
-- **Key:** `boot:refuse:no-nonce`
-- **WHEN** `GPUNIT_NONCE` is unset
-- **THEN** boot exits `1` naming `GPUNIT_NONCE`, prints no host-key line, and starts no command
-
 ### Requirement: The pod stops itself
 
-Boot SHALL arm a timer of `GPUNIT_CEILING` seconds and an exit trap, each stopping the pod through the provider's
-API with the key the provider injected; the stop SHALL retry on any answer but a success, the wait doubling from
-30 seconds to 300; a 401 or 403 SHALL be logged as the key being unable to stop this pod, naming a delete by hand,
-and still retried; and the command's exit, however it ends, SHALL stop the pod 60 seconds after boot logs
-`the command exited <code>`, so the pod's log still holds that line for a reader. The ceiling and a refusal SHALL
-stop the pod without that wait.
+Boot SHALL arm a watchdog process that stops the pod after `GPUNIT_CEILING` seconds and outlives a crash of boot's
+main flow, and SHALL stop the pod on every end of that main flow; each stop SHALL go through the provider's API with
+the key the provider injected; the stop SHALL retry on any answer but a success, the wait doubling from 30 seconds to
+300; a 401 or 403 SHALL be logged as the key being unable to stop this pod, naming a delete by hand, and still
+retried; and the command's exit, however it ends, SHALL stop the pod 60 seconds after boot logs
+`the command exited <code>`, so the pod's log still holds that line for a reader. The ceiling, a refusal and an error
+of boot's own SHALL stop the pod without that wait.
 
 #### Scenario: the ceiling stops the pod
 - **Key:** `boot:stop:ceiling`
@@ -59,6 +29,11 @@ stop the pod without that wait.
 - **Key:** `boot:stop:refusal-no-grace`
 - **WHEN** boot refuses after the ceiling is armed, before the command starts
 - **THEN** the stop is requested with no 60-second wait before it
+
+#### Scenario: an error of boot's own stops the pod
+- **Key:** `boot:stop:own-error`
+- **WHEN** boot's main flow raises an error it did not expect, after the ceiling is armed
+- **THEN** the stop is requested with no 60-second wait before it, and boot exits non-zero
 
 #### Scenario: a failed stop retries with backoff
 - **Key:** `boot:stop:retries`
@@ -116,3 +91,46 @@ environment, forward `SIGTERM` to it, and exit with its code after the stop.
 - **Key:** `boot:child:no-nonce`
 - **WHEN** boot runs a command that prints its environment
 - **THEN** the printed environment holds no `GPUNIT_NONCE`
+
+### Requirement: Boot runs on a Python image and refuses what it lacks
+
+`boot.py -- <command>` SHALL run on an image holding `python3` 3.10 or newer with its standard library, `openssh-server` and `ca-certificates`,
+and SHALL need neither `curl` nor `env`. It SHALL exit `1` naming the gap when `sshd` is not on the image, when
+OpenSSL finds no CA store for the stop's TLS, or when any
+of `RUNPOD_API_KEY`, `RUNPOD_POD_ID`, `PUBLIC_KEY`, `GPUNIT_CEILING`, `GPUNIT_NONCE` is unset or empty, or when no
+command follows `--`; and SHALL stop the pod before exiting when the gap is found after the ceiling is armed.
+
+#### Scenario: no sshd
+- **Key:** `boot:refuse:no-sshd`
+- **WHEN** `sshd` is not on `PATH`
+- **THEN** boot exits `1` naming `openssh-server` and starts no command
+
+#### Scenario: the stop needs no curl
+- **Key:** `boot:needs:no-curl`
+- **WHEN** `curl` is not on `PATH`
+- **THEN** boot runs the command, and the stop is requested with the key in a request header
+
+#### Scenario: the command needs no env
+- **Key:** `boot:needs:no-env`
+- **WHEN** `env` is not on `PATH`
+- **THEN** boot runs the command, with neither `RUNPOD_API_KEY` nor `GPUNIT_NONCE` in its environment
+
+#### Scenario: no ceiling
+- **Key:** `boot:refuse:no-ceiling`
+- **WHEN** `GPUNIT_CEILING` is unset
+- **THEN** boot exits `1` naming `GPUNIT_CEILING` and starts no command
+
+#### Scenario: no nonce
+- **Key:** `boot:refuse:no-nonce`
+- **WHEN** `GPUNIT_NONCE` is unset
+- **THEN** boot exits `1` naming `GPUNIT_NONCE`, prints no host-key line, and starts no command
+
+### Requirement: Boot is one file a consumer adds alone
+
+Boot SHALL be one file, `boot/boot.py`, that imports nothing but Python's standard library and nothing of gpunit, so
+a consumer's image adds it alone; and it SHALL parse and run on Python 3.10.
+
+#### Scenario: the standard library alone
+- **Key:** `boot:file:stdlib-only`
+- **WHEN** boot's imports are read
+- **THEN** each names a module of Python's standard library, and none names `gpunit`

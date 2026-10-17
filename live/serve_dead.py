@@ -1,7 +1,8 @@
 """Prove a pod that dies while the model loads ends `serve`'s wait (0009 design D7).
 
 e.g. `RUNPOD_API_KEY=<key> python live/serve_dead.py` serves `qwen3-4b` with an argument
-vLLM refuses, prints gpunit's lines, and exits 0 only when `check` finds no failure.
+vLLM refuses, inside its window volume (0010 design D10), prints gpunit's lines, and
+exits 0 only when `check` finds no failure.
 """
 
 import dataclasses
@@ -14,6 +15,7 @@ from pathlib import Path
 from gpunit import log
 from gpunit.runpod import RunPod
 from gpunit.serve import session, table
+from live.window import report, serve_window
 
 MODEL = "qwen3-4b"
 CEILING_S = 600
@@ -53,7 +55,7 @@ def _time(line: str) -> datetime:
     return datetime.strptime(line.split(" ", 1)[0], "%Y-%m-%dT%H:%M:%SZ")
 
 
-def main() -> int:
+def prove() -> int:
     """Serve the broken row, print gpunit's lines, and return 0 when `check` passes."""
     lines: list[str] = []
 
@@ -83,11 +85,14 @@ def main() -> int:
             provider=RunPod(os.environ),
         )
     failures = check(lines, code)
-    for failure in failures:
-        print(f"check failed: {failure}", file=sys.stderr)
     if not failures:
         print("check passed: the dead pod ended the wait and was deleted", flush=True)
-    return 1 if failures else 0
+    return report(failures)
+
+
+def main() -> int:
+    """Prove the dead serve inside the row's window volume, deleted however it ends."""
+    return serve_window(MODEL, prove)
 
 
 if __name__ == "__main__":

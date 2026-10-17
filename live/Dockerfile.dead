@@ -1,15 +1,14 @@
-# The image `make live-dead` boots: `live/Dockerfile` without curl, so boot.sh refuses
-# at once and the container exits. Why: 0006 design D6.
+# The image `make live-dead` boots: `live/Dockerfile` without python3, so boot.py's
+# entrypoint cannot start and the container exits at once. Why: 0006 design D6.
 # Build from the repository root: docker buildx build -f live/Dockerfile.dead .
 FROM ubuntu:22.04@sha256:5ec03bb3441e8b0bf3b4f9cd4629a1ae763010dc3035bb8da3ae6cf026486401
 
-# The host keys go: boot.sh makes the pod's own.
+# The host keys go: boot.py would make the pod's own.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends openssh-server ca-certificates \
  && rm -rf /var/lib/apt/lists/* /etc/ssh/ssh_host_*
 
-COPY boot/boot.sh /opt/gpunit/boot.sh
-RUN chmod +x /opt/gpunit/boot.sh
+COPY boot/boot.py /opt/gpunit/boot.py
 
-ENTRYPOINT ["/opt/gpunit/boot.sh", "--"]
+ENTRYPOINT ["python3", "/opt/gpunit/boot.py", "--"]
 CMD ["sleep", "infinity"]

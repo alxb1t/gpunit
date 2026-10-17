@@ -1,15 +1,16 @@
 # gpunit — shared context for Claude Code
 
-A RunPod GPU session any project can open, use and close: the `gpunit` CLI and the pod's `boot/boot.sh`.
+A RunPod GPU session any project can open, use and close: the `gpunit` CLI and the pod's `boot/boot.py`.
 
 > **This file is what is true of this repo. It is not a script.** What to do comes from the task you were given.
 
 ## The quality gate — `make gate`
 
 The gate is **`make gate`**, run at the repository root. The `Makefile` recipe is the one list of its commands;
-prose names `make gate` and never copies them. It syncs the locked environment, formats, lints, type-checks, runs
-the tests offline on faked provider answers, and validates the specs. A new command lands through a change whose
-cut names the gate recipe in a task.
+prose names `make gate` and never copies them. It syncs the locked environment, formats, lints, type-checks (and
+`boot/boot.py` as Python 3.10), runs the tests offline on faked provider answers with `boot/boot.py` at 100 % line
+and branch coverage, and validates the specs. A new command lands through a change whose cut names the gate recipe
+in a task.
 
 ## How a change is cut here
 
@@ -26,12 +27,15 @@ CLI is recorded, not pinned: `@fission-ai/openspec@1.11.0`, resolved on `PATH`.
   billing by project).
 - **`gpunit/serve/`** — `gpunit serve`: `models.toml` (the model table and the image's digest), `table.py` (a row's
   `Spec`), `session.py` (the price, the wait, the `--api` hold), `chat.py` (the streamed chat).
-- **`boot/boot.sh`** — the pod's entrypoint: the ceiling, sshd, the fingerprint, the command.
+- **`boot/boot.py`** — the pod's entrypoint, one stdlib file for Python 3.10: the ceiling, sshd, the fingerprint,
+  the command.
 - **`serve/Dockerfile`** — the serve image, vLLM by digest; built on request by
-  `.github/workflows/build-serve-image.yml`.
+  `.github/workflows/build-serve-image.yml`. **`serve/launch.py`** — its command: `HF_HOME` on a volume, then vLLM.
 - **`tests/`** — `fakes.py` (`FakeProvider`, `FakeOpener`), `fixtures/` (v2 bodies), one `test_*.py` per module;
-  every test carries `@pytest.mark.spec("<scenario key>")`.
-- **`live/`** — the metered proof on a real pod, run by hand.
+  `boot.py` has `tests/test_boot_steps.py` (each step alone) and `tests/test_boot.py` (the whole run); every test
+  carries `@pytest.mark.spec("<scenario key>")`.
+- **`live/`** — the metered proof on a real pod, run by hand: `live/*.py`, one script a `make live-*` target, and
+  `live/window.py`, their shared steps and the window volume's teardown.
 - **`openspec/`** — the living specs in `specs/`; the changes in `changes/`, the shipped ones in `changes/archive/`.
 - **`.minions/`** — run artefacts, **gitignored**; nothing in it is tracked.
 - **`CHANGELOG.md`** — Keep a Changelog: each phase appends under `## [Unreleased]`, the release cuts it.
@@ -39,7 +43,7 @@ CLI is recorded, not pinned: `@fission-ai/openspec@1.11.0`, resolved on `PATH`.
 ## Invariants
 
 - **No runtime dependency:** `dependencies = []` in `pyproject.toml`; the stdlib carries the package.
-- **The key never on argv:** `runpod.py` sends it in a request header, `boot.sh` on a file descriptor
+- **The key never on argv:** `runpod.py` and `boot.py` send it in a request header
   (`test_gpu_reads_the_memory_and_the_secure_price`, `test_the_commands_end_stops_the_pod`).
 - **The ceiling is required:** no default, no pod without it (`test_no_ceiling_no_pod`).
 - **A 404 is never gone:** `down` keeps the record (`test_a_404_keeps_the_record`).
