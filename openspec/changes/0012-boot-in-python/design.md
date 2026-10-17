@@ -242,7 +242,8 @@ records what was checked then (`0008·R5`).
 
 ### D12
 
-- **`gpunit-vllm`:** `.github/workflows/build-serve-image.yml` with the tag `v0.8-rc1`; the digest replaces the old at
+- **`gpunit-vllm`:** `.github/workflows/build-serve-image.yml` with the tag `v0.8-rc1`, rebuilt as `v0.8-rc2`
+  after `4ee00fd`'s key pause, the shipped build; its digest replaces the old at
   `gpunit/serve/models.toml:2`.
 - **`gpunit-vllm`'s install line:** `openssh-server curl` → `openssh-server ca-certificates`.
 - **`gpunit-live`:** `live/Dockerfile` installs `openssh-server python3 ca-certificates`, no `curl`: `python3`, not

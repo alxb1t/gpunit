@@ -37,6 +37,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`0012·R1`, `0012·S1`).
 - `live/serve.py` ends the `serve --api` hold however its proof ends: a non-`OSError` from the chat request or the
   tool call no longer leaves the endpoint's pod held while the window's volume is deleted (`0012·S2`).
+- `boot.py`'s stop sends the key as an unredirected header: a redirect from the stop endpoint no longer carries it to
+  the host it names, as `runpod.py`'s `_NoRedirect` already guards the laptop's side (`0012·S3`).
+- A stop that gets no answer names its cause, `the stop answered HTTP 000 (<cause>)`: an image without
+  `ca-certificates` says its certificate check failed, where it said nothing (`0012·S4`).
+- A watchdog whose stop raises an error it did not expect says the ceiling's stop failed, prints the traceback and
+  exits `1`, where it exited `0` without a line (`0012·R6`).
+- README says the serve proof sends one chat request, not one `curl`; design D12 and task 6.1 say the shipped images
+  are `v0.8-rc2`; `test_the_cmd_is_launch_py` is bound to `serve:image:pinned-inputs`, whose scenario it checks
+  (`0012·R2`, `0012·R3`, `0012·R4`).
 
 ### Removed
 

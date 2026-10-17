@@ -317,7 +317,7 @@ time to the volume, a new pod reads it back, and the target fails unless the lin
 
 `make live-serve MODEL=<row>` proves the serve image and a row on one of its cards, for at most 30 minutes plus the
 1200s wait for SSH a session, inside the row's working window: `gpunit serve <row> --api` downloads the weights into
-the volume for one `curl` and one tool call through [live/tool_call.py](live/tool_call.py), then a chat of one prompt
+the volume for one chat request and one tool call through [live/tool_call.py](live/tool_call.py), then a chat of one prompt
 loads them from it. `MODEL` defaults to `qwen3-4b`.
 
 `make live-dead` boots an image whose container exits at once, and passes when `up` exits `1` and prints its refusal

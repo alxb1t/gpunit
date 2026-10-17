@@ -16,6 +16,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import traceback
 import urllib.error
 import urllib.request
 from collections.abc import Mapping
@@ -63,23 +64,25 @@ def say(text: str) -> None:
 
 
 def _answer(environ: Mapping[str, str]) -> str:
-    """Return the HTTP code of one stop request, "000" when none came back."""
+    """Return the HTTP code of one stop request, "000 (<cause>)" when none came back."""
     request = urllib.request.Request(
         f"{API}/pods/{environ['RUNPOD_POD_ID']}/action",
         data=b'{"action":"stop"}',
-        headers={
-            "Authorization": f"Bearer {environ['RUNPOD_API_KEY']}",
-            "Content-Type": "application/json",
-        },
+        headers={"Content-Type": "application/json"},
         method="POST",
+    )
+    # Unredirected: urllib would carry the key's header to the host a redirect names.
+    request.add_unredirected_header(
+        "Authorization", f"Bearer {environ['RUNPOD_API_KEY']}"
     )
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
             return str(response.status)
     except urllib.error.HTTPError as error:
         return str(error.code)
-    except (OSError, http.client.HTTPException):
-        return "000"
+    except (OSError, http.client.HTTPException) as error:
+        # The cause, a missing CA store say, holds no key.
+        return f"000 ({getattr(error, 'reason', error)})"
 
 
 def stop(environ: Mapping[str, str]) -> None:
@@ -121,13 +124,17 @@ def arm(ceiling: str, environ: Mapping[str, str]) -> None:
     sys.stdout.flush()
     sys.stderr.flush()
     if os.fork() == 0:
+        # The watchdog never reaches the main flow's own stop.
         try:
             time.sleep(int(ceiling))
             say(f"the ceiling of {ceiling}s is reached")
             stop(environ)
-        finally:
-            # The watchdog never reaches the main flow's own stop.
-            os._exit(0)
+        except BaseException:
+            say("the ceiling's stop failed; delete the pod by hand")
+            traceback.print_exc()
+            sys.stderr.flush()
+            os._exit(1)
+        os._exit(0)
 
 
 def sshd(home: Path, public_key: str) -> Path:

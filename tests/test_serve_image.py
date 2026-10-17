@@ -136,6 +136,7 @@ ARGS = (
 )
 
 
+@pytest.mark.spec("serve:image:pinned-inputs")
 @pytest.mark.spec("serve:volume:weights-on-the-volume")
 def test_the_cmd_is_launch_py() -> None:
     lines = instructions(DOCKERFILE.read_text(encoding="utf-8"))

@@ -1,15 +1,19 @@
 import ast
 import http.client
+import io
 import os
 import runpy
 import signal
+import ssl
 import subprocess
 import sys
 import tempfile
 import urllib.error
 import urllib.request
+import urllib.response
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
+from email.message import Message
 from pathlib import Path
 from types import FrameType
 from typing import Any
@@ -28,6 +32,8 @@ SSHD = "/usr/sbin/sshd"
 CEILING = "7"
 GRACE = f"sleep {boot.GRACE_S}"
 KEY_GAP = f"sleep {boot.KEY_GAP_S}"
+# urllib's own, taken before the `pod` fixture fakes it.
+URLOPEN = urllib.request.urlopen
 
 
 class Exited(Exception):
@@ -346,6 +352,23 @@ def test_the_watchdog_never_returns_into_the_main_flow(
 
 
 @pytest.mark.spec("boot:stop:ceiling")
+def test_a_watchdog_whose_stop_fails_says_so(
+    pod: Pod, capsys: pytest.CaptureFixture[str]
+) -> None:
+    pod.fork = 0
+    pod.answer(ValueError("a header urllib refuses"))
+
+    with pytest.raises(Exited) as exited:
+        boot.arm(CEILING, os.environ)
+
+    assert exited.value.args == (1,)
+    err = capsys.readouterr().err
+    assert "the ceiling's stop failed; delete the pod by hand" in err
+    assert "Traceback" in err
+    assert "ValueError: a header urllib refuses" in err
+
+
+@pytest.mark.spec("boot:stop:ceiling")
 def test_the_arm_returns_at_once_in_boot(pod: Pod) -> None:
     boot.arm(CEILING, os.environ)
 
@@ -371,6 +394,50 @@ def test_the_commands_end_stops_the_pod(
     assert timeout == 30
     # The fake PATH holds sshd alone: the stop needs no curl.
     assert not any("curl" in argv[0] for argv in pod.runs)
+
+
+class Redirecting(urllib.request.BaseHandler):
+    """Answer RunPod's API with a 302 to another host; log what reaches that host."""
+
+    handler_order = 100  # before urllib's own HTTPS handler, so no socket opens
+    ELSEWHERE = "https://elsewhere.example/stop"
+
+    def __init__(self) -> None:
+        self.elsewhere: list[dict[str, str]] = []
+
+    def https_open(self, request: urllib.request.Request) -> "Answered":
+        headers = Message()
+        if request.host == "api.runpod.io":
+            headers["Location"] = self.ELSEWHERE
+            code = 302
+        else:
+            self.elsewhere.append(dict(request.header_items()))
+            code = 200
+        return Answered(request.full_url, code, headers)
+
+
+class Answered(urllib.response.addinfourl):
+    """An HTTPS answer of no body, as urllib's handler returns one."""
+
+    def __init__(self, url: str, code: int, headers: Message) -> None:
+        super().__init__(io.BytesIO(b""), headers, url, code)
+        # Read by urllib's error processor on a 3xx.
+        self.msg = "Found" if code == 302 else "OK"
+
+
+@pytest.mark.spec("boot:needs:no-curl")
+def test_a_redirect_never_carries_the_key(
+    pod: Pod, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    api = Redirecting()
+    # urllib's own urlopen and redirect handler, on a faked HTTPS answer.
+    monkeypatch.setattr(urllib.request, "urlopen", URLOPEN)
+    monkeypatch.setattr(urllib.request, "_opener", urllib.request.build_opener(api))
+
+    boot.stop(os.environ)
+
+    [reached] = api.elsewhere
+    assert not any(KEY in value for value in reached.values())
 
 
 @pytest.mark.spec("boot:stop:command-end")
@@ -435,7 +502,30 @@ def test_no_answer_is_000_and_retried(
     boot.stop(os.environ)
 
     assert pod.order == ["stop", "sleep 30", "stop"]
-    assert "the stop answered HTTP 000; trying again in 30s" in capsys.readouterr().err
+    assert "the stop answered HTTP 000 (" in capsys.readouterr().err
+
+
+@pytest.mark.spec("boot:stop:retries")
+def test_no_ca_store_names_the_cause(
+    pod: Pod, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # What urllib raises on an image without ca-certificates: no root to trust RunPod's.
+    unverified = ssl.SSLCertVerificationError(
+        1,
+        "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: "
+        "unable to get local issuer certificate (_ssl.c:1006)",
+    )
+    pod.answer(urllib.error.URLError(unverified))
+
+    boot.stop(os.environ)
+
+    err = capsys.readouterr().err
+    assert (
+        "the stop answered HTTP 000 ([SSL: CERTIFICATE_VERIFY_FAILED] certificate "
+        "verify failed: unable to get local issuer certificate (_ssl.c:1006)); "
+        "trying again in 30s"
+    ) in err
+    assert KEY not in err
 
 
 @pytest.mark.spec("boot:stop:refused-key-named")
