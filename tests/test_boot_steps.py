@@ -33,7 +33,7 @@ CEILING = "7"
 GRACE = f"sleep {boot.GRACE_S}"
 KEY_GAP = f"sleep {boot.KEY_GAP_S}"
 # urllib's own, taken before the `pod` fixture fakes it.
-URLOPEN = urllib.request.urlopen
+BUILD_OPENER = urllib.request.build_opener
 
 
 class Exited(Exception):
@@ -82,7 +82,10 @@ class Pod:
     def stops(self) -> list[tuple[urllib.request.Request, float]]:
         return list(zip(self.api.requests, self.api.timeouts, strict=True))
 
-    def urlopen(self, request: urllib.request.Request, timeout: float) -> object:
+    def build_opener(self, *handlers: object) -> "Pod":
+        return self
+
+    def open(self, request: urllib.request.Request, timeout: float) -> object:
         self.order.append("stop")
         if not self.api.answers:
             self.api.answers.append((200, b""))
@@ -137,7 +140,7 @@ def pod(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, isolated_home: Path) ->
     monkeypatch.setattr(os, "fork", lambda: fake.fork)
     monkeypatch.setattr(os, "_exit", fake.exit)
     monkeypatch.setattr(boot.time, "sleep", fake.sleep)
-    monkeypatch.setattr(urllib.request, "urlopen", fake.urlopen)
+    monkeypatch.setattr(urllib.request, "build_opener", fake.build_opener)
     monkeypatch.setattr(subprocess, "run", fake.run)
     monkeypatch.setattr(subprocess, "Popen", fake.popen)
     monkeypatch.setattr(boot.shutil, "which", fake.which)
@@ -397,22 +400,25 @@ def test_the_commands_end_stops_the_pod(
 
 
 class Redirecting(urllib.request.BaseHandler):
-    """Answer RunPod's API with a 302 to another host; log what reaches that host."""
+    """Answer the first stop with a 302 to a host that answers 200; log its calls."""
 
     handler_order = 100  # before urllib's own HTTPS handler, so no socket opens
     ELSEWHERE = "https://elsewhere.example/stop"
 
     def __init__(self) -> None:
+        self.stops = 0
         self.elsewhere: list[dict[str, str]] = []
 
     def https_open(self, request: urllib.request.Request) -> "Answered":
         headers = Message()
-        if request.host == "api.runpod.io":
-            headers["Location"] = self.ELSEWHERE
-            code = 302
-        else:
+        code = 200
+        if request.host != "api.runpod.io":
             self.elsewhere.append(dict(request.header_items()))
-            code = 200
+        else:
+            self.stops += 1
+            if self.stops == 1:
+                headers["Location"] = self.ELSEWHERE
+                code = 302
         return Answered(request.full_url, code, headers)
 
 
@@ -426,18 +432,24 @@ class Answered(urllib.response.addinfourl):
 
 
 @pytest.mark.spec("boot:needs:no-curl")
-def test_a_redirect_never_carries_the_key(
-    pod: Pod, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.spec("boot:stop:retries")
+def test_a_redirect_is_a_failed_stop_never_followed(
+    pod: Pod, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     api = Redirecting()
-    # urllib's own urlopen and redirect handler, on a faked HTTPS answer.
-    monkeypatch.setattr(urllib.request, "urlopen", URLOPEN)
-    monkeypatch.setattr(urllib.request, "_opener", urllib.request.build_opener(api))
+    # urllib's own opener and redirect handling, on a faked HTTPS answer.
+    monkeypatch.setattr(
+        urllib.request, "build_opener", lambda *h: BUILD_OPENER(*h, api)
+    )
 
     boot.stop(os.environ)
 
-    [reached] = api.elsewhere
-    assert not any(KEY in value for value in reached.values())
+    assert api.elsewhere == []
+    assert api.stops == 2
+    assert pod.order == ["sleep 30"]
+    err = capsys.readouterr().err
+    assert "the stop answered HTTP 302; trying again in 30s" in err
+    assert err.count("the pod is stopping") == 1
 
 
 @pytest.mark.spec("boot:stop:command-end")

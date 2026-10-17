@@ -40,7 +40,7 @@ def _log(name, line):
         log.write(line + "\\n")
 
 
-def _urlopen(request, timeout):
+def _open(request, timeout):
     key = os.environ.get("RUNPOD_API_KEY")
     header = request.get_header("Authorization") == f"Bearer {key}"
     # The order first: a command that waits on the stop's log must find it there.
@@ -60,6 +60,10 @@ def _urlopen(request, timeout):
     )
 
 
+class _Opener:
+    open = staticmethod(_open)
+
+
 class _Answered:
     status = 200
 
@@ -76,7 +80,7 @@ def _sleep_logged(seconds):
         _sleep(600)
 
 
-urllib.request.urlopen = _urlopen
+urllib.request.build_opener = lambda *handlers: _Opener()
 time.sleep = _sleep_logged
 """
 

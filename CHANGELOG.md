@@ -37,8 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`0012·R1`, `0012·S1`).
 - `live/serve.py` ends the `serve --api` hold however its proof ends: a non-`OSError` from the chat request or the
   tool call no longer leaves the endpoint's pod held while the window's volume is deleted (`0012·S2`).
-- `boot.py`'s stop sends the key as an unredirected header: a redirect from the stop endpoint no longer carries it to
-  the host it names, as `runpod.py`'s `_NoRedirect` already guards the laptop's side (`0012·S3`).
+- `boot.py`'s stop follows no redirect, as `runpod.py`'s `_NoRedirect` already guards the laptop's side: a 3xx from
+  the stop endpoint is a failed stop and retried, where urllib carried the key to the host it named (`0012·S3`) and
+  read that host's 200 as the pod stopping, ending the ceiling while the pod billed (`0012·R8`, `0012·S5`).
 - A stop that gets no answer names its cause, `the stop answered HTTP 000 (<cause>)`: an image without
   `ca-certificates` says its certificate check failed, where it said nothing (`0012·S4`).
 - A watchdog whose stop raises an error it did not expect says the ceiling's stop failed, prints the traceback and

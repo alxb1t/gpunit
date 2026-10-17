@@ -20,7 +20,9 @@ import traceback
 import urllib.error
 import urllib.request
 from collections.abc import Mapping
+from email.message import Message
 from pathlib import Path
+from typing import IO
 
 API = "https://api.runpod.io/v2"
 RETRY_S = 30
@@ -63,20 +65,36 @@ def say(text: str) -> None:
     print(f"{stamp} {text}", file=sys.stderr, flush=True)
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Follow no redirect: the host it names never stopped the pod."""
+
+    def redirect_request(
+        self,
+        req: urllib.request.Request,
+        fp: IO[bytes],
+        code: int,
+        msg: str,
+        headers: Message,
+        newurl: str,
+    ) -> None:
+        """Return None, so the 3xx is raised as an `HTTPError` and retried."""
+        return None
+
+
 def _answer(environ: Mapping[str, str]) -> str:
     """Return the HTTP code of one stop request, "000 (<cause>)" when none came back."""
     request = urllib.request.Request(
         f"{API}/pods/{environ['RUNPOD_POD_ID']}/action",
         data=b'{"action":"stop"}',
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Authorization": f"Bearer {environ['RUNPOD_API_KEY']}",
+            "Content-Type": "application/json",
+        },
         method="POST",
     )
-    # Unredirected: urllib would carry the key's header to the host a redirect names.
-    request.add_unredirected_header(
-        "Authorization", f"Bearer {environ['RUNPOD_API_KEY']}"
-    )
+    opener = urllib.request.build_opener(_NoRedirect)
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        with opener.open(request, timeout=30) as response:
             return str(response.status)
     except urllib.error.HTTPError as error:
         return str(error.code)
