@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ca-certificates`, not `curl`. `tests/test_boot.py` runs `boot.py` end to end (`0012`).
 - The serve image's `CMD` is `serve/launch.py`, in place of `sh -c`: it sets `HF_HOME` on a window volume and `exec`s
   vLLM, with no shell to misparse (`0012`).
+- `make live-volume`, `make live-serve`, `make live-dead` and `make live-serve-dead` are one line each: their logic is
+  `live/volume.py`, `live/serve.py`, `live/dead.py` and `live/serve_dead.py`, the window volume's teardown
+  `live/window.py`, tested offline in `tests/test_live.py` (`0012`).
 
 ### Removed
 

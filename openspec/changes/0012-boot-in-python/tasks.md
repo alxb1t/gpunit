@@ -9,7 +9,7 @@ task names.
 - [x] 1 — boot.py
 - [x] 2 — The proof
 - [x] 3 — The launch
-- [ ] 4 — The live scripts
+- [x] 4 — The live scripts
 - [ ] 5 — The handover
 - [ ] 6 — ⚠️ **HUMAN** — the images
 - [ ] 7 — ⚠️ **HUMAN · METERED** — make live, make live-dead, make live-volume, make live-serve
@@ -45,11 +45,11 @@ task names.
 
 ## 4 — The live scripts
 
-- [ ] 4.1 Write `live/window.py`, `live/volume.py` and `live/dead.py`, and make the `Makefile`'s `live-volume` and `live-dead` one line each, per [D10](design.md#d10).
+- [x] 4.1 Write `live/window.py`, `live/volume.py` and `live/dead.py`, and make the `Makefile`'s `live-volume` and `live-dead` one line each, per [D10](design.md#d10).
   Verify: `make -n live-volume` prints `uv run python live/volume.py`, and `make -n live-dead` prints `uv run python live/dead.py`.
-- [ ] 4.2 Write `live/serve.py`, move `live-serve-dead`'s window into `live/serve_dead.py` through `live/window.py`, and make the `Makefile`'s `live-serve` and `live-serve-dead` one line each, per [D10](design.md#d10).
+- [x] 4.2 Write `live/serve.py`, move `live-serve-dead`'s window into `live/serve_dead.py` through `live/window.py`, and make the `Makefile`'s `live-serve` and `live-serve-dead` one line each, per [D10](design.md#d10).
   Verify: `make -n live-serve` prints `uv run python live/serve.py qwen3-4b`, `make -n live-serve-dead` prints `uv run python live/serve_dead.py`, and `uv run pytest -q tests/test_serve_dead.py` exits 0.
-- [ ] 4.3 Write `tests/test_live.py` per [D10](design.md#d10), binding `session:volume:window-mounted`, `session:wait:dead-pod-tears-down`, `serve:api:prints-the-endpoint` and `volume:down:deletes`.
+- [x] 4.3 Write `tests/test_live.py` per [D10](design.md#d10), binding `session:volume:window-mounted`, `session:wait:dead-pod-tears-down`, `serve:api:prints-the-endpoint` and `volume:down:deletes`.
   Verify: `grep -o -E 'session:volume:window-mounted|session:wait:dead-pod-tears-down|serve:api:prints-the-endpoint|volume:down:deletes' tests/test_live.py | sort -u | wc -l | tr -d ' '` prints `4`, and `uv run pytest -q tests/test_live.py` exits 0.
 
 ## 5 — The handover
