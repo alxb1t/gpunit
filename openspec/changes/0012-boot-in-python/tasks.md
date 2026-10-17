@@ -6,7 +6,7 @@ task names.
 
 ## Progress
 
-- [ ] 1 — boot.py
+- [x] 1 — boot.py
 - [ ] 2 — The proof
 - [ ] 3 — The launch
 - [ ] 4 — The live scripts
@@ -16,11 +16,11 @@ task names.
 
 ## 1 — boot.py
 
-- [ ] 1.1 **HALT CHECK** — none of this change exists yet, and the card it closes is still in the backlog.
+- [x] 1.1 **HALT CHECK** — none of this change exists yet, and the card it closes is still in the backlog.
   Verify: `test -e boot/boot.py; echo $?` prints `1`, `test -e serve/launch.py; echo $?` prints `1`, `grep -c 'pytest-cov' pyproject.toml` prints `0`, and `grep -c -E '^- \*\*0011·R4 ' .minions/backlog.md` prints `1`.
-- [ ] 1.2 Write `boot/boot.py` per [D1](design.md#d1), [D2](design.md#d2), [D3](design.md#d3) and [D4](design.md#d4); add `[tool.ruff] per-file-target-version = { "boot/boot.py" = "py310" }` to `pyproject.toml`, per [D7](design.md#d7).
+- [x] 1.2 Write `boot/boot.py` per [D1](design.md#d1), [D2](design.md#d2), [D3](design.md#d3) and [D4](design.md#d4); add `[tool.ruff] per-file-target-version = { "boot/boot.py" = "py310" }` to `pyproject.toml`, per [D7](design.md#d7).
   Verify: `grep -c -E '^def (main|check|arm|sshd|run|stop)\(' boot/boot.py` prints `6`, `grep -c -E 'curl|import gpunit|from gpunit' boot/boot.py` prints `0`, `grep -c 'per-file-target-version' pyproject.toml` prints `1`, and `uv run ty check --python-version 3.10 boot/boot.py` exits 0.
-- [ ] 1.3 Write `tests/test_boot_steps.py` per [D5](design.md#d5), binding every key of `openspec/specs/boot/spec.md` and of [the boot delta](specs/boot/spec.md), `boot:stop:own-error` and `boot:file:stdlib-only` among them.
+- [x] 1.3 Write `tests/test_boot_steps.py` per [D5](design.md#d5), binding every key of `openspec/specs/boot/spec.md` and of [the boot delta](specs/boot/spec.md), `boot:stop:own-error` and `boot:file:stdlib-only` among them.
   Verify: `for k in $(grep -o -h -E 'boot:[a-z]+:[a-z0-9-]+' openspec/specs/boot/spec.md openspec/changes/0012-boot-in-python/specs/boot/spec.md | grep -v -x -E 'boot:refuse:no-(curl|env)' | sort -u); do grep -q "\"$k\"" tests/test_boot_steps.py || echo "$k"; done | wc -l | tr -d ' '` prints `0`, and `uv run pytest -q tests/test_boot_steps.py` exits 0.
 
 ## 2 — The proof

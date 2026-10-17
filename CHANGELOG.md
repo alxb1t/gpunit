@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `boot/boot.py`: the pod's boot in stdlib Python 3.10, one function a step, every `boot:*` scenario unit-tested in
+  `tests/test_boot_steps.py`; it prints `boot.sh`'s lines and needs neither `curl` nor `env` (`0012`).
+
 ## [0.7.1] - 2026-10-17
 
 ### Fixed

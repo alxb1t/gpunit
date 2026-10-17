@@ -24,6 +24,10 @@ dev = [
     "ty>=0.0.64",
 ]
 
+[tool.ruff]
+# boot.py runs on the pod's Python, 3.10 on Ubuntu 22.04 (0012 design D2, D7).
+per-file-target-version = { "boot/boot.py" = "py310" }
+
 [tool.ruff.lint]
 select = ["E", "F", "I", "D", "ANN"]
 # D203/D211 and D212/D213 are exclusive pairs; selecting `D` enables both halves.
