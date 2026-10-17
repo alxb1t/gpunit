@@ -41,8 +41,11 @@ def test_the_image_is_built_from_pinned_inputs() -> None:
     assert pinned(text)
     [install] = [line for line in lines if "openssh-server" in line]
     assert "/etc/ssh/ssh_host_*" in install
-    assert 'ENTRYPOINT ["/opt/gpunit/boot.sh", "--"]' in lines
-    assert "COPY boot/boot.sh /opt/gpunit/boot.sh" in lines
+    # boot.py's stop goes over urllib: the image needs TLS roots, not curl.
+    assert "ca-certificates" in install.split()
+    assert "curl" not in install.split()
+    assert 'ENTRYPOINT ["python3", "/opt/gpunit/boot.py", "--"]' in lines
+    assert "COPY boot/boot.py /opt/gpunit/boot.py" in lines
     [env] = [line for line in lines if line.startswith("ENV")]
     for off in (
         "DO_NOT_TRACK=1",

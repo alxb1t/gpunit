@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `boot/boot.py`: the pod's boot in stdlib Python 3.10, one function a step, every `boot:*` scenario unit-tested in
   `tests/test_boot_steps.py`; it prints `boot.sh`'s lines and needs neither `curl` nor `env` (`0012`).
+- The gate holds `boot/boot.py` at 100 % line and branch coverage (`pytest-cov`) and type-checks it as Python 3.10.
+
+### Changed
+
+- `boot.py` is the entrypoint of `serve/Dockerfile`, `live/Dockerfile` and `live/Dockerfile.dead`; they install
+  `ca-certificates`, not `curl`. `tests/test_boot.py` runs `boot.py` end to end (`0012`).
+
+### Removed
+
+- `boot/boot.sh`: consumers keep it at `v0.7.0` by its tag URL, and gpunit still reads its lines (`0012`).
 
 ## [0.7.1] - 2026-10-17
 

@@ -7,7 +7,7 @@ task names.
 ## Progress
 
 - [x] 1 — boot.py
-- [ ] 2 — The proof
+- [x] 2 — The proof
 - [ ] 3 — The launch
 - [ ] 4 — The live scripts
 - [ ] 5 — The handover
@@ -25,17 +25,17 @@ task names.
 
 ## 2 — The proof
 
-- [ ] 2.1 Run `uv add --dev 'pytest-cov>=7.1,<8'`; add `[tool.coverage.run]` and `[tool.coverage.report]` to `pyproject.toml`, and `.coverage` to `.gitignore`, per [D7](design.md#d7).
+- [x] 2.1 Run `uv add --dev 'pytest-cov>=7.1,<8'`; add `[tool.coverage.run]` and `[tool.coverage.report]` to `pyproject.toml`, and `.coverage` to `.gitignore`, per [D7](design.md#d7).
   Verify: `grep -c '"pytest-cov>=7.1,<8"' pyproject.toml` prints `1`, `grep -c '^fail_under = 100$' pyproject.toml` prints `1`, `grep -c -x '.coverage' .gitignore` prints `1`, and `uv run pytest -q tests/test_boot_steps.py --cov` exits 0.
-- [ ] 2.2 In the `Makefile`'s `gate` recipe, `uv run pytest` → `uv run pytest --cov`, and add `uv run ty check --python-version 3.10 boot/boot.py` after `uv run ty check`, per [D7](design.md#d7).
+- [x] 2.2 In the `Makefile`'s `gate` recipe, `uv run pytest` → `uv run pytest --cov`, and add `uv run ty check --python-version 3.10 boot/boot.py` after `uv run ty check`, per [D7](design.md#d7).
   Verify: `make -n gate | grep -c -x 'uv run pytest --cov'` prints `1`, and `make -n gate | grep -c -x 'uv run ty check --python-version 3.10 boot/boot.py'` prints `1`.
-- [ ] 2.3 Port `tests/test_boot.py` to run `boot/boot.py` per [D6](design.md#d6), keeping every key it binds and `test_the_commands_end_stops_the_pod`'s name.
+- [x] 2.3 Port `tests/test_boot.py` to run `boot/boot.py` per [D6](design.md#d6), keeping every key it binds and `test_the_commands_end_stops_the_pod`'s name.
   Verify: `grep -c 'boot\.sh' tests/test_boot.py` prints `0`, `for k in $(grep -o -h -E 'boot:[a-z]+:[a-z0-9-]+' openspec/specs/boot/spec.md openspec/changes/0012-boot-in-python/specs/boot/spec.md | grep -v -x -E 'boot:refuse:no-(curl|env)' | sort -u); do grep -q "\"$k\"" tests/test_boot.py || echo "$k"; done | wc -l | tr -d ' '` prints `0`, and `uv run pytest -q tests/test_boot.py` exits 0.
-- [ ] 2.4 Make `serve/Dockerfile` copy and enter `boot.py` with `ca-certificates` in place of `curl`, its `CMD` unchanged; in `tests/test_serve_image.py`, assert [D2](design.md#d2)'s `ENTRYPOINT`, the `COPY` of `boot.py`, and no `curl` in the install line; per [D8](design.md#d8).
+- [x] 2.4 Make `serve/Dockerfile` copy and enter `boot.py` with `ca-certificates` in place of `curl`, its `CMD` unchanged; in `tests/test_serve_image.py`, assert [D2](design.md#d2)'s `ENTRYPOINT`, the `COPY` of `boot.py`, and no `curl` in the install line; per [D8](design.md#d8).
   Verify: `grep -c -E 'boot\.sh|curl' serve/Dockerfile` prints `0`, and `uv run pytest -q tests/test_serve_image.py` exits 0.
-- [ ] 2.5 Make `live/Dockerfile` and `live/Dockerfile.dead` copy and enter `boot.py`, with the install lines of [D12](design.md#d12), per [D8](design.md#d8).
+- [x] 2.5 Make `live/Dockerfile` and `live/Dockerfile.dead` copy and enter `boot.py`, with the install lines of [D12](design.md#d12), per [D8](design.md#d8).
   Verify: `grep -c -E 'boot\.sh|curl' live/Dockerfile live/Dockerfile.dead | grep -v ':0$' | wc -l | tr -d ' '` prints `0`, `grep 'apt-get install' live/Dockerfile | grep -c -w 'python3'` prints `1`, `grep -c 'python3-minimal' live/Dockerfile` prints `0`, `grep 'apt-get install' live/Dockerfile.dead | grep -c 'python3'` prints `0`, and `grep -c -F 'ENTRYPOINT ["python3", "/opt/gpunit/boot.py", "--"]' live/Dockerfile live/Dockerfile.dead | grep -c ':1$'` prints `2`.
-- [ ] 2.6 Delete `boot/boot.sh`, per [D8](design.md#d8).
+- [x] 2.6 Delete `boot/boot.sh`, per [D8](design.md#d8).
   Verify: `test -e boot/boot.sh; echo $?` prints `1`, and `uv run pytest -q tests/test_boot.py tests/test_boot_steps.py tests/test_serve_image.py` exits 0.
 
 ## 3 — The launch

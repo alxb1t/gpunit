@@ -12,8 +12,10 @@ gate:
 	uv run ruff format --check .
 	uv run ruff check .
 	uv run ty check
-# offline: every provider answer is faked (0001 design D13)
-	uv run pytest
+# boot.py runs on the pod's 3.10: ty alone catches a newer stdlib name (0012 design D7)
+	uv run ty check --python-version 3.10 boot/boot.py
+# offline: every provider answer is faked (0001 design D13); boot.py at 100 % coverage
+	uv run pytest --cov
 	openspec validate --all --strict --no-interactive
 
 # The metered proof: one real pod, run by hand, its price printed first (0001 design D14).

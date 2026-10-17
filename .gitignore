@@ -9,3 +9,6 @@
 __pycache__/
 
 .env
+
+# The gate's coverage data, rewritten on every run.
+.coverage

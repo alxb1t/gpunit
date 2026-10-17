@@ -20,6 +20,7 @@ path = "gpunit/__init__.py"
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
+    "pytest-cov>=7.1,<8",
     "ruff>=0.16.0",
     "ty>=0.0.64",
 ]
@@ -48,3 +49,13 @@ addopts = ["--strict-markers"]
 markers = [
     "spec(key): binds this test to a keyed scenario in openspec/",
 ]
+
+# The unit tests alone hold boot.py at 100 %: the end-to-end tests run it in a child
+# process, which coverage does not follow (0012 design D7).
+[tool.coverage.run]
+source = ["boot"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
