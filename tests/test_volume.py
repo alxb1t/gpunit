@@ -9,7 +9,14 @@ from gpunit.provider import GpuInfo, Lost, Refused
 from gpunit.state import State
 from gpunit.volume import most_cost
 from tests.fakes import FakeProvider
-from tests.helpers import NO_REQUESTS, WINDOW, gpunit, open_window, write_spec
+from tests.helpers import (
+    NO_REQUESTS,
+    VALID,
+    WINDOW,
+    gpunit,
+    open_window,
+    write_spec,
+)
 
 CARDS = WINDOW.replace('["RTX 4090", "RTX A6000"]', '["NVIDIA A40", "NVIDIA L40"]')
 
@@ -199,6 +206,26 @@ def test_up_again_extends(cwd: Path, capsys: pytest.CaptureFixture[str]) -> None
     assert f"volume v1 extended until {window.ends}" in capsys.readouterr().err
 
 
+@pytest.mark.spec("volume:extend:never-earlier")
+@pytest.mark.parametrize(
+    ("ceiling", "kept"), [("30m", True), ("8h", False)], ids=["shorter", "twin-longer"]
+)
+def test_up_again_never_pulls_the_end_in(ceiling: str, kept: bool, cwd: Path) -> None:
+    write_spec(cwd, VALID + f'volume_gb = 60\nvolume_ceiling = "{ceiling}"\n')
+    state = open_window(cwd, 14400)
+    recorded = state.window()
+    assert recorded is not None
+    provider = FakeProvider()
+
+    assert gpunit(["volume", "up", "--yes"], provider=provider) == 0
+
+    assert provider.calls == []
+    window = state.window()
+    assert window is not None
+    assert (window.ends == recorded.ends) is kept
+    assert ledger.volumes()["v1"].ends == window.ends
+
+
 @pytest.mark.spec("volume:ceiling:overdue-deleted")
 def test_up_on_an_overdue_volume_deletes_it_and_makes_a_new_one(cwd: Path) -> None:
     write_spec(cwd, WINDOW)
@@ -304,6 +331,23 @@ def test_a_recorded_window_clears_the_mark_and_sweeps_nothing(
     assert provider.named("volumes") == []
     assert (state.window() is None) is (code == 204)
     assert not state.volume_pending.exists()
+
+
+@pytest.mark.spec("volume:ceiling:overdue-clears-the-mark")
+def test_the_overdue_sweep_clears_the_mark_beside_it(
+    cwd: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    state = open_window(cwd, -60)
+    state.mark_volume_pending()
+    monkeypatch.setattr("sys.stdin", io.StringIO("y\n"))
+    provider = FakeProvider(volume_listings=[["v1", "v8"]])
+
+    assert gpunit(["volume", "down"], provider=provider) == 0
+    assert provider.named("delete_volume") == [("v1",)]
+    assert provider.named("volumes") == []
+    assert state.window() is None
+    assert not state.volume_pending.exists()
+    assert "[y/N]" not in capsys.readouterr().out
 
 
 @pytest.mark.spec("volume:down:ledger-volume-kept")

@@ -5,7 +5,7 @@ The window, the sweep, the ledger and the boot, then the metered run, per [desig
 
 ## Progress
 
-- [ ] 1 — The window
+- [x] 1 — The window
 - [ ] 2 — The sweep
 - [ ] 3 — The ledger
 - [ ] 4 — The boot
@@ -15,13 +15,13 @@ The window, the sweep, the ledger and the boot, then the metered run, per [desig
 
 `0010·R4`, `0010·S4`, `0010·R6`.
 
-- [ ] 1.1 **HALT CHECK** — none of this change's fixes exists yet, and every card it closes is still in the backlog.
+- [x] 1.1 **HALT CHECK** — none of this change's fixes exists yet, and every card it closes is still in the backlog.
   Verify: `grep -c -E '^- \*\*0010·(R4|R5|R6|R7|R8|R9|R10|R11|S3|S4) ' .minions/backlog.md` prints `10`, and `grep -c -E 'isatty|record_deleted|step: the ceiling|max\(window\.ends' gpunit/volume.py gpunit/ledger.py gpunit/provider.py gpunit/lifecycle.py gpunit/serve/session.py gpunit/spend.py | grep -v ':0$' | wc -l | tr -d ' '` prints `0`.
-- [ ] 1.2 In `gpunit/volume.py`'s `_extend`, take the later end, per [D1](design.md#d1); in `tests/test_volume.py` bind `volume:extend:never-earlier`; in `README.md`'s *Working window*, the bullet becomes "`volume up` again extends a live volume to now plus `volume_ceiling`, never earlier than its end, after the price".
+- [x] 1.2 In `gpunit/volume.py`'s `_extend`, take the later end, per [D1](design.md#d1); in `tests/test_volume.py` bind `volume:extend:never-earlier`; in `README.md`'s *Working window*, the bullet becomes "`volume up` again extends a live volume to now plus `volume_ceiling`, never earlier than its end, after the price".
   Verify: `grep -c 'max(window.ends, log.utc(ceiling_s))' gpunit/volume.py` prints `1`, `grep -c 'volume:extend:never-earlier' tests/test_volume.py` prints `1`, `grep -c 'never earlier than its end' README.md` prints `1`, and `uv run pytest -q tests/test_volume.py` exits 0.
-- [ ] 1.3 In `gpunit/lifecycle.py`'s `sweep_window`, clear the pending mark on a `204`, per [D2](design.md#d2); in `tests/test_volume.py` bind `volume:ceiling:overdue-clears-the-mark`.
+- [x] 1.3 In `gpunit/lifecycle.py`'s `sweep_window`, clear the pending mark on a `204`, per [D2](design.md#d2); in `tests/test_volume.py` bind `volume:ceiling:overdue-clears-the-mark`.
   Verify: `grep -A20 '^def sweep_window' gpunit/lifecycle.py | grep -c 'clear_volume_pending'` prints `1`, `grep -c 'volume:ceiling:overdue-clears-the-mark' tests/test_volume.py` prints `1`, and `uv run pytest -q tests/test_volume.py tests/test_status.py tests/test_down.py tests/test_up.py` exits 0.
-- [ ] 1.4 In `gpunit/serve/session.py`'s `serve`, sweep and refuse at the top of `body()`, before `_agree`, per [D3](design.md#d3); in `tests/test_serve_session.py` bind `volume:ceiling:serve-sweeps-first`, asserting no `gpu` call and no question.
+- [x] 1.4 In `gpunit/serve/session.py`'s `serve`, sweep and refuse at the top of `body()`, before `_agree`, per [D3](design.md#d3); in `tests/test_serve_session.py` bind `volume:ceiling:serve-sweeps-first`, asserting no `gpu` call and no question.
   Verify: `grep -c 'lifecycle.sweep_window' gpunit/serve/session.py` prints `1`, `grep -c 'volume:ceiling:serve-sweeps-first' tests/test_serve_session.py` prints `1`, and `uv run pytest -q tests/test_serve_session.py` exits 0.
 
 ## 2 — The sweep

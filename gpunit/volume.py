@@ -154,7 +154,8 @@ def _extend(
         )
     question = f"extend volume {window.id}"
     _agree(window.size_gb, ceiling_s, question, "not extended", yes)
-    extended = replace(window, ends=log.utc(ceiling_s))
+    # Never earlier: a session may be running to the recorded end. 0011 design D1.
+    extended = replace(window, ends=max(window.ends, log.utc(ceiling_s)))
     state.write_window(extended)
     ledger.record_volume(project, window.id, extended.ends)
     log.say(f"volume {window.id} extended until {extended.ends}")

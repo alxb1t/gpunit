@@ -236,6 +236,8 @@ def sweep_window(state: State, provider: Callable[[], Provider]) -> None:
     code = provider().delete_volume(window.id)
     if code == 204:
         state.clear_window()
+        # A record beside the mark: the create came back. 0011 design D2.
+        state.clear_volume_pending()
         log.say(f"volume {window.id} passed its ceiling at {window.ends}; deleted")
     else:
         log.say(

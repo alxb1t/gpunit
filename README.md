@@ -217,7 +217,7 @@ uv run gpunit volume down --serve qwen3-4b
   without `y`. `--yes` skips the question.
 - **No session outlives its volume.** `up`, `run` and `serve` refuse when no volume is recorded, or when the session's
   ceiling plus its wait for SSH would end after the volume.
-- **`volume up` again extends** a live volume to now plus `volume_ceiling`, after the price.
+- **`volume up` again extends** a live volume to now plus `volume_ceiling`, never earlier than its end, after the price.
 - **The ceiling:** `up`, `run`, `serve`, `down`, `status`, `volume up` and `volume down` each delete a volume past its
   end before anything else, `down` after its pods, which may hold it. `status` names the volume and its end.
 - **The residual:** a volume no command reaches after its ceiling bills $0.07/GB a month until one does; `spend` names

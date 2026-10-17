@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `volume up` on a live volume never moves its end earlier, so a running session keeps its volume (`0010·R4`).
+- The overdue sweep clears `.gpunit/volume.pending` beside the record it deletes (`0010·S4`); `serve` sweeps an
+  overdue volume and refuses before its price (`0010·R6`).
+
 ## [0.7.0] - 2026-10-16
 
 ### Added

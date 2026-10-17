@@ -14,7 +14,7 @@ from gpunit.provider import PodInfo, Provider, VolumeInfo
 from gpunit.runpod import RunPod
 from gpunit.serve import session, table
 from gpunit.spec import Spec
-from gpunit.state import State
+from gpunit.state import State, Window
 from tests.fakes import (
     RUNNING,
     Answer,
@@ -555,6 +555,22 @@ def test_serve_mounts_the_rows_window_volume(home: Path) -> None:
     env = body["env"]
     assert isinstance(env, dict)
     assert env["GPUNIT_VOLUME_PATH"] == "/runpod-volume"
+
+
+@pytest.mark.spec("volume:ceiling:serve-sweeps-first")
+def test_serve_sweeps_an_overdue_volume_before_the_price(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    place = session.home("qwen3-4b")
+    place.mkdir(parents=True)
+    State(place).write_window(Window("v3", "EU-RO-1", 40, log.utc(-60)))
+    provider = FakeProvider()
+
+    assert served(provider, FakeOpener(MODELS), yes=False) == 1
+    assert provider.named("delete_volume") == [("v3",)]
+    assert provider.named("gpu") == []
+    assert State(place).window() is None
+    assert "run gpunit volume up" in capsys.readouterr().err
 
 
 @pytest.mark.spec("serve:volume:never-created")
