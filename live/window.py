@@ -4,9 +4,11 @@ e.g. `window(gpunit("volume", "up", …), gpunit("volume", "down", …), body, r
 runs `up`, then `body`, then `down`; why each live run holds one: 0010 design D10.
 """
 
+import contextlib
+import signal
 import subprocess
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Generator
 from pathlib import Path
 
 LIVE = Path(__file__).parent
@@ -35,6 +37,22 @@ def waited(child: subprocess.Popen[str]) -> int:
     if interrupted is not None:
         raise interrupted
     return code
+
+
+@contextlib.contextmanager
+def hangups_interrupt() -> Generator[None]:
+    """Make a SIGHUP or SIGTERM a Ctrl-C while held, so each `finally` still runs.
+
+    Python's default for both ends the process at once, where a closed terminal or a
+    kill would skip the teardown; the handlers before are put back on the way out.
+    """
+    hangups = (signal.SIGHUP, signal.SIGTERM)
+    before = {s: signal.signal(s, signal.default_int_handler) for s in hangups}
+    try:
+        yield
+    finally:
+        for signum, handler in before.items():
+            signal.signal(signum, handler)
 
 
 def call(
@@ -91,16 +109,18 @@ def window(
 ) -> int:
     """Run `up`, `body` once `up` exits 0, then `down`; return the first failure's code.
 
-    A failed `down` makes the result 1; an exception in `body` still reaches `down`.
+    A failed `down` makes the result 1; an exception in `body`, a SIGHUP or a SIGTERM
+    still reaches `down`.
     """
-    try:
-        code = run(up)
-        if code == 0:
-            code = body()
-    finally:
-        # The volume bills until its delete: a failed one must fail the run.
-        if run(down) != 0:
-            code = 1
+    with hangups_interrupt():
+        try:
+            code = run(up)
+            if code == 0:
+                code = body()
+        finally:
+            # The volume bills until its delete: a failed one must fail the run.
+            if run(down) != 0:
+                code = 1
     return code
 
 

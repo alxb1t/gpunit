@@ -147,6 +147,10 @@ def pod(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, isolated_home: Path) ->
     monkeypatch.setattr(signal, "signal", fake.signal)
     monkeypatch.setattr(boot, "RUN_SSHD", tmp_path / "run" / "sshd")
     monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+    # A CA store the stop's TLS can trust, whatever this machine holds.
+    store = tmp_path / "ca.pem"
+    store.write_text("", encoding="utf-8")
+    monkeypatch.setenv("SSL_CERT_FILE", str(store))
     isolated_home.mkdir()
     for name, value in {
         "RUNPOD_API_KEY": KEY,
@@ -179,6 +183,50 @@ def test_no_sshd_refuses(pod: Pod, capsys: pytest.CaptureFixture[str]) -> None:
     )
     assert pod.started == []
     assert pod.order == []
+
+
+def no_ca_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *roots: str) -> None:
+    """Leave OpenSSL no CA file, and a CA directory holding `roots`."""
+    monkeypatch.setenv("SSL_CERT_FILE", str(tmp_path / "no-ca.pem"))
+    certs = tmp_path / "certs"
+    certs.mkdir()
+    for name in roots:
+        (certs / name).write_text("", encoding="utf-8")
+    monkeypatch.setenv("SSL_CERT_DIR", str(certs))
+
+
+@pytest.mark.spec("boot:refuse:no-sshd")
+@pytest.mark.parametrize("directory", ["missing", "empty"])
+def test_no_ca_store_refuses_before_the_arm(
+    pod: Pod,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    directory: str,
+) -> None:
+    # An image without ca-certificates: every stop would fail its certificate check.
+    no_ca_file(tmp_path, monkeypatch)
+    if directory == "missing":
+        (tmp_path / "certs").rmdir()
+
+    assert boot.main(["--", "true"]) == 1
+
+    said = "refused: no CA store for the stop's TLS; install ca-certificates"
+    assert said in capsys.readouterr().err
+    # Nothing is armed yet: no watchdog, no stop.
+    assert pod.order == []
+    assert pod.started == []
+
+
+@pytest.mark.spec("boot:refuse:no-sshd")
+def test_a_ca_directory_alone_is_a_store(
+    pod: Pod, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    no_ca_file(tmp_path, monkeypatch, "5ed36f99.0")
+
+    assert boot.main(["--", "true"]) == 0
+
+    assert pod.after_the_ceiling() == [GRACE, "stop"]
 
 
 @pytest.mark.spec("boot:refuse:no-sshd")
@@ -395,6 +443,8 @@ def test_the_commands_end_stops_the_pod(
     assert request.data == b'{"action":"stop"}'
     assert request.get_header("Authorization") == f"Bearer {KEY}"
     assert request.get_header("Content-type") == "application/json"
+    # Not urllib's default agent, which RunPod's Cloudflare refuses with a 403.
+    assert request.get_header("User-agent") == "gpunit-boot"
     assert timeout == 30
     # The fake PATH holds sshd alone: the stop needs no curl.
     assert not any("curl" in argv[0] for argv in pod.runs)

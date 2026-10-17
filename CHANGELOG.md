@@ -53,6 +53,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   are `v0.8-rc3`; `test_the_cmd_is_launch_py` is bound to `serve:image:pinned-inputs`, whose scenario it checks
   (`0012·R2`, `0012·R3`, `0012·R4`).
 
+- `boot.py`'s stop sends `User-Agent: gpunit-boot`, as the laptop sends its own: RunPod's Cloudflare refuses urllib's
+  default agent with a 403 (code 1010), which would fail every stop, the ceiling's too (review `R1` at `65a8f39`).
+- `boot.py` refuses before the arm, `no CA store for the stop's TLS; install ca-certificates in the image`, when
+  OpenSSL finds no CA file and no CA directory holding a file: every stop would fail its certificate check, and the pod
+  would bill past its ceiling (security `S3` at `65a8f39`).
+- The `v0.8-rc3` images, `gpunit-vllm`, `gpunit-live` and `gpunit-live-dead`, predate the two `boot.py` fixes above:
+  their `boot.py` sends urllib's default agent and arms without a CA store. They are not rebuilt or re-pinned here.
+- `live/dead.py` runs `gpunit down` after `up` however `up` ends, and a failed `down` fails the run: a lost create or a
+  failed teardown left the dead image's pod, which no ceiling stops, billing (security `S1` at `65a8f39`).
+- A SIGHUP or SIGTERM during a live script is a Ctrl-C: `live/window.py`'s `hangups_interrupt` holds it while
+  `window` and `live/dead.py` run, so their `down` still runs, as the recipes' `trap … EXIT` did on both (security
+  `S2` at `65a8f39`).
+- `tests/test_live.py` checks that `live/dead.py` waits `up` to its exit before `gpunit down` starts, where the
+  Ctrl-C test checked only the `down` (review `R2` at `65a8f39`).
+
 ### Removed
 
 - `boot/boot.sh`: consumers keep it at `v0.7.0` by its tag URL, and gpunit still reads its lines (`0012`).

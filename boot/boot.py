@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import signal
+import ssl
 import subprocess
 import sys
 import tempfile
@@ -89,6 +90,8 @@ def _answer(environ: Mapping[str, str]) -> str:
         headers={
             "Authorization": f"Bearer {environ['RUNPOD_API_KEY']}",
             "Content-Type": "application/json",
+            # RunPod's Cloudflare refuses urllib's default agent with a 403 (code 1010).
+            "User-Agent": "gpunit-boot",
         },
         method="POST",
     )
@@ -123,10 +126,23 @@ def stop(environ: Mapping[str, str]) -> None:
         wait_s = min(wait_s * 2, MAX_RETRY_S)
 
 
+def _trusts_nothing() -> bool:
+    """Return True when OpenSSL finds no CA file, nor a CA directory holding a file."""
+    paths = ssl.get_default_verify_paths()
+    if paths.cafile:
+        return False
+    return not (paths.capath and any(Path(paths.capath).iterdir()))
+
+
 def check(environ: Mapping[str, str], command: list[str]) -> None:
     """Raise `Refused` naming the first gap boot cannot run with."""
     if shutil.which("sshd") is None:
         raise Refused("sshd is not on PATH; install openssh-server in the image")
+    # Without a CA store every stop fails its certificate check, the ceiling's too.
+    if _trusts_nothing():
+        raise Refused(
+            "no CA store for the stop's TLS; install ca-certificates in the image"
+        )
     for name in NEEDED:
         if not environ.get(name):
             raise Refused(f"{name} is unset or empty")

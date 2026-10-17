@@ -93,8 +93,9 @@ main(argv)
 
 - **Names and values kept:** `API`, `RETRY_S = 30`, `MAX_RETRY_S = 300`, `GRACE_S = 60`; every message of `boot.sh`,
   word for word, but `use boot.sh -- <command>` → `use boot.py -- <command>`, and a stop with no answer names its
-  cause, `HTTP 000 (<cause>)` ([D4](#d4)). Two lines are new: `the command could not start: <error>` and the
-  watchdog's `the ceiling's stop failed; delete the pod by hand` ([D3](#d3)). `say` writes
+  cause, `HTTP 000 (<cause>)` ([D4](#d4)). Three lines are new: `the command could not start: <error>`, the
+  watchdog's `the ceiling's stop failed; delete the pod by hand` ([D3](#d3)), and `check`'s
+  `refused: no CA store for the stop's TLS; install ca-certificates in the image` ([D4](#d4)). `say` writes
   `<UTC as %Y-%m-%dT%H:%M:%SZ> <text>` to stderr.
 - **Every line is flushed when written**, stdout and stderr, as bash's `echo` is: gpunit reads the key line before
   `step: the command`, and a buffered line would reach the log late. Stdout and stderr are flushed before the fork.
@@ -135,10 +136,13 @@ main(argv)
 ### D4
 
 - **The image needs** `python3` ≥ 3.10, `openssh-server` (it brings `ssh-keygen`) and `ca-certificates` (for the
-  stop's TLS). `check` no longer looks for `curl` or `env`.
+  stop's TLS). `check` no longer looks for `curl` or `env`; before the arm it refuses
+  `no CA store for the stop's TLS; install ca-certificates in the image` when `ssl.get_default_verify_paths()` names
+  no CA file and no CA directory holding a file, since every stop, the ceiling's too, would fail its certificate check.
 - **The stop:** an opener built with `_NoRedirect`, which follows no 3xx, sends a `POST` to
-  `{API}/pods/{RUNPOD_POD_ID}/action`, body `{"action":"stop"}`, headers `Authorization: Bearer <key>` and
-  `Content-Type: application/json`, timeout 30 s. A `200` stops; an `HTTPError`, a 3xx among them, gives its code; any
+  `{API}/pods/{RUNPOD_POD_ID}/action`, body `{"action":"stop"}`, headers `Authorization: Bearer <key>`,
+  `Content-Type: application/json` and `User-Agent: gpunit-boot` (RunPod's Cloudflare refuses urllib's default agent
+  with a 403, code 1010, as `gpunit/runpod.py` records), timeout 30 s. A `200` stops; an `HTTPError`, a 3xx among them, gives its code; any
   other `OSError` or `http.client.HTTPException` gives `000 (<cause>)`, `curl -w '%{http_code}'`'s `000` with the
   error's reason. The backoff is `boot.sh`'s, and so are the messages, but for that cause.
 - **The command's environment:** a copy of `os.environ` without `RUNPOD_API_KEY` and `GPUNIT_NONCE`, passed to
@@ -224,18 +228,24 @@ A script per target, named for it: `live-volume` → `live/volume.py`, `live-ser
 volume.py      price → volume up → run (write) → run (read) → check(wrote, read) → status   window
 serve.py       serve --api ─ OPENAI_BASE_URL, OPENAI_API_KEY ─ a chat request ─ tool_call.py ─ SIGTERM   window
                → volume up again → a chat of one prompt
-dead.py        price → up → "up exited <code> after <s>s", "reason: <line>" → status → check(code, lines)
+dead.py        price → up → down → "up exited <code> after <s>s", "reason: <line>" → status
+               → check(code, lines, down)
 serve_dead.py  today's main                                                                 window
 ```
 
 - **The commands are the recipes'**, each `uv run gpunit …` as `[sys.executable, "-m", "gpunit", …]` through
   `subprocess`, and `live/price.py` as `[sys.executable, "live/price.py", <spec>]`.
 - **`live/window.py`:** `window(up, down, body, run) -> int` runs `up`, then `body`, then `down` in a `finally`; a
-  failed `down` makes the result `1`; an exception in `body` still reaches `down`. It is the recipes' `trap`.
+  failed `down` makes the result `1`; an exception in `body` still reaches `down`. It is the recipes' `trap`: while
+  it runs, `hangups_interrupt` makes a SIGHUP or SIGTERM a `KeyboardInterrupt`, as bash's `EXIT` trap ran on both.
+- **`live/dead.py`** runs `gpunit down` in a `finally` after `up`, however `up` ends, under `hangups_interrupt`: the
+  dead image never starts `boot.py`, so no ceiling stops a pod a lost create or a failed teardown leaves; a failed
+  `down` fails `check`. On a Ctrl-C it waits `up` out first, as `up` may still write its record.
 - **`serve.py`'s chat request** goes over `urllib`, the key in a header, as `tool_call.py`'s does.
 - **Offline, in `tests/test_live.py`:** `volume.check` under `session:volume:window-mounted`, `dead.check` under
   `session:wait:dead-pod-tears-down`, `serve.py`'s reading of the `OPENAI_BASE_URL` and `OPENAI_API_KEY` lines under `serve:api:prints-the-endpoint`,
-  and `window` with a fake `run` under `volume:down:deletes`: a body that fails, one that raises, and a failed `down`.
+  and `window` with a fake `run` under `volume:down:deletes`: a body that fails, one that raises, and a failed `down`;
+  a SIGHUP and a SIGTERM to a child Python running `window`; `dead.main`'s `down` after each way `up` ends.
 
 ### D11
 
@@ -250,7 +260,8 @@ records what was checked then (`0008·R5`).
 - **`gpunit-vllm`:** `.github/workflows/build-serve-image.yml` with the tag `v0.8-rc1`, rebuilt as `v0.8-rc2`
   after `4ee00fd`'s key pause, and as `v0.8-rc3` at `fa98cdf` after `3209e68` and `fa98cdf` changed `boot.py`'s
   stop, the shipped build; its digest replaces the old at `gpunit/serve/models.toml:2`. `gpunit-live` and
-  `gpunit-live-dead` are rebuilt with it, at the same tags.
+  `gpunit-live-dead` are rebuilt with it, at the same tags. The stop's `User-Agent` and `check`'s CA-store refusal
+  ([D4](#d4)) came after: the `v0.8-rc3` images predate them.
 - **`gpunit-vllm`'s install line:** `openssh-server curl` → `openssh-server ca-certificates`.
 - **`gpunit-live`:** `live/Dockerfile` installs `openssh-server python3 ca-certificates`, no `curl`: `python3`, not
   `python3-minimal`, whose module set lacks `http.client`, `json` and `shutil` (settled at the cut).

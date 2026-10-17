@@ -45,7 +45,8 @@ of boot's own SHALL stop the pod without that wait.
 ### Requirement: Boot runs on a Python image and refuses what it lacks
 
 `boot.py -- <command>` SHALL run on an image holding `python3` 3.10 or newer with its standard library, `openssh-server` and `ca-certificates`,
-and SHALL need neither `curl` nor `env`. It SHALL exit `1` naming the gap when `sshd` is not on the image, or when any
+and SHALL need neither `curl` nor `env`. It SHALL exit `1` naming the gap when `sshd` is not on the image, when
+OpenSSL finds no CA store for the stop's TLS, or when any
 of `RUNPOD_API_KEY`, `RUNPOD_POD_ID`, `PUBLIC_KEY`, `GPUNIT_CEILING`, `GPUNIT_NONCE` is unset or empty, or when no
 command follows `--`; and SHALL stop the pod before exiting when the gap is found after the ceiling is armed.
 

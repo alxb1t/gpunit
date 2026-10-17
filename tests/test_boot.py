@@ -151,7 +151,11 @@ def pod(tmp_path: Path, pod_bin: Path) -> dict[str, str]:
     (site / "sitecustomize.py").write_text(SITECUSTOMIZE, encoding="utf-8")
     image_config = tmp_path / "image_sshd_config"
     image_config.write_text(IMAGE_CONFIG, encoding="utf-8")
+    # A CA store boot's check finds, whatever this machine holds; the stop is faked.
+    store = tmp_path / "ca.pem"
+    store.write_text("", encoding="utf-8")
     return {
+        "SSL_CERT_FILE": str(store),
         "PATH": f"{pod_bin}:/usr/bin:/bin",
         "HOME": str(tmp_path / "home"),
         "RUNPOD_API_KEY": KEY,
