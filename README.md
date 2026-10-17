@@ -252,11 +252,13 @@ total                                  $1.79
 - **A pod's project comes from the ledger**, `~/.local/state/gpunit/ledger.jsonl`: `up` adds a line when a create
   answers, and `down` when it sweeps a pod no record names. Each line holds the pod's id, the project, the card,
   the image and the time; one that cannot be written warns and blocks nothing, one that cannot be read exits `1`.
+  `volume down` and the sweeps add a line for each volume they delete: its id, `deleted` and the time.
 - **`unattributed`** counts the pods the ledger does not name: made before this version, on another machine, by a
   create whose answer was lost, or outside gpunit.
 - **`storage`** is one line per network volume the ledger does not name, billed whether or not a pod runs.
 - **A window volume bills under its project**, in its amount; a project with a volume and no pod shows `0 pods`. One
-  whose end fell before today and still bills today is named on stderr, with `gpunit volume down`.
+  whose end fell before today, that still bills today and that the ledger does not record as deleted is named on
+  stderr, with `gpunit volume down`.
 - **The current UTC day is still being billed**: its figures can change, and stderr says so.
 - **An unreadable billing exits `1`**, with no table: a table of zeros would read as a free week.
 

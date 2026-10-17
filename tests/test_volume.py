@@ -471,3 +471,34 @@ def test_ctrl_c_ends_the_sweep(
     assert state.volume_pending.exists() is ctrl_c
     if ctrl_c:
         assert "run gpunit volume down" in capsys.readouterr().err
+
+
+@pytest.mark.spec("spend:ledger:delete-is-recorded")
+@pytest.mark.parametrize(
+    ("ends_in_s", "pending", "code", "deleted"),
+    [
+        (3600, False, 204, {"v1"}),
+        (-60, False, 204, {"v1"}),
+        (None, True, 204, {"v9"}),
+        (3600, False, 409, set()),
+    ],
+    ids=["down", "overdue", "sweep", "twin-refused"],
+)
+def test_each_volume_delete_is_recorded(
+    ends_in_s: int | None,
+    pending: bool,
+    code: int,
+    deleted: set[str],
+    cwd: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    state = State(cwd) if ends_in_s is None else open_window(cwd, ends_in_s)
+    if pending:
+        state.mark_volume_pending()
+    monkeypatch.setattr("sys.stdin", TtyInput("y\n"))
+    provider = FakeProvider(
+        volume_listings=[["v9"]], volume_deletes={"v1": code, "v9": code}
+    )
+
+    gpunit(["volume", "down"], provider=provider)
+    assert ledger.deleted() == deleted

@@ -7,7 +7,7 @@ The window, the sweep, the ledger and the boot, then the metered run, per [desig
 
 - [x] 1 — The window
 - [x] 2 — The sweep
-- [ ] 3 — The ledger
+- [x] 3 — The ledger
 - [ ] 4 — The boot
 - [ ] 5 — ⚠️ **HUMAN · METERED** — make live-volume
 
@@ -43,13 +43,13 @@ The window, the sweep, the ledger and the boot, then the metered run, per [desig
 
 `0010·R5`.
 
-- [ ] 3.1 In `gpunit/ledger.py`, add `Deleted`, `record_deleted` and `deleted`, per [D7](design.md#d7); in `tests/test_ledger.py` bind `spend:ledger:delete-is-recorded` to the line's keys, `id`, `kind` and `at`.
+- [x] 3.1 In `gpunit/ledger.py`, add `Deleted`, `record_deleted` and `deleted`, per [D7](design.md#d7); in `tests/test_ledger.py` bind `spend:ledger:delete-is-recorded` to the line's keys, `id`, `kind` and `at`.
   Verify: `grep -c -E '^def (record_deleted|deleted)\(' gpunit/ledger.py` prints `2`, `grep -c 'spend:ledger:delete-is-recorded' tests/test_ledger.py` prints `1`, and `uv run pytest -q tests/test_ledger.py` exits 0.
-- [ ] 3.2 Call `ledger.record_deleted` after each `204` in `volume.down`, `volume._sweep` and `lifecycle.sweep_window`, per [D7](design.md#d7); in `tests/test_volume.py` bind `spend:ledger:delete-is-recorded` to each delete.
+- [x] 3.2 Call `ledger.record_deleted` after each `204` in `volume.down`, `volume._sweep` and `lifecycle.sweep_window`, per [D7](design.md#d7); in `tests/test_volume.py` bind `spend:ledger:delete-is-recorded` to each delete.
   Verify: `cat gpunit/volume.py gpunit/lifecycle.py | grep -c 'ledger.record_deleted('` prints `3`, `grep -c 'spend:ledger:delete-is-recorded' tests/test_volume.py` prints `1`, and `uv run pytest -q tests/test_volume.py tests/test_status.py tests/test_down.py tests/test_up.py` exits 0.
-- [ ] 3.3 In `gpunit/spend.py`, skip the ids of `ledger.deleted()` in the overdue warning, per [D7](design.md#d7); in `tests/test_spend.py` bind `spend:report:deleted-volume-not-named`.
+- [x] 3.3 In `gpunit/spend.py`, skip the ids of `ledger.deleted()` in the overdue warning, per [D7](design.md#d7); in `tests/test_spend.py` bind `spend:report:deleted-volume-not-named`.
   Verify: `grep -c 'ledger.deleted()' gpunit/spend.py` prints `1`, `grep -c 'spend:report:deleted-volume-not-named' tests/test_spend.py` prints `1`, and `uv run pytest -q tests/test_spend.py` exits 0.
-- [ ] 3.4 In `README.md`'s *What it cost*, the ledger bullet adds "`volume down` and the sweeps add a line for each volume they delete"; the window-volume bullet names a volume "that the ledger does not record as deleted".
+- [x] 3.4 In `README.md`'s *What it cost*, the ledger bullet adds "`volume down` and the sweeps add a line for each volume they delete"; the window-volume bullet names a volume "that the ledger does not record as deleted".
   Verify: `grep -c 'add a line for each volume they delete' README.md` prints `1`, and `grep -c 'does not record as deleted' README.md` prints `1`.
 
 ## 4 — The boot

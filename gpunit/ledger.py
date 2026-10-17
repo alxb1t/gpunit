@@ -10,7 +10,7 @@ from typing import TypeVar
 from gpunit import log
 from gpunit.state import home_state
 
-T = TypeVar("T", "Entry", "VolumeEntry")
+T = TypeVar("T", "Entry", "VolumeEntry", "Deleted")
 
 
 @dataclass(frozen=True)
@@ -35,6 +35,15 @@ class VolumeEntry:
     at: str
 
 
+@dataclass(frozen=True)
+class Deleted:
+    """A volume's delete, once it answered 204; `kind` is "deleted"."""
+
+    id: str
+    kind: str
+    at: str
+
+
 def path() -> Path:
     """Return the ledger file, under the home directory of whoever runs gpunit."""
     return home_state() / "ledger.jsonl"
@@ -48,6 +57,11 @@ def record(project: str, pod_id: str, card: str | None, image: str) -> None:
 def record_volume(project: str, volume_id: str, ends: str) -> None:
     """Append the window volume's line; with no home or on an `OSError`, warn."""
     _append(asdict(VolumeEntry(volume_id, project, "volume", ends, log.utc())))
+
+
+def record_deleted(volume_id: str) -> None:
+    """Append the line of a volume's delete; with no home or on an `OSError`, warn."""
+    _append(asdict(Deleted(volume_id, "deleted", log.utc())))
 
 
 def _append(line: dict[str, object]) -> None:
@@ -92,6 +106,18 @@ def volumes() -> dict[str, VolumeEntry]:
         ):
             entries[entry.id] = entry
     return entries
+
+
+def deleted() -> set[str]:
+    """Return the ids of every volume the ledger records as deleted.
+
+    A ledger that cannot be read refuses.
+    """
+    return {
+        entry.id
+        for entry in _parsed(Deleted)
+        if entry.kind == "deleted" and isinstance(entry.id, str)
+    }
 
 
 def _parsed(kind: type[T]) -> Iterator[T]:

@@ -79,6 +79,7 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
         code = provider.delete_volume(window.id)
         if code == 204:
             state.clear_window()
+            ledger.record_deleted(window.id)
             log.say(f"volume {window.id} deleted")
         else:
             # A 404 is never gone: a wrong key gets one too.
@@ -131,6 +132,7 @@ def _sweep(name: str, provider: Provider, state: State) -> int:
         elif not answer:
             log.say(f"volume {volume_id} kept")
         elif (code := provider.delete_volume(volume_id)) == 204:
+            ledger.record_deleted(volume_id)
             log.say(f"swept volume {volume_id}")
         else:
             log.say(f"delete of swept volume {volume_id} answered HTTP {code}")
