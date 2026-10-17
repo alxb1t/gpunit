@@ -1,5 +1,4 @@
 import ast
-import email.message
 import http.client
 import os
 import runpy
@@ -18,6 +17,7 @@ from typing import Any
 import pytest
 
 from boot import boot
+from tests.fakes import FakeOpener
 
 BOOT = Path(boot.__file__)
 KEY = "rpa_pod_key"
@@ -52,11 +52,10 @@ class Child:
 class Pod:
     """What boot reached outside its process, faked, and what it asked of each."""
 
-    # Each stop's answer, in turn: an HTTP code, "000" for no answer, or an exception.
-    answers: list[int | str | Exception] = field(default_factory=list)
+    # The stops' answers, in turn; a 200 once the script runs out.
+    api: FakeOpener = field(default_factory=FakeOpener)
     # The stops and the waits, in the order they ran.
     order: list[str] = field(default_factory=list)
-    stops: list[tuple[urllib.request.Request, float]] = field(default_factory=list)
     runs: list[list[str]] = field(default_factory=list)
     started: list[tuple[list[str], dict[str, str]]] = field(default_factory=list)
     handlers: dict[int, Callable[[int, FrameType | None], Any]] = field(
@@ -67,19 +66,21 @@ class Pod:
     failing: set[str] = field(default_factory=set)
     child: Child | Exception = field(default_factory=lambda: Child(0))
 
-    def urlopen(self, request: urllib.request.Request, timeout: float) -> "Answered":
+    def answer(self, *answers: int | Exception) -> None:
+        """Script the stops' answers: an HTTP code, or the exception to raise."""
+        self.api.answers = [
+            a if isinstance(a, Exception) else (a, b"") for a in answers
+        ]
+
+    @property
+    def stops(self) -> list[tuple[urllib.request.Request, float]]:
+        return list(zip(self.api.requests, self.api.timeouts, strict=True))
+
+    def urlopen(self, request: urllib.request.Request, timeout: float) -> object:
         self.order.append("stop")
-        self.stops.append((request, timeout))
-        answer = self.answers.pop(0) if self.answers else 200
-        if isinstance(answer, Exception):
-            raise answer
-        if answer == "000":
-            raise urllib.error.URLError("no route to host")
-        if answer != 200:
-            raise urllib.error.HTTPError(
-                request.full_url, int(answer), "no", email.message.Message(), None
-            )
-        return Answered()
+        if not self.api.answers:
+            self.api.answers.append((200, b""))
+        return self.api.open(request, timeout=timeout)
 
     def run(
         self, argv: list[str], **kwargs: object
@@ -122,18 +123,6 @@ class Pod:
         return [
             step for step in self.order if step not in (f"sleep {CEILING}", KEY_GAP)
         ]
-
-
-class Answered:
-    """A 200, as `urlopen` returns it."""
-
-    status = 200
-
-    def __enter__(self) -> "Answered":
-        return self
-
-    def __exit__(self, *_: object) -> None:
-        return None
 
 
 @pytest.fixture
@@ -199,20 +188,14 @@ def test_the_main_guard_runs_main(
 
 @pytest.mark.spec("boot:refuse:no-ceiling")
 @pytest.mark.parametrize(
-    ("name", "value", "said", "command"),
+    ("name", "value", "said"),
     [
-        ("GPUNIT_CEILING", None, "GPUNIT_CEILING is unset or empty", ["true"]),
-        ("GPUNIT_CEILING", "", "GPUNIT_CEILING is unset or empty", ["true"]),
-        ("GPUNIT_CEILING", "7m", "GPUNIT_CEILING is not a number of seconds", ["true"]),
-        ("RUNPOD_API_KEY", None, "RUNPOD_API_KEY is unset or empty", ["true"]),
-        ("RUNPOD_POD_ID", None, "RUNPOD_POD_ID is unset or empty", ["true"]),
-        ("PUBLIC_KEY", None, "PUBLIC_KEY is unset or empty", ["true"]),
-        (
-            "GPUNIT_CEILING",
-            CEILING,
-            "no command after --; use boot.py -- <command>",
-            [],
-        ),
+        ("GPUNIT_CEILING", None, "GPUNIT_CEILING is unset or empty"),
+        ("GPUNIT_CEILING", "", "GPUNIT_CEILING is unset or empty"),
+        ("GPUNIT_CEILING", "7m", "GPUNIT_CEILING is not a number of seconds"),
+        ("RUNPOD_API_KEY", None, "RUNPOD_API_KEY is unset or empty"),
+        ("RUNPOD_POD_ID", None, "RUNPOD_POD_ID is unset or empty"),
+        ("PUBLIC_KEY", None, "PUBLIC_KEY is unset or empty"),
     ],
 )
 def test_a_gap_before_the_arm_refuses(
@@ -222,19 +205,27 @@ def test_a_gap_before_the_arm_refuses(
     name: str,
     value: str | None,
     said: str,
-    command: list[str],
 ) -> None:
     if value is None:
         monkeypatch.delenv(name)
     else:
         monkeypatch.setenv(name, value)
 
-    assert boot.main(["--", *command]) == 1
+    assert boot.main(["--", "true"]) == 1
 
     assert f"refused: {said}" in capsys.readouterr().err
     # Nothing is armed yet: no watchdog, no stop.
     assert pod.order == []
     assert pod.started == []
+
+
+@pytest.mark.spec("boot:refuse:no-ceiling")
+def test_no_command_refuses(pod: Pod, capsys: pytest.CaptureFixture[str]) -> None:
+    assert boot.main(["--"]) == 1
+
+    said = "refused: no command after --; use boot.py -- <command>"
+    assert said in capsys.readouterr().err
+    assert pod.order == []
 
 
 @pytest.mark.spec("boot:refuse:no-nonce")
@@ -337,7 +328,7 @@ def test_the_watchdog_never_returns_into_the_main_flow(
     pod: Pod, monkeypatch: pytest.MonkeyPatch, guarded: bool
 ) -> None:
     pod.fork = 0
-    pod.answers = [ValueError("an answer boot cannot read")]
+    pod.answer(ValueError("an answer boot cannot read"))
     if not guarded:
         # The twin: without the `finally`, a failed stop returns the child into main.
         def unguarded(ceiling: str, environ: Mapping[str, str]) -> None:
@@ -362,6 +353,7 @@ def test_the_arm_returns_at_once_in_boot(pod: Pod) -> None:
 
 
 @pytest.mark.spec("boot:stop:command-end")
+@pytest.mark.spec("boot:needs:no-curl")
 def test_the_commands_end_stops_the_pod(
     pod: Pod, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -377,6 +369,8 @@ def test_the_commands_end_stops_the_pod(
     assert request.get_header("Authorization") == f"Bearer {KEY}"
     assert request.get_header("Content-type") == "application/json"
     assert timeout == 30
+    # The fake PATH holds sshd alone: the stop needs no curl.
+    assert not any("curl" in argv[0] for argv in pod.runs)
 
 
 @pytest.mark.spec("boot:stop:command-end")
@@ -395,7 +389,7 @@ def test_the_lines_open_with_the_utc_time(
 def test_a_failed_stop_retries_with_backoff(
     pod: Pod, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    pod.answers = [500, 500, 200]
+    pod.answer(500, 500, 200)
 
     assert boot.main(["--", "true"]) == 0
 
@@ -415,7 +409,7 @@ def test_a_failed_stop_retries_with_backoff(
 
 @pytest.mark.spec("boot:stop:retries")
 def test_the_backoff_stops_doubling_at_300s(pod: Pod) -> None:
-    pod.answers = [500] * 7
+    pod.answer(*[500] * 7)
 
     boot.stop(os.environ)
 
@@ -426,13 +420,17 @@ def test_the_backoff_stops_doubling_at_300s(pod: Pod) -> None:
 @pytest.mark.spec("boot:stop:retries")
 @pytest.mark.parametrize(
     "answer",
-    ["000", TimeoutError("timed out"), http.client.BadStatusLine("")],
+    [
+        urllib.error.URLError("no route to host"),
+        TimeoutError("timed out"),
+        http.client.BadStatusLine(""),
+    ],
     ids=["no-route", "timeout", "bad-status"],
 )
 def test_no_answer_is_000_and_retried(
-    pod: Pod, capsys: pytest.CaptureFixture[str], answer: str | Exception
+    pod: Pod, capsys: pytest.CaptureFixture[str], answer: Exception
 ) -> None:
-    pod.answers = [answer]
+    pod.answer(answer)
 
     boot.stop(os.environ)
 
@@ -442,7 +440,7 @@ def test_no_answer_is_000_and_retried(
 
 @pytest.mark.spec("boot:stop:refused-key-named")
 def test_a_refused_key_is_named(pod: Pod, capsys: pytest.CaptureFixture[str]) -> None:
-    pod.answers = [401, 403, 200]
+    pod.answer(401, 403, 200)
 
     assert boot.main(["--", "true"]) == 0
 
@@ -613,37 +611,19 @@ def test_a_command_that_cannot_start_gives_127(
 
 @pytest.mark.spec("boot:child:no-key")
 @pytest.mark.spec("boot:child:no-nonce")
+@pytest.mark.spec("boot:needs:no-env")
 def test_the_child_holds_no_key_and_no_nonce(pod: Pod) -> None:
-    boot.main(["--", "env"])
+    boot.main(["--", "/bin/true"])
 
-    [(_, env)] = pod.started
+    # The command itself is started, not `env` around it.
+    [(argv, env)] = pod.started
+    assert argv == ["/bin/true"]
     assert env["RUNPOD_POD_ID"] == POD
     assert "RUNPOD_API_KEY" not in env
     assert "GPUNIT_NONCE" not in env
     # The stop still carries the key.
     [(request, _)] = pod.stops
     assert request.get_header("Authorization") == f"Bearer {KEY}"
-
-
-@pytest.mark.spec("boot:needs:no-curl")
-def test_the_stop_needs_no_curl(pod: Pod) -> None:
-    # Every tool but sshd is missing from the fake PATH.
-    assert boot.main(["--", "true"]) == 0
-
-    assert pod.started
-    [(request, _)] = pod.stops
-    assert request.get_header("Authorization") == f"Bearer {KEY}"
-    assert not any("curl" in argv[0] for argv in pod.runs)
-
-
-@pytest.mark.spec("boot:needs:no-env")
-def test_the_command_needs_no_env(pod: Pod) -> None:
-    assert boot.main(["--", "/bin/true"]) == 0
-
-    # The command itself is started, not `env` around it.
-    [(argv, env)] = pod.started
-    assert argv == ["/bin/true"]
-    assert "RUNPOD_API_KEY" not in env and "GPUNIT_NONCE" not in env
 
 
 def foreign(source: str) -> list[str]:

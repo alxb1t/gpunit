@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from boot.boot import KEY_GAP_S
 from gpunit.provider import fingerprint
 from tests.helpers import install_stubs
 
@@ -19,7 +20,7 @@ FINGERPRINT = "SHA256:fromTheStub+/0"
 NONCE = "0123456789abcdef0123456789abcdef"
 CEILING = "7"
 GRACE = "60"
-KEY_GAP = "sleep 1"
+KEY_GAP = f"sleep {KEY_GAP_S}"
 
 # First on boot's PYTHONPATH: the stop answers from $STOP_CODES, one line a call (200
 # when empty), and logs whether the header held the key; each wait returns at once, but
@@ -242,22 +243,11 @@ PRINT_NAMES = [sys.executable, "-c", "import os; print(*os.environ, sep='\\n')"]
 
 
 @pytest.mark.spec("boot:needs:no-curl")
-def test_the_stop_needs_no_curl(pod: dict[str, str], tmp_path: Path) -> None:
+@pytest.mark.spec("boot:needs:no-env")
+def test_boot_needs_neither_curl_nor_env(pod: dict[str, str], tmp_path: Path) -> None:
     # awk: the sshd stub reads its config with it.
     only_stubs(pod, tmp_path / "bin", "awk")
     assert shutil.which("curl", path=pod["PATH"]) is None
-
-    result = boot(pod, *PRINT_NAMES)
-
-    assert result.code == 0
-    assert "RUNPOD_POD_ID" in result.out.splitlines()
-    [stop] = result.stops
-    assert stop.startswith("header-ok ")
-
-
-@pytest.mark.spec("boot:needs:no-env")
-def test_the_command_needs_no_env(pod: dict[str, str], tmp_path: Path) -> None:
-    only_stubs(pod, tmp_path / "bin", "awk")
     assert shutil.which("env", path=pod["PATH"]) is None
 
     result = boot(pod, *PRINT_NAMES)
@@ -267,6 +257,8 @@ def test_the_command_needs_no_env(pod: dict[str, str], tmp_path: Path) -> None:
     assert "RUNPOD_POD_ID" in names
     assert "RUNPOD_API_KEY" not in names
     assert "GPUNIT_NONCE" not in names
+    [stop] = result.stops
+    assert stop.startswith("header-ok ")
 
 
 @pytest.mark.spec("boot:file:stdlib-only")
@@ -429,7 +421,7 @@ def test_a_refused_key_is_named(pod: dict[str, str]) -> None:
 @pytest.mark.spec("boot:sshd:pam-on")
 @pytest.mark.spec("boot:sshd:root-only")
 def test_the_fingerprint_line(pod: dict[str, str]) -> None:
-    result = boot(pod, "true")
+    result = boot(pod, "true", merged=True)
 
     printed = [
         line for line in result.out.splitlines() if line.startswith("gpunit host key")
@@ -451,14 +443,8 @@ def test_the_fingerprint_line(pod: dict[str, str]) -> None:
     assert f"-lf {host_key}.pub" in result.keygen
     # The pause that keeps the key line ahead of `step: the command` in RunPod's log.
     assert KEY_GAP in result.order
-
-
-@pytest.mark.spec("boot:sshd:fingerprint-printed")
-def test_gpunit_reads_the_served_key_from_boots_log(pod: dict[str, str]) -> None:
     # gpunit accepts a key line only once boot's `step: the command` line follows it
     # (0006 design D1): rewording that line would leave every session unverified.
-    result = boot(pod, "true", merged=True)
-
     assert fingerprint(result.out.splitlines(), NONCE) == FINGERPRINT
 
 
@@ -483,24 +469,16 @@ def test_the_childs_code(pod: dict[str, str]) -> None:
 
 
 @pytest.mark.spec("boot:child:no-key")
-def test_the_child_holds_no_key(pod: dict[str, str]) -> None:
+@pytest.mark.spec("boot:child:no-nonce")
+def test_the_child_holds_no_key_and_no_nonce(pod: dict[str, str]) -> None:
     result = boot(pod, "env")
 
     assert result.code == 0
     names = [line.split("=", 1)[0] for line in result.out.splitlines()]
     assert "RUNPOD_POD_ID" in names
     assert "RUNPOD_API_KEY" not in names
+    assert "GPUNIT_NONCE" not in names
     [stop] = result.stops
     assert stop.startswith("header-ok ")
-
-
-@pytest.mark.spec("boot:child:no-nonce")
-def test_the_child_holds_no_nonce(pod: dict[str, str]) -> None:
-    result = boot(pod, "env")
-
-    assert result.code == 0
-    names = [line.split("=", 1)[0] for line in result.out.splitlines()]
-    assert "RUNPOD_POD_ID" in names
-    assert "GPUNIT_NONCE" not in names
     # Boot's own key line still carries it.
     assert f"gpunit host key {NONCE}: {FINGERPRINT}" in result.out

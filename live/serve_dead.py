@@ -15,7 +15,7 @@ from pathlib import Path
 from gpunit import log
 from gpunit.runpod import RunPod
 from gpunit.serve import session, table
-from live.window import gpunit, window
+from live.window import report, serve_window
 
 MODEL = "qwen3-4b"
 CEILING_S = 600
@@ -85,20 +85,14 @@ def prove() -> int:
             provider=RunPod(os.environ),
         )
     failures = check(lines, code)
-    for failure in failures:
-        print(f"check failed: {failure}", file=sys.stderr)
     if not failures:
         print("check passed: the dead pod ended the wait and was deleted", flush=True)
-    return 1 if failures else 0
+    return report(failures)
 
 
 def main() -> int:
     """Prove the dead serve inside the row's window volume, deleted however it ends."""
-    return window(
-        gpunit("volume", "up", "--serve", MODEL, "--ceiling", "1h", "--yes"),
-        gpunit("volume", "down", "--serve", MODEL),
-        prove,
-    )
+    return serve_window(MODEL, prove)
 
 
 if __name__ == "__main__":

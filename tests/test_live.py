@@ -1,7 +1,7 @@
 import pytest
 
 from live import dead, serve, volume
-from live.window import window
+from live.window import report, window
 
 UP = ["gpunit", "volume", "up"]
 DOWN = ["gpunit", "volume", "down"]
@@ -116,3 +116,10 @@ def test_a_body_that_raises_still_deletes_the_volume() -> None:
         window(UP, DOWN, raises, runs)
 
     assert runs.order == ["up", "down"]
+
+
+@pytest.mark.spec("session:volume:window-mounted")
+def test_a_failure_fails_the_run(capsys: pytest.CaptureFixture[str]) -> None:
+    assert report([]) == 0
+    assert report(["the first pod wrote nothing"]) == 1
+    assert "check failed: the first pod wrote nothing" in capsys.readouterr().err

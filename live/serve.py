@@ -11,17 +11,12 @@ import os
 import subprocess
 import sys
 import urllib.request
-from pathlib import Path
 
-from live.window import gpunit, run, window
+from live.tool_call import OPENER
+from live.window import LIVE, gpunit, run, serve_volume_up, serve_window
 
-LIVE = Path(__file__).parent
-# The chat extends the window first: its 30m and 1200s wait must fit inside it.
-VOLUME_CEILING = "1h"
 CEILING = "30m"
 PROMPT = "What is 2 + 2? Answer with the number.\n"
-# The endpoint is gpunit's local tunnel: a proxy would only stand in its way.
-OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 
 def endpoint(lines: list[str]) -> tuple[str, str] | None:
@@ -87,7 +82,8 @@ def body(model: str) -> int:
     served.wait()
     if not proved:
         return 1
-    code = run(volume_up(model))
+    # The chat extends the window first: its 30m and 1200s wait must fit inside it.
+    code = run(serve_volume_up(model))
     if code:
         return code
     chatted = subprocess.run(
@@ -96,24 +92,13 @@ def body(model: str) -> int:
     return chatted.returncode
 
 
-def volume_up(model: str) -> list[str]:
-    """Return the argv that opens, or extends, the row's window volume."""
-    return gpunit(
-        "volume", "up", "--serve", model, "--ceiling", VOLUME_CEILING, "--yes"
-    )
-
-
 def main(argv: list[str]) -> int:
     """Prove the row `argv` names inside its window volume; return 0 when it answers."""
     if len(argv) != 1:
         print("usage: python live/serve.py <model>", file=sys.stderr)
         return 1
     [model] = argv
-    return window(
-        volume_up(model),
-        gpunit("volume", "down", "--serve", model),
-        lambda: body(model),
-    )
+    return serve_window(model, lambda: body(model))
 
 
 if __name__ == "__main__":

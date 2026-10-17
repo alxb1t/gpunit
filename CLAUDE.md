@@ -35,7 +35,7 @@ CLI is recorded, not pinned: `@fission-ai/openspec@1.11.0`, resolved on `PATH`.
   `boot.py` has `tests/test_boot_steps.py` (each step alone) and `tests/test_boot.py` (the whole run); every test
   carries `@pytest.mark.spec("<scenario key>")`.
 - **`live/`** — the metered proof on a real pod, run by hand: `live/*.py`, one script a `make live-*` target, and
-  `live/window.py`, the window volume's teardown.
+  `live/window.py`, their shared steps and the window volume's teardown.
 - **`openspec/`** — the living specs in `specs/`; the changes in `changes/`, the shipped ones in `changes/archive/`.
 - **`.minions/`** — run artefacts, **gitignored**; nothing in it is tracked.
 - **`CHANGELOG.md`** — Keep a Changelog: each phase appends under `## [Unreleased]`, the release cuts it.

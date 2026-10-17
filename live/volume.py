@@ -7,11 +7,9 @@ deletes it.
 
 import subprocess
 import sys
-from pathlib import Path
 
-from live.window import gpunit, run, window
+from live.window import LIVE, gpunit, price, report, run, window
 
-LIVE = Path(__file__).parent
 SPEC = str(LIVE / "gpunit.volume.toml")
 PROOF = "/runpod-volume/proof"
 # `$GPUNIT_SSH` is expanded by the shell `gpunit run` starts, not here.
@@ -51,16 +49,12 @@ def body() -> int:
         return code
     print(f"wrote: {wrote}")
     print(f"read: {read}", flush=True)
-    failures = check(wrote, read)
-    for failure in failures:
-        print(f"check failed: {failure}", file=sys.stderr)
-    return 1 if failures else 0
+    return report(check(wrote, read))
 
 
 def main() -> int:
     """Print the price, prove the window, then show that no pod is left."""
-    code = run([sys.executable, str(LIVE / "price.py"), SPEC])
-    if code:
+    if code := price(SPEC):
         return code
     code = window(
         gpunit("volume", "up", "--spec", SPEC, "--yes"),

@@ -10,11 +10,9 @@ import re
 import subprocess
 import sys
 import time
-from pathlib import Path
 
-from live.window import gpunit, run
+from live.window import LIVE, gpunit, price, report, run
 
-LIVE = Path(__file__).parent
 SPEC = str(LIVE / "gpunit.dead.toml")
 _REFUSED = re.compile(r"^\S+ refused: (.*)$")
 
@@ -40,8 +38,7 @@ def check(code: int, lines: list[str]) -> list[str]:
 
 def main() -> int:
     """Boot the dead image, say how `up` ended, and return 0 when `check` passes."""
-    code = run([sys.executable, str(LIVE / "price.py"), SPEC])
-    if code:
+    if code := price(SPEC):
         return code
     start = time.monotonic()
     up = subprocess.Popen(
@@ -60,10 +57,7 @@ def main() -> int:
     print(f"reason: {reason(lines)}", flush=True)
     # Either way: it shows that no pod is left.
     run(gpunit("status", "--spec", SPEC))
-    failures = check(code, lines)
-    for failure in failures:
-        print(f"check failed: {failure}", file=sys.stderr)
-    return 1 if failures else 0
+    return report(check(code, lines))
 
 
 if __name__ == "__main__":
