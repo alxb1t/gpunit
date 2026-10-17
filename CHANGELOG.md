@@ -34,8 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - A Ctrl-C during a live script waits for gpunit's own teardown: `live/window.py`'s `call` starts each gpunit child
-  and waits through every interrupt before re-raising it, where `subprocess.run` killed the child 0.25s in, mid-delete
-  (`0012·R1`, `0012·S1`).
+  and waits through every interrupt before re-raising it, where `subprocess.run` killed the child 0.25s in, mid-delete;
+  `live/dead.py` waits on its own `up` the same way (`0012·R1`, `0012·S1`, `0012·R5`).
 - `live/serve.py` ends the `serve --api` hold however its proof ends: a non-`OSError` from the chat request or the
   tool call no longer leaves the endpoint's pod held while the window's volume is deleted (`0012·S2`).
 - `boot.py`'s stop follows no redirect, as `runpod.py`'s `_NoRedirect` already guards the laptop's side: a 3xx from
@@ -45,6 +45,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ca-certificates` says its certificate check failed, where it said nothing (`0012·S4`).
 - A watchdog whose stop raises an error it did not expect says the ceiling's stop failed, prints the traceback and
   exits `1`, where it exited `0` without a line (`0012·R6`).
+- Design D1, D3, D4, D5 and D6 say what `boot.py`'s stop does: an opener built with `_NoRedirect`, `000 (<cause>)`
+  on no answer, and the watchdog's failure line and exit `1`; a test comment names the watchdog's guard, not a
+  `finally` (`0012·R2`, `0012·R3`, `0012·R4`).
 - README says the serve proof sends one chat request, not one `curl`; design D12 and task 6.1 say the shipped images
   are `v0.8-rc3`; `test_the_cmd_is_launch_py` is bound to `serve:image:pinned-inputs`, whose scenario it checks
   (`0012·R2`, `0012·R3`, `0012·R4`).

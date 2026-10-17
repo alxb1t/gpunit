@@ -11,7 +11,7 @@ import subprocess
 import sys
 import time
 
-from live.window import LIVE, gpunit, price, report, run
+from live.window import LIVE, gpunit, price, report, run, waited
 
 SPEC = str(LIVE / "gpunit.dead.toml")
 _REFUSED = re.compile(r"^\S+ refused: (.*)$")
@@ -49,10 +49,15 @@ def main() -> int:
     )
     assert up.stdout is not None
     lines = []
-    for line in up.stdout:
-        print(line, end="", flush=True)
-        lines.append(line.rstrip("\n"))
-    code = up.wait()
+    try:
+        for line in up.stdout:
+            print(line, end="", flush=True)
+            lines.append(line.rstrip("\n"))
+        code = up.wait()
+    except KeyboardInterrupt:
+        # gpunit has the SIGINT too and is deleting its pod: wait for it.
+        waited(up)
+        raise
     print(f"up exited {code} after {int(time.monotonic() - start)}s")
     print(f"reason: {reason(lines)}", flush=True)
     # Either way: it shows that no pod is left.

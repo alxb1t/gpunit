@@ -1,6 +1,7 @@
 import http.client
 import subprocess
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from typing import cast
 
 import pytest
 
@@ -140,7 +141,7 @@ class Child:
         self.calls: list[str] = []
         self.interrupts = interrupts
         self.returncode: int | None = None
-        self.stdout = iter(
+        self.stdout: Iterator[str] = iter(
             ["OPENAI_BASE_URL=http://127.0.0.1:8000/v1\n", "OPENAI_API_KEY=k\n"]
         )
 
@@ -195,6 +196,24 @@ def _chat(monkeypatch: pytest.MonkeyPatch) -> object:
     return serve.body("qwen3-4b")
 
 
+def _dead_up(monkeypatch: pytest.MonkeyPatch) -> object:
+    """Reach `dead.main`'s read of `up`'s lines; the Ctrl-C lands in it."""
+    children = cast(Children, subprocess.Popen)
+
+    def cut(lines: Iterator[str]) -> Iterator[str]:
+        yield from lines
+        raise KeyboardInterrupt
+
+    def popen(argv: list[str], **kwargs: object) -> Child:
+        child = children(argv, **kwargs)
+        child.stdout = cut(child.stdout)
+        return child
+
+    monkeypatch.setattr(subprocess, "Popen", popen)
+    monkeypatch.setattr(dead, "price", lambda spec: 0)
+    return dead.main()
+
+
 @pytest.mark.spec("volume:down:deletes")
 @pytest.mark.parametrize(
     ("start", "interrupts"),
@@ -202,8 +221,9 @@ def _chat(monkeypatch: pytest.MonkeyPatch) -> object:
         (lambda monkeypatch: run(UP), (2,)),
         (lambda monkeypatch: volume._said("true"), (2,)),
         (_chat, (0, 2)),
+        (_dead_up, (1,)),
     ],
-    ids=["window-run", "volume-said", "serve-chat"],
+    ids=["window-run", "volume-said", "serve-chat", "dead-up"],
 )
 def test_ctrl_c_waits_for_gpunits_teardown(
     monkeypatch: pytest.MonkeyPatch,

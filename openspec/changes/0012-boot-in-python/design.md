@@ -92,7 +92,9 @@ main(argv)
 ```
 
 - **Names and values kept:** `API`, `RETRY_S = 30`, `MAX_RETRY_S = 300`, `GRACE_S = 60`; every message of `boot.sh`,
-  word for word, but `use boot.sh -- <command>` → `use boot.py -- <command>`. `say` writes
+  word for word, but `use boot.sh -- <command>` → `use boot.py -- <command>`, and a stop with no answer names its
+  cause, `HTTP 000 (<cause>)` ([D4](#d4)). Two lines are new: `the command could not start: <error>` and the
+  watchdog's `the ceiling's stop failed; delete the pod by hand` ([D3](#d3)). `say` writes
   `<UTC as %Y-%m-%dT%H:%M:%SZ> <text>` to stderr.
 - **Every line is flushed when written**, stdout and stderr, as bash's `echo` is: gpunit reads the key line before
   `step: the command`, and a buffered line would reach the log late. Stdout and stderr are flushed before the fork.
@@ -117,7 +119,9 @@ main(argv)
 ### D3
 
 - **The watchdog:** `arm` calls `os.fork()`; the child sleeps `GPUNIT_CEILING`, says `the ceiling of Ns is reached`,
-  runs `stop()` and leaves by `os._exit(0)`, so it never reaches the parent's `finally`. The parent returns at once.
+  runs `stop()` and leaves by `os._exit(0)`, so it never reaches the parent's `finally`. An error in that stop is
+  caught by `except BaseException`: the child says `the ceiling's stop failed; delete the pod by hand`, prints the
+  traceback and leaves by `os._exit(1)`. The parent returns at once.
 - **The `finally`:** a refusal raised after the arm, an error of boot's own, and the command's end each reach
   `stop()`. Only the command's end sleeps `GRACE_S` first.
 - **`SIGTERM`:** once the command starts, a handler sends `SIGTERM` to it; `Popen.wait` resumes after the handler
@@ -132,10 +136,11 @@ main(argv)
 
 - **The image needs** `python3` ≥ 3.10, `openssh-server` (it brings `ssh-keygen`) and `ca-certificates` (for the
   stop's TLS). `check` no longer looks for `curl` or `env`.
-- **The stop:** `urllib.request.urlopen` on a `POST` to `{API}/pods/{RUNPOD_POD_ID}/action`, body `{"action":"stop"}`,
-  headers `Authorization: Bearer <key>` and `Content-Type: application/json`, timeout 30 s. A `200` stops; an
-  `HTTPError` gives its code; any other `OSError` gives `000`, as `curl -w '%{http_code}'` prints. The messages and
-  the backoff are `boot.sh`'s.
+- **The stop:** an opener built with `_NoRedirect`, which follows no 3xx, sends a `POST` to
+  `{API}/pods/{RUNPOD_POD_ID}/action`, body `{"action":"stop"}`, headers `Authorization: Bearer <key>` and
+  `Content-Type: application/json`, timeout 30 s. A `200` stops; an `HTTPError`, a 3xx among them, gives its code; any
+  other `OSError` or `http.client.HTTPException` gives `000 (<cause>)`, `curl -w '%{http_code}'`'s `000` with the
+  error's reason. The backoff is `boot.sh`'s, and so are the messages, but for that cause.
 - **The command's environment:** a copy of `os.environ` without `RUNPOD_API_KEY` and `GPUNIT_NONCE`, passed to
   `subprocess.Popen`.
 
@@ -143,7 +148,7 @@ main(argv)
 
 `tests/test_boot_steps.py` imports `from boot import boot` (`boot/` as a namespace package, on pytest's
 `pythonpath = ["."]`) and replaces, with `monkeypatch`, what reaches outside the process: `os.fork`, `os._exit`,
-`time.sleep`, `urllib.request.urlopen`, `subprocess.run`, `subprocess.Popen`, `shutil.which`, `signal.signal`, and
+`time.sleep`, `urllib.request.build_opener`, `subprocess.run`, `subprocess.Popen`, `shutil.which`, `signal.signal`, and
 the home directory. Each test binds a `boot:*` key; together they bind every key of
 [the boot delta](specs/boot/spec.md) and of `openspec/specs/boot/spec.md`. The `__main__` guard is covered by
 `runpy.run_path` on a call that refuses before the arm.
@@ -155,7 +160,7 @@ the home directory. Each test binds a `boot:*` key; together they bind every key
 
 - **Stub `sshd` and `ssh-keygen`** on `PATH`, today's scripts unchanged.
 - **A `sitecustomize.py`** written into the test's directory and put first on `PYTHONPATH`: it replaces
-  `urllib.request.urlopen` with a recorder that logs `header-ok` or `no-header`, the URL and the body, and answers from
+  `urllib.request.build_opener` with a recorder that logs `header-ok` or `no-header`, the URL and the body, and answers from
   `$STOP_CODES`; and `time.sleep` with a logger that returns at once, but holds the ceiling's own wait when
   `HOLD_CEILING` is set — today's `curl` and `sleep` stubs, moved into Python. `boot.py` holds no test knob.
 - **`boot:needs:no-curl` and `boot:needs:no-env`** — in place of `boot:refuse:no-curl` and `boot:refuse:no-env`, whose

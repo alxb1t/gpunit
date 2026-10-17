@@ -339,7 +339,8 @@ def test_the_watchdog_never_returns_into_the_main_flow(
     pod.fork = 0
     pod.answer(ValueError("an answer boot cannot read"))
     if not guarded:
-        # The twin: without the `finally`, a failed stop returns the child into main.
+        # The twin: without the guard's `except BaseException` and `os._exit`, a failed
+        # stop returns the child into main.
         def unguarded(ceiling: str, environ: Mapping[str, str]) -> None:
             if os.fork() == 0:
                 boot.time.sleep(int(ceiling))
