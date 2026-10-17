@@ -44,7 +44,7 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    image, and BuildKit for the checksum; on an older Docker, copy the file in.
 
    ```dockerfile
-   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.7.0/boot/boot.sh /opt/gpunit/boot.sh
+   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.7.1/boot/boot.sh /opt/gpunit/boot.sh
    RUN chmod +x /opt/gpunit/boot.sh
    ENTRYPOINT ["/opt/gpunit/boot.sh", "--"]
    CMD ["python3", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
@@ -59,7 +59,7 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    on the pod you would not trust with the key.
 
    ```sh
-   uv add --dev git+https://github.com/alxb1t/gpunit@v0.7.0
+   uv add --dev git+https://github.com/alxb1t/gpunit@v0.7.1
    echo .gpunit/ >> .gitignore
    export RUNPOD_API_KEY=...
    uv run gpunit run -- python3 render.py
@@ -217,15 +217,16 @@ uv run gpunit volume down --serve qwen3-4b
   without `y`. `--yes` skips the question.
 - **No session outlives its volume.** `up`, `run` and `serve` refuse when no volume is recorded, or when the session's
   ceiling plus its wait for SSH would end after the volume.
-- **`volume up` again extends** a live volume to now plus `volume_ceiling`, after the price.
+- **`volume up` again extends** a live volume to now plus `volume_ceiling`, never earlier than its end, after the price.
 - **The ceiling:** `up`, `run`, `serve`, `down`, `status`, `volume up` and `volume down` each delete a volume past its
   end before anything else, `down` after its pods, which may hold it. `status` names the volume and its end.
 - **The residual:** a volume no command reaches after its ceiling bills $0.07/GB a month until one does; `spend` names
   it once its billing shows it.
 - **A lost create exits `3`.** `.gpunit/volume.pending` stays, and `volume down` lists the `gpunit-<project>`
   volumes, skips any this machine's ledger records, and names each other one, deleting it only on your `y`; no answer
-  keeps it and the mark. Only that mark, with no volume recorded, sweeps by name: otherwise `volume down` deletes the
-  recorded volume alone, so another checkout's volume of the same project is never deleted unasked.
+  keeps it and the mark. A stdin that is not a terminal is no answer, and Ctrl-C ends the sweep. Only that mark, with
+  no volume recorded, sweeps by name: otherwise `volume down` deletes the recorded volume alone, so another checkout's
+  volume of the same project is never deleted unasked.
 - **`volume = "<id>"` keeps its meaning:** a volume you keep, never set with `volume_gb`.
 
 ## What it cost
@@ -251,11 +252,13 @@ total                                  $1.79
 - **A pod's project comes from the ledger**, `~/.local/state/gpunit/ledger.jsonl`: `up` adds a line when a create
   answers, and `down` when it sweeps a pod no record names. Each line holds the pod's id, the project, the card,
   the image and the time; one that cannot be written warns and blocks nothing, one that cannot be read exits `1`.
+  `volume down` and the sweeps add a line for each volume they delete: its id, `deleted` and the time.
 - **`unattributed`** counts the pods the ledger does not name: made before this version, on another machine, by a
   create whose answer was lost, or outside gpunit.
 - **`storage`** is one line per network volume the ledger does not name, billed whether or not a pod runs.
 - **A window volume bills under its project**, in its amount; a project with a volume and no pod shows `0 pods`. One
-  whose end fell before today and still bills today is named on stderr, with `gpunit volume down`.
+  whose end fell before today, that still bills today and that the ledger does not record as deleted is named on
+  stderr, with `gpunit volume down`.
 - **The current UTC day is still being billed**: its figures can change, and stderr says so.
 - **An unreadable billing exits `1`**, with no table: a table of zeros would read as a free week.
 
@@ -285,7 +288,7 @@ Each verb reads `gpunit.toml` from the working directory, or the file `--spec <p
 | `1` | refused or failed; the teardown failed |
 | `2` | usage: an unknown verb, a missing command, an unreadable spec path, `serve` or `volume up --serve` without `--ceiling`, an unknown model, `spend --days` under 1 or over 3660, `volume` without `up` or `down` |
 | `3` | a create's answer was lost; a pod may exist and bill — run `gpunit down`; for a volume's create, `gpunit volume down` |
-| `128+n` | signal `n` stopped `run` or `serve`, or killed `run`'s command, and the teardown succeeded; a failed teardown is still `1` |
+| `128+n` | signal `n` stopped `run` or `serve`, or killed `run`'s command, and the teardown succeeded; a failed teardown is still `1`; Ctrl-C at `volume down`'s sweep question is `130` |
 
 gpunit's own lines go to stderr, each opening with the UTC time; stdout belongs to the command, or to `serve`'s
 chat and `--api`'s two lines, or to `spend`'s report.

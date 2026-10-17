@@ -1,6 +1,7 @@
 """Make, extend and end a working window's network volume: `volume up · down`."""
 
 import math
+import signal
 import sys
 from dataclasses import replace
 from decimal import ROUND_UP, Decimal
@@ -59,7 +60,7 @@ def up(
     except Lost as lost:
         log.say(str(lost))
         log.say(f"the create's outcome is unknown: a volume {name} may exist and bill;")
-        log.say("run gpunit volume down, which finds and deletes it")
+        log.say("run gpunit volume down, which finds it and asks before deleting it")
         raise
     ends = log.utc(spec.volume_ceiling_s)
     state.write_window(Window(volume_id, datacenter, spec.volume_gb, ends))
@@ -70,7 +71,10 @@ def up(
 
 
 def down(spec: Spec, provider: Provider, state: State) -> int:
-    """Delete the recorded volume, then sweep its name after a lost create; 0, or 1."""
+    """Delete the recorded volume, then sweep its name after a lost create.
+
+    Return 0, 1, or 130 on Ctrl-C at the sweep.
+    """
     lifecycle.sweep_window(state, lambda: provider)
     failed = False
     window = state.window()
@@ -78,6 +82,7 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
         code = provider.delete_volume(window.id)
         if code == 204:
             state.clear_window()
+            ledger.record_deleted(window.id)
             log.say(f"volume {window.id} deleted")
         else:
             # A 404 is never gone: a wrong key gets one too.
@@ -96,7 +101,9 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
 
 
 def _sweep(name: str, provider: Provider, state: State) -> int:
-    """Offer each unrecorded volume `name` lists for deletion; clear the mark; 0, or 1.
+    """Offer each unrecorded volume `name` lists for deletion; clear the mark.
+
+    Return 0, 1, or 130 on Ctrl-C at a question, which ends the sweep, the mark kept.
 
     A volume this machine's ledger records is another checkout's, and is skipped;
     any other is named and deleted on a yes alone, since a teammate's on the
@@ -112,13 +119,28 @@ def _sweep(name: str, provider: Provider, state: State) -> int:
     for volume_id in listed:
         if volume_id in known:
             continue
-        answer = _ask(f"delete volume {volume_id}, named {name} but in no record?")
+        # No script or agent answers for an unrecorded volume: 0011 design D5.
+        tty = sys.stdin.isatty()
+        try:
+            answer = (
+                _ask(f"delete volume {volume_id}, named {name} but in no record?")
+                if tty
+                else None
+            )
+        except KeyboardInterrupt:
+            log.say(
+                f"the sweep stopped at volume {volume_id}; it and the rest are kept; "
+                "run gpunit volume down"
+            )
+            return 128 + signal.SIGINT
         if answer is None:
-            log.say(f"volume {volume_id} kept: no answer; run gpunit volume down")
+            hint = "" if tty else " at a terminal, or delete it by hand"
+            log.say(f"volume {volume_id} kept: no answer; run gpunit volume down{hint}")
             settled = False
         elif not answer:
             log.say(f"volume {volume_id} kept")
         elif (code := provider.delete_volume(volume_id)) == 204:
+            ledger.record_deleted(volume_id)
             log.say(f"swept volume {volume_id}")
         else:
             log.say(f"delete of swept volume {volume_id} answered HTTP {code}")
@@ -154,7 +176,8 @@ def _extend(
         )
     question = f"extend volume {window.id}"
     _agree(window.size_gb, ceiling_s, question, "not extended", yes)
-    extended = replace(window, ends=log.utc(ceiling_s))
+    # Never earlier: a session may be running to the recorded end. 0011 design D1.
+    extended = replace(window, ends=max(window.ends, log.utc(ceiling_s)))
     state.write_window(extended)
     ledger.record_volume(project, window.id, extended.ends)
     log.say(f"volume {window.id} extended until {extended.ends}")
@@ -197,12 +220,19 @@ def _agree(
     most = most_cost(size_gb, ceiling_s)
     log.say(f"price: ${VOLUME_GB_MONTH}/GB a month")
     log.say(f"at most ${most} for {size_gb} GB over {_hours(ceiling_s)}")
-    if not yes and not _ask(f"{question} for at most ${most}?"):
+    try:
+        agreed = yes or _ask(f"{question} for at most ${most}?")
+    except KeyboardInterrupt:
+        agreed = False
+    if not agreed:
         log.refuse(refused)
 
 
 def _ask(question: str) -> bool | None:
-    """Ask `question` [y/N]; return whether the answer is yes, or None for no answer."""
+    """Ask `question` [y/N]; return whether the answer is yes, or None for no answer.
+
+    Ctrl-C re-raises `KeyboardInterrupt`, for the caller to end on.
+    """
     try:
         answer = input(f"{question} [y/N] ")
     except EOFError:
@@ -210,7 +240,7 @@ def _ask(question: str) -> bool | None:
     except KeyboardInterrupt:
         # Ends the prompt's line, so what follows opens at its start.
         print(file=sys.stderr, flush=True)
-        return None
+        raise
     return answer.strip().lower() in ("y", "yes")
 
 

@@ -152,6 +152,22 @@ def test_a_window_volume_is_recorded_with_its_end() -> None:
     assert list(ledger.read()) == ["pod-9"]
 
 
+@pytest.mark.spec("spend:ledger:delete-is-recorded")
+def test_a_volumes_delete_is_recorded() -> None:
+    ledger.record("isekai", "pod-9", "NVIDIA A40", IMAGE)
+    ledger.record_volume("isekai", "v1", "2026-10-15T14:30:00Z")
+    ledger.record_deleted("v1")
+
+    *_, volume, deleted = lines()
+    assert sorted(deleted) == ["at", "id", "kind"]
+    assert (deleted["id"], deleted["kind"]) == ("v1", "deleted")
+    assert UTC.fullmatch(str(deleted["at"]))
+    assert ledger.deleted() == {"v1"}
+    # The readers of a pod's and a volume's line skip it; the end stays the volume's.
+    assert list(ledger.read()) == ["pod-9"]
+    assert ledger.volumes()["v1"].ends == volume["ends"]
+
+
 @pytest.mark.spec("spend:ledger:volume-is-recorded")
 def test_a_line_that_is_not_a_volumes_is_skipped() -> None:
     ledger.path().parent.mkdir(parents=True)

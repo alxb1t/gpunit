@@ -25,7 +25,7 @@ from gpunit.provider import (
     pod_name,
 )
 from gpunit.spec import Spec
-from gpunit.state import Record, State
+from gpunit.state import Record, State, Window
 
 POLL_S = 5
 # The statuses of a container that is not running; two polls in a row end the wait.
@@ -236,6 +236,9 @@ def sweep_window(state: State, provider: Callable[[], Provider]) -> None:
     code = provider().delete_volume(window.id)
     if code == 204:
         state.clear_window()
+        # A record beside the mark: the create came back. 0011 design D2.
+        state.clear_volume_pending()
+        ledger.record_deleted(window.id)
         log.say(f"volume {window.id} passed its ceiling at {window.ends}; deleted")
     else:
         log.say(
@@ -258,12 +261,18 @@ def _report(info: PodInfo | None, record: Record, as_json: bool) -> None:
         print(" ".join(f"{key}={value}" for key, value in report.items()))
 
 
-def _in_window(spec: Spec, state: State) -> Spec:
-    """Return `spec` mounting the window volume; refuse a session that outlives it."""
+def live_window(state: State) -> Window:
+    """Return the recorded window volume; refuse when none is up."""
     window = state.window()
     # A volume still recorded after the sweep is one whose delete failed.
     if window is None or window.ends_within(0):
         log.refuse("no window volume is up; run gpunit volume up")
+    return window
+
+
+def _in_window(spec: Spec, state: State) -> Spec:
+    """Return `spec` mounting the window volume; refuse a session that outlives it."""
+    window = live_window(state)
     if window.ends_within(spec.ceiling_s + spec.timeout_s):
         log.refuse(
             f"the volume ends at {window.ends}; shorten the ceiling or run gpunit "
@@ -383,8 +392,9 @@ def _verify_host_key(
         lines = provider.log(record.id, tail=LOG_TAIL)
         if printed := fingerprint(lines, nonce):
             return printed
-        # Judged on a read that holds the whole log, whose key line is boot's own: a
-        # full tail can hold only a command's echo of an older one.
+        # Judged on a read that holds the whole log, its first line boot's
+        # `step: the ceiling`, whose key line is boot's own: a full tail can hold
+        # only a command's echo of an older one.
         if len(lines) < LOG_TAIL and old_boot(lines):
             _tear_down(
                 spec,

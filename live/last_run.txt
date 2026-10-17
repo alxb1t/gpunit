@@ -316,3 +316,40 @@ up exited 1 after 129s
 reason: pod p7ax26qjcoqlg7 got no host and port 22 within 120s
 no session is recorded
 The account's pod and network-volume listings (RunPod's REST v2, read after the runs) were empty.
+
+2026-10-17 — make live-volume, 0011-paydown
+
+One pod wrote the UTC time to the window volume, a new pod read the same line, and the trap's `volume down` deleted
+the volume and wrote its `deleted` ledger line.
+
+NVIDIA RTX A4500: $0.25/h
+NVIDIA RTX A5000: $0.27/h
+NVIDIA A40: $0.59/h
+NVIDIA RTX A6000: $0.59/h
+NVIDIA RTX PRO 4500 Blackwell: $0.72/h
+NVIDIA GeForce RTX 4090: $0.89/h
+at most $0.26 for 600s and a 420s wait for SSH
+2026-10-17T10:51:51Z data centre: EU-RO-1
+2026-10-17T10:51:51Z price: $0.07/GB a month
+2026-10-17T10:51:51Z at most $0.01 for 10 GB over 1h
+2026-10-17T10:51:52Z volume 38iuo34xfc up in EU-RO-1, 10 GB, until 2026-10-17T11:21:52Z
+2026-10-17T10:51:56Z creating on NVIDIA RTX A4500
+2026-10-17T10:51:57Z pod c0obo57wq1dr0l created; waiting for SSH
+2026-10-17T10:52:26Z host key verified: SHA256:sIEkBJzOer6CUZuYXIe71zKFaB4t1SsugdvI1/vgyFE
+2026-10-17T10:52:26Z session up: pod c0obo57wq1dr0l, root@213.173.108.222 -p 36158
+2026-10-17T10:52:28Z pod c0obo57wq1dr0l deleted
+2026-10-17T10:52:32Z creating on NVIDIA RTX A4500
+2026-10-17T10:52:33Z pod ig49kn45utf6yl created; waiting for SSH
+2026-10-17T10:53:01Z host key verified: SHA256:xAIm0SdNcohzcekMnN6Yk+dGTkrMDPd/SQbf8hevS68
+2026-10-17T10:53:01Z session up: pod ig49kn45utf6yl, root@213.173.108.222 -p 19403
+2026-10-17T10:53:04Z pod ig49kn45utf6yl deleted
+wrote: 2026-10-17T10:52:27Z
+read: 2026-10-17T10:52:27Z
+2026-10-17T10:53:05Z volume 38iuo34xfc deleted
+uv run gpunit status --spec live/gpunit.volume.toml
+no session is recorded
+
+$ tail -1 ~/.local/state/gpunit/ledger.jsonl
+{"id": "38iuo34xfc", "kind": "deleted", "at": "2026-10-17T10:53:05Z"}
+
+The account's pod and network-volume listings (RunPod's REST v2, read after the run) were empty.

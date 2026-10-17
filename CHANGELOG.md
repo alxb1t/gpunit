@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-17
+
+### Fixed
+
+- `volume up` on a live volume never moves its end earlier, so a running session keeps its volume (`0010·R4`).
+- The overdue sweep clears `.gpunit/volume.pending` beside the record it deletes (`0010·S4`); `serve` sweeps an
+  overdue volume and refuses before its price (`0010·R6`).
+- `volume down`'s lost-create sweep asks only a terminal, so a piped `y` deletes nothing (`0010·S3`), and Ctrl-C ends
+  it with exit `130`, the rest and the mark kept (`0010·R9`); its message and ledger-skip test match it (`0010·R10`,
+  `0010·R11`).
+- Off a terminal, the sweep's no-answer line says to run `gpunit volume down` at a terminal or delete the volume by
+  hand, since a rerun off one can never answer (0011 review `R3`).
+- Each volume delete that answers `204` appends a `deleted` line to the ledger, and `spend` names no deleted volume as
+  still billing past its end (`0010·R5`).
+- An older `boot.sh` is judged only on a log read that opens with boot's `step: the ceiling` line, so a read cut
+  before boot's lines names no wrong reason (`0010·R7`).
+- `make live-volume` passed on a real volume: a pod wrote it, a new pod read it back, and its delete wrote the ledger's
+  `deleted` line (`live/last_run.txt`).
+
 ## [0.7.0] - 2026-10-16
 
 ### Added

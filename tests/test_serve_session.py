@@ -23,7 +23,7 @@ from tests.fakes import (
     _Response,
     fixture,
 )
-from tests.helpers import gpunit
+from tests.helpers import gpunit, open_window
 
 MODELS = (200, b'{"object": "list", "data": [{"id": "qwen3-4b"}]}')
 NOT_YET = urllib.error.URLError(ConnectionRefusedError(61, "Connection refused"))
@@ -555,6 +555,22 @@ def test_serve_mounts_the_rows_window_volume(home: Path) -> None:
     env = body["env"]
     assert isinstance(env, dict)
     assert env["GPUNIT_VOLUME_PATH"] == "/runpod-volume"
+
+
+@pytest.mark.spec("volume:ceiling:serve-sweeps-first")
+def test_serve_sweeps_an_overdue_volume_before_the_price(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    place = session.home("qwen3-4b")
+    place.mkdir(parents=True)
+    open_window(place, -60, "v3")
+    provider = FakeProvider()
+
+    assert served(provider, FakeOpener(MODELS), yes=False) == 1
+    assert provider.named("delete_volume") == [("v3",)]
+    assert provider.named("gpu") == []
+    assert State(place).window() is None
+    assert "run gpunit volume up" in capsys.readouterr().err
 
 
 @pytest.mark.spec("serve:volume:never-created")

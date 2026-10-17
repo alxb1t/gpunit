@@ -63,10 +63,14 @@ def serve(
     opener = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
     def body() -> int:
-        _agree(spec, provider, yes, ask)
         place = home(name)
-        place.mkdir(mode=0o700, parents=True, exist_ok=True)
         state = State(place)
+        # Before the price, as every command sweeps first: 0011 design D3.
+        lifecycle.sweep_window(state, lambda: provider)
+        if spec.volume_gb is not None:
+            lifecycle.live_window(state)
+        _agree(spec, provider, yes, ask)
+        place.mkdir(mode=0o700, parents=True, exist_ok=True)
         kept: _Kept | None = None
         try:
             with library._open(spec, provider, state, None) as opened:
@@ -106,7 +110,10 @@ def volume_up(name: str, ceiling_s: int, *, yes: bool, provider: Provider) -> in
 
 
 def volume_down(name: str, provider: Provider) -> int:
-    """Delete the window volume `volume_up` made for `name`; return 0, or 1."""
+    """Delete the window volume `volume_up` made for `name`.
+
+    Return 0, 1, or 130 on Ctrl-C at the sweep.
+    """
     return volume.down(_window_spec(name, 0), provider, State(home(name)))
 
 

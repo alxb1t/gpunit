@@ -266,3 +266,18 @@ def test_an_overdue_volume_still_billing_is_named(
         "volume v2 (isekai) passed its ceiling and still bills; run gpunit volume down"
     )
     assert (said in err) is named
+
+
+@pytest.mark.spec("spend:report:deleted-volume-not-named")
+@pytest.mark.parametrize("deleted", [True, False], ids=["deleted", "twin-kept"])
+def test_a_deleted_volume_is_not_named(
+    deleted: bool, capsys: pytest.CaptureFixture[str]
+) -> None:
+    ledger.record_volume("isekai", "v2", "2026-10-11T18:00:00Z")
+    if deleted:
+        ledger.record_deleted("v2")
+    provider = FakeProvider(volume_costs=[VolumeCost("v2", DAY_2, 0.02)])
+
+    out, err = report(capsys, provider)
+    assert ("volume v2" in err) is not deleted
+    assert "pods      isekai               0 pods  $0.02\n" in out
