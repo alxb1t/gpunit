@@ -10,7 +10,7 @@ task names.
 - [x] 2 — The proof
 - [x] 3 — The launch
 - [x] 4 — The live scripts
-- [ ] 5 — The handover
+- [x] 5 — The handover
 - [ ] 6 — ⚠️ **HUMAN** — the images
 - [ ] 7 — ⚠️ **HUMAN · METERED** — make live, make live-dead, make live-volume, make live-serve
 
@@ -54,11 +54,11 @@ task names.
 
 ## 5 — The handover
 
-- [ ] 5.1 In `README.md`, rewrite step 2 and every present-tense `boot.sh`, per [D14](design.md#d14).
+- [x] 5.1 In `README.md`, rewrite step 2 and every present-tense `boot.sh`, per [D14](design.md#d14).
   Verify: `grep -c 'gpunit/v0.8.0/boot/boot.py /opt/gpunit/boot.py' README.md` prints `1`, `grep -c -F 'ENTRYPOINT ["python3", "/opt/gpunit/boot.py", "--"]' README.md` prints `1`, and `grep 'boot\.sh' README.md | grep -c -v -E 'v0\.6\.0|v0\.7\.0'` prints `0`.
-- [ ] 5.2 In `CLAUDE.md`, name `boot/boot.py`, `serve/launch.py`, `live/*.py`, `tests/test_boot_steps.py` beside `tests/test_boot.py`, and the coverage the gate holds, per [D14](design.md#d14).
+- [x] 5.2 In `CLAUDE.md`, name `boot/boot.py`, `serve/launch.py`, `live/*.py`, `tests/test_boot_steps.py` beside `tests/test_boot.py`, and the coverage the gate holds, per [D14](design.md#d14).
   Verify: `grep -c 'boot\.sh' CLAUDE.md` prints `0`, and `grep -c -E 'serve/launch\.py|tests/test_boot_steps\.py' CLAUDE.md` prints a number of at least `2`.
-- [ ] 5.3 In `openspec/specs/boot/spec.md`'s `## Purpose`, "one shell file" → "one Python file", per [D14](design.md#d14).
+- [x] 5.3 In `openspec/specs/boot/spec.md`'s `## Purpose`, "one shell file" → "one Python file", per [D14](design.md#d14).
   Verify: `grep -c 'one shell file' openspec/specs/boot/spec.md` prints `0`, and `grep -c 'one Python file' openspec/specs/boot/spec.md` prints `1`.
 
 ## 6 — ⚠️ **HUMAN** — the images

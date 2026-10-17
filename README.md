@@ -5,7 +5,7 @@ the pod is placed, its host key proven, the command run against it, and the pod 
 
 ```
 laptop                                           pod
-gpunit run -- <cmd>                              boot.sh -- <cmd>
+gpunit run -- <cmd>                              boot.py -- <cmd>
  ├─ up: place · wait · verify host key ────────▶  ceiling armed · sshd · fingerprint
  ├─ ssh -N -L <ports>  ◀─────────────────────────▶ sshd
  ├─ <cmd> with GPUNIT_HOST, GPUNIT_PORT_*, GPUNIT_SSH
@@ -40,18 +40,19 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    MODE = "render"                             # GPUNIT_* names are gpunit's, and refused here
    ```
 
-2. **Make `boot.sh` the image's entrypoint.** It needs `openssh-server`, `curl` and coreutils' `env` in the
-   image, and BuildKit for the checksum; on an older Docker, copy the file in.
+2. **Make `boot.py` the image's entrypoint.** It needs `python3` 3.10 or newer with its standard library,
+   `openssh-server` and `ca-certificates` in the image, and BuildKit for the checksum; on an older Docker, copy
+   the file in. `python3-minimal` is not enough: it lacks the modules the stop's request needs.
 
    ```dockerfile
-   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.7.1/boot/boot.sh /opt/gpunit/boot.sh
-   RUN chmod +x /opt/gpunit/boot.sh
-   ENTRYPOINT ["/opt/gpunit/boot.sh", "--"]
+   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.8.0/boot/boot.py /opt/gpunit/boot.py
+   ENTRYPOINT ["python3", "/opt/gpunit/boot.py", "--"]
    CMD ["python3", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
    ```
 
-   `<digest>` is the file's sha256 at the tag: `curl -sL <the URL above> | shasum -a 256`. An older `boot.sh` is
-   refused: its host-key line carries no session nonce, so `up` tears the pod down and names `v0.6.0`.
+   `<digest>` is the file's sha256 at the tag: `curl -sL <the URL above> | shasum -a 256`. `boot.sh` at `v0.7.0`
+   still works: gpunit reads its lines. A `boot.sh` older than `v0.6.0` is refused: its host-key line carries
+   no session nonce, so `up` tears the pod down and names `v0.6.0`.
 
 3. **Install and run.** The key comes from the environment alone; gpunit reads no `.env`. The command's
    environment on the pod does not carry `RUNPOD_API_KEY`: boot keeps it to stop the pod. The command runs as
@@ -120,7 +121,7 @@ OpenAI-compatible endpoint on loopback instead. The models it knows are rows of
 
 ```
 laptop                                         pod (gpunit-vllm)
-gpunit serve qwen3-4b --ceiling 2h             boot.sh -- vllm serve, key required
+gpunit serve qwen3-4b --ceiling 2h             boot.py -- vllm serve, key required
  ├─ the price · [y/N]: nothing rented without y
  ├─ up · ssh -L <port> ◀─────────────────────▶ vLLM on 127.0.0.1:8000
  ├─ wait for /v1/models, at most 1200s
@@ -150,7 +151,7 @@ A warp is ...
 - **A pod that stops ends the session.** Two status reads in a row of a stopped pod, in the wait or the `--api`
   hold, refuse with `the pod stopped while the model loaded` or `… while serving`, and tear it down. The pod's log
   is kept every 30s at `~/.local/state/gpunit/serve/<model>/pod.log`; the refusal prints its last 30 lines.
-  `boot.sh` waits 60s after vLLM exits before it stops the pod, so the crash reaches `pod.log`.
+  `boot.py` waits 60s after vLLM exits before it stops the pod, so the crash reaches `pod.log`.
 - **The chat** streams each answer and keeps the conversation in memory. Thinking is off unless `--think`.
   `/exit` or the end of input ends the session; so does a server that stops answering, as when the ceiling has
   stopped the pod.
@@ -295,7 +296,7 @@ chat and `--api`'s two lines, or to `spend`'s report.
 
 ## The spend rules
 
-- **The ceiling is required.** `boot.sh` stops the pod at it, whatever happens to the laptop.
+- **The ceiling is required.** `boot.py` stops the pod at it, whatever happens to the laptop.
 - **The pod stops; `down` deletes.** A stopped pod bills storage, not GPU, until the next `gpunit down`.
 - **A 404 is not "gone".** A wrong key gets a 404 too; `down` keeps the record and exits `1`.
 - **A lost create exits `3`.** `.gpunit/pending` stays, and `down` sweeps every live `gpunit-<project>` pod.

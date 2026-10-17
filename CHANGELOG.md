@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `make live-volume`, `make live-serve`, `make live-dead` and `make live-serve-dead` are one line each: their logic is
   `live/volume.py`, `live/serve.py`, `live/dead.py` and `live/serve_dead.py`, the window volume's teardown
   `live/window.py`, tested offline in `tests/test_live.py` (`0012`).
+- README's step 2 adds `boot.py` from `v0.8.0` on `python3` 3.10 or newer; `CLAUDE.md` and the boot spec's Purpose
+  name the Python files (`0012`).
 
 ### Removed
 

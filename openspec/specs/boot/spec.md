@@ -1,6 +1,6 @@
 ## Purpose
 
-The pod's half of the session: one shell file a consumer's image runs as its entrypoint, so the pod stops itself
+The pod's half of the session: one Python file a consumer's image runs as its entrypoint, so the pod stops itself
 at its ceiling whatever happens to the machine that made it, and proves its host key before anything connects.
 
 ## Requirements
