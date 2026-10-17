@@ -224,8 +224,9 @@ uv run gpunit volume down --serve qwen3-4b
   it once its billing shows it.
 - **A lost create exits `3`.** `.gpunit/volume.pending` stays, and `volume down` lists the `gpunit-<project>`
   volumes, skips any this machine's ledger records, and names each other one, deleting it only on your `y`; no answer
-  keeps it and the mark. Only that mark, with no volume recorded, sweeps by name: otherwise `volume down` deletes the
-  recorded volume alone, so another checkout's volume of the same project is never deleted unasked.
+  keeps it and the mark. A stdin that is not a terminal is no answer, and Ctrl-C ends the sweep. Only that mark, with
+  no volume recorded, sweeps by name: otherwise `volume down` deletes the recorded volume alone, so another checkout's
+  volume of the same project is never deleted unasked.
 - **`volume = "<id>"` keeps its meaning:** a volume you keep, never set with `volume_gb`.
 
 ## What it cost
@@ -285,7 +286,7 @@ Each verb reads `gpunit.toml` from the working directory, or the file `--spec <p
 | `1` | refused or failed; the teardown failed |
 | `2` | usage: an unknown verb, a missing command, an unreadable spec path, `serve` or `volume up --serve` without `--ceiling`, an unknown model, `spend --days` under 1 or over 3660, `volume` without `up` or `down` |
 | `3` | a create's answer was lost; a pod may exist and bill — run `gpunit down`; for a volume's create, `gpunit volume down` |
-| `128+n` | signal `n` stopped `run` or `serve`, or killed `run`'s command, and the teardown succeeded; a failed teardown is still `1` |
+| `128+n` | signal `n` stopped `run` or `serve`, or killed `run`'s command, and the teardown succeeded; a failed teardown is still `1`; Ctrl-C at `volume down`'s sweep question is `130` |
 
 gpunit's own lines go to stderr, each opening with the UTC time; stdout belongs to the command, or to `serve`'s
 chat and `--api`'s two lines, or to `spend`'s report.

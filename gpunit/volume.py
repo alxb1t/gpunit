@@ -1,6 +1,7 @@
 """Make, extend and end a working window's network volume: `volume up · down`."""
 
 import math
+import signal
 import sys
 from dataclasses import replace
 from decimal import ROUND_UP, Decimal
@@ -59,7 +60,7 @@ def up(
     except Lost as lost:
         log.say(str(lost))
         log.say(f"the create's outcome is unknown: a volume {name} may exist and bill;")
-        log.say("run gpunit volume down, which finds and deletes it")
+        log.say("run gpunit volume down, which finds it and asks before deleting it")
         raise
     ends = log.utc(spec.volume_ceiling_s)
     state.write_window(Window(volume_id, datacenter, spec.volume_gb, ends))
@@ -98,6 +99,8 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
 def _sweep(name: str, provider: Provider, state: State) -> int:
     """Offer each unrecorded volume `name` lists for deletion; clear the mark; 0, or 1.
 
+    Ctrl-C at a question ends the sweep, the mark kept, and returns 130.
+
     A volume this machine's ledger records is another checkout's, and is skipped;
     any other is named and deleted on a yes alone, since a teammate's on the
     account carries the same name and a network volume's delete cannot be undone.
@@ -112,7 +115,16 @@ def _sweep(name: str, provider: Provider, state: State) -> int:
     for volume_id in listed:
         if volume_id in known:
             continue
-        answer = _ask(f"delete volume {volume_id}, named {name} but in no record?")
+        question = f"delete volume {volume_id}, named {name} but in no record?"
+        # No script or agent answers for an unrecorded volume: 0011 design D5.
+        try:
+            answer = _ask(question) if sys.stdin.isatty() else None
+        except KeyboardInterrupt:
+            log.say(
+                f"the sweep stopped at volume {volume_id}; it and the rest are kept; "
+                "run gpunit volume down"
+            )
+            return 128 + signal.SIGINT
         if answer is None:
             log.say(f"volume {volume_id} kept: no answer; run gpunit volume down")
             settled = False
@@ -198,12 +210,21 @@ def _agree(
     most = most_cost(size_gb, ceiling_s)
     log.say(f"price: ${VOLUME_GB_MONTH}/GB a month")
     log.say(f"at most ${most} for {size_gb} GB over {_hours(ceiling_s)}")
-    if not yes and not _ask(f"{question} for at most ${most}?"):
+    if yes:
+        return
+    try:
+        agreed = _ask(f"{question} for at most ${most}?")
+    except KeyboardInterrupt:
+        agreed = False
+    if not agreed:
         log.refuse(refused)
 
 
 def _ask(question: str) -> bool | None:
-    """Ask `question` [y/N]; return whether the answer is yes, or None for no answer."""
+    """Ask `question` [y/N]; return whether the answer is yes, or None for no answer.
+
+    Ctrl-C re-raises `KeyboardInterrupt`, for the caller to end on.
+    """
     try:
         answer = input(f"{question} [y/N] ")
     except EOFError:
@@ -211,7 +232,7 @@ def _ask(question: str) -> bool | None:
     except KeyboardInterrupt:
         # Ends the prompt's line, so what follows opens at its start.
         print(file=sys.stderr, flush=True)
-        return None
+        raise
     return answer.strip().lower() in ("y", "yes")
 
 

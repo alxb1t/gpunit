@@ -31,6 +31,14 @@ STEP_LINE = "2026-10-07T00:00:05Z step: the command"
 BOOT_LOG = [KEY_LINE, STEP_LINE]
 
 
+class TtyInput(io.StringIO):
+    """A stdin that holds `text` and says it is a terminal."""
+
+    def isatty(self) -> bool:
+        """Return True: a person is at the keyboard."""
+        return True
+
+
 class FakeClock:
     """A clock whose sleeps advance it at once."""
 

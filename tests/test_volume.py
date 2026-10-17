@@ -1,6 +1,7 @@
 import io
 from decimal import Decimal
 from pathlib import Path
+from typing import NoReturn
 
 import pytest
 
@@ -8,7 +9,7 @@ from gpunit import ledger, log
 from gpunit.provider import GpuInfo, Lost, Refused
 from gpunit.state import State
 from gpunit.volume import most_cost
-from tests.fakes import FakeProvider
+from tests.fakes import FakeProvider, TtyInput
 from tests.helpers import (
     NO_REQUESTS,
     VALID,
@@ -19,6 +20,10 @@ from tests.helpers import (
 )
 
 CARDS = WINDOW.replace('["RTX 4090", "RTX A6000"]', '["NVIDIA A40", "NVIDIA L40"]')
+
+
+def interrupt(prompt: str) -> NoReturn:
+    raise KeyboardInterrupt
 
 
 @pytest.mark.spec("volume:up:datacenter-from-stock")
@@ -116,6 +121,19 @@ def test_no_is_the_default(
     assert ("not created" in capsys.readouterr().err) is not created
 
 
+@pytest.mark.spec("volume:up:no-by-default")
+def test_an_interrupt_at_the_price_creates_nothing(
+    cwd: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_spec(cwd, WINDOW)
+    monkeypatch.setattr("builtins.input", interrupt)
+    provider = FakeProvider()
+
+    assert gpunit(["volume", "up"], provider=provider) == 1
+    assert provider.named("create_volume") == []
+    assert "not created" in capsys.readouterr().err
+
+
 @pytest.mark.spec("volume:up:price-names-the-window")
 def test_the_price_names_the_window(
     cwd: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
@@ -157,7 +175,8 @@ def test_a_lost_create_keeps_the_pending_mark(
     assert gpunit(["volume", "up", "--yes"], provider=provider) == 3
     assert State(cwd).volume_pending.exists()
     assert State(cwd).window() is None
-    assert "run gpunit volume down" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "run gpunit volume down, which finds it and asks before deleting it" in err
 
 
 @pytest.mark.spec("volume:up:lost-create-exits-3")
@@ -258,7 +277,7 @@ def test_a_lost_create_is_swept(
 ) -> None:
     state = State(cwd)
     state.mark_volume_pending()
-    monkeypatch.setattr("sys.stdin", io.StringIO("y\n"))
+    monkeypatch.setattr("sys.stdin", TtyInput("y\n"))
     provider = FakeProvider(volume_listings=[["v9"]])
 
     assert gpunit(["volume", "down"], provider=provider) == 0
@@ -296,7 +315,7 @@ def test_a_failed_sweep_keeps_the_pending_mark(
 ) -> None:
     state = State(cwd)
     state.mark_volume_pending()
-    monkeypatch.setattr("sys.stdin", io.StringIO("y\n"))
+    monkeypatch.setattr("sys.stdin", TtyInput("y\n"))
     provider = FakeProvider(volume_listings=[["v9"]], volume_deletes={"v9": 500})
 
     assert gpunit(["volume", "down"], provider=provider) == 1
@@ -358,13 +377,15 @@ def test_a_volume_the_ledger_records_is_not_swept(
     ledger.record_volume("isekai", "v5", log.utc(3600))
     state = State(cwd)
     state.mark_volume_pending()
-    monkeypatch.setattr("sys.stdin", io.StringIO("y\n"))
+    monkeypatch.setattr("sys.stdin", TtyInput("y\n"))
     provider = FakeProvider(volume_listings=[["v5", "v9"]])
 
     assert gpunit(["volume", "down"], provider=provider) == 0
     assert provider.named("delete_volume") == [("v9",)]
     assert not state.volume_pending.exists()
-    assert "v5" not in capsys.readouterr().out
+    captured = capsys.readouterr()
+    assert "v5" not in captured.out
+    assert "v5" not in captured.err
 
 
 @pytest.mark.spec("volume:down:sweep-asks")
@@ -383,7 +404,7 @@ def test_the_sweep_asks_before_each_delete(
 ) -> None:
     state = State(cwd)
     state.mark_volume_pending()
-    monkeypatch.setattr("sys.stdin", io.StringIO(answer))
+    monkeypatch.setattr("sys.stdin", TtyInput(answer))
     provider = FakeProvider(volume_listings=[["v9"]])
 
     assert gpunit(["volume", "down"], provider=provider) == exit_code
@@ -396,3 +417,57 @@ def test_the_sweep_asks_before_each_delete(
     if answer == "":
         assert "volume v9 kept" in captured.err
         assert "gpunit volume down" in captured.err
+
+
+@pytest.mark.spec("volume:down:sweep-needs-a-terminal")
+@pytest.mark.parametrize("tty", [False, True], ids=["pipe", "twin-terminal"])
+def test_the_sweep_asks_only_a_terminal(
+    tty: bool,
+    cwd: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    state = State(cwd)
+    state.mark_volume_pending()
+    monkeypatch.setattr("sys.stdin", TtyInput("y\n") if tty else io.StringIO("y\n"))
+    provider = FakeProvider(volume_listings=[["v9"]])
+
+    assert gpunit(["volume", "down"], provider=provider) == (0 if tty else 1)
+    assert bool(provider.named("delete_volume")) is tty
+    assert state.volume_pending.exists() is not tty
+    captured = capsys.readouterr()
+    assert ("[y/N]" in captured.out) is tty
+    if not tty:
+        assert "volume v9 kept: no answer; run gpunit volume down" in captured.err
+
+
+@pytest.mark.spec("volume:down:ctrl-c-ends-the-sweep")
+@pytest.mark.parametrize("ctrl_c", [True, False], ids=["ctrl-c", "twin-no"])
+def test_ctrl_c_ends_the_sweep(
+    ctrl_c: bool,
+    cwd: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    state = State(cwd)
+    state.mark_volume_pending()
+    monkeypatch.setattr("sys.stdin", TtyInput(""))
+    asked: list[str] = []
+
+    def answer(prompt: str) -> str:
+        asked.append(prompt)
+        if ctrl_c:
+            raise KeyboardInterrupt
+        return "n"
+
+    monkeypatch.setattr("builtins.input", answer)
+    provider = FakeProvider(volume_listings=[["v8", "v9"]])
+
+    assert gpunit(["volume", "down"], provider=provider) == (130 if ctrl_c else 0)
+    assert provider.named("delete_volume") == []
+    assert ["v9" in prompt for prompt in asked] == (
+        [False] if ctrl_c else [False, True]
+    )
+    assert state.volume_pending.exists() is ctrl_c
+    if ctrl_c:
+        assert "run gpunit volume down" in capsys.readouterr().err
