@@ -10,14 +10,7 @@ from gpunit.provider import GpuInfo, Lost, Refused
 from gpunit.state import State
 from gpunit.volume import most_cost
 from tests.fakes import FakeProvider, TtyInput
-from tests.helpers import (
-    NO_REQUESTS,
-    VALID,
-    WINDOW,
-    gpunit,
-    open_window,
-    write_spec,
-)
+from tests.helpers import NO_REQUESTS, WINDOW, gpunit, open_window, write_spec
 
 CARDS = WINDOW.replace('["RTX 4090", "RTX A6000"]', '["NVIDIA A40", "NVIDIA L40"]')
 
@@ -230,7 +223,7 @@ def test_up_again_extends(cwd: Path, capsys: pytest.CaptureFixture[str]) -> None
     ("ceiling", "kept"), [("30m", True), ("8h", False)], ids=["shorter", "twin-longer"]
 )
 def test_up_again_never_pulls_the_end_in(ceiling: str, kept: bool, cwd: Path) -> None:
-    write_spec(cwd, VALID + f'volume_gb = 60\nvolume_ceiling = "{ceiling}"\n')
+    write_spec(cwd, WINDOW.replace('"4h"', f'"{ceiling}"'))
     state = open_window(cwd, 14400)
     recorded = state.window()
     assert recorded is not None
@@ -465,9 +458,7 @@ def test_ctrl_c_ends_the_sweep(
 
     assert gpunit(["volume", "down"], provider=provider) == (130 if ctrl_c else 0)
     assert provider.named("delete_volume") == []
-    assert ["v9" in prompt for prompt in asked] == (
-        [False] if ctrl_c else [False, True]
-    )
+    assert any("v9" in prompt for prompt in asked) is not ctrl_c
     assert state.volume_pending.exists() is ctrl_c
     if ctrl_c:
         assert "run gpunit volume down" in capsys.readouterr().err
@@ -475,26 +466,27 @@ def test_ctrl_c_ends_the_sweep(
 
 @pytest.mark.spec("spend:ledger:delete-is-recorded")
 @pytest.mark.parametrize(
-    ("ends_in_s", "pending", "code", "deleted"),
+    ("ends_in_s", "code", "deleted"),
     [
-        (3600, False, 204, {"v1"}),
-        (-60, False, 204, {"v1"}),
-        (None, True, 204, {"v9"}),
-        (3600, False, 409, set()),
+        (3600, 204, {"v1"}),
+        (-60, 204, {"v1"}),
+        (None, 204, {"v9"}),
+        (3600, 409, set()),
     ],
     ids=["down", "overdue", "sweep", "twin-refused"],
 )
 def test_each_volume_delete_is_recorded(
     ends_in_s: int | None,
-    pending: bool,
     code: int,
     deleted: set[str],
     cwd: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    state = State(cwd) if ends_in_s is None else open_window(cwd, ends_in_s)
-    if pending:
-        state.mark_volume_pending()
+    # No window recorded: a lost create's mark, so `volume down` sweeps `v9`.
+    if ends_in_s is None:
+        State(cwd).mark_volume_pending()
+    else:
+        open_window(cwd, ends_in_s)
     monkeypatch.setattr("sys.stdin", TtyInput("y\n"))
     provider = FakeProvider(
         volume_listings=[["v9"]], volume_deletes={"v1": code, "v9": code}

@@ -14,7 +14,7 @@ from gpunit.provider import PodInfo, Provider, VolumeInfo
 from gpunit.runpod import RunPod
 from gpunit.serve import session, table
 from gpunit.spec import Spec
-from gpunit.state import State, Window
+from gpunit.state import State
 from tests.fakes import (
     RUNNING,
     Answer,
@@ -23,7 +23,7 @@ from tests.fakes import (
     _Response,
     fixture,
 )
-from tests.helpers import gpunit
+from tests.helpers import gpunit, open_window
 
 MODELS = (200, b'{"object": "list", "data": [{"id": "qwen3-4b"}]}')
 NOT_YET = urllib.error.URLError(ConnectionRefusedError(61, "Connection refused"))
@@ -563,7 +563,7 @@ def test_serve_sweeps_an_overdue_volume_before_the_price(
 ) -> None:
     place = session.home("qwen3-4b")
     place.mkdir(parents=True)
-    State(place).write_window(Window("v3", "EU-RO-1", 40, log.utc(-60)))
+    open_window(place, -60, "v3")
     provider = FakeProvider()
 
     assert served(provider, FakeOpener(MODELS), yes=False) == 1

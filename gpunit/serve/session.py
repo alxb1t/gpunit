@@ -67,9 +67,8 @@ def serve(
         state = State(place)
         # Before the price, as every command sweeps first: 0011 design D3.
         lifecycle.sweep_window(state, lambda: provider)
-        window = state.window()
-        if spec.volume_gb is not None and (window is None or window.ends_within(0)):
-            log.refuse("no window volume is up; run gpunit volume up")
+        if spec.volume_gb is not None:
+            lifecycle.live_window(state)
         _agree(spec, provider, yes, ask)
         place.mkdir(mode=0o700, parents=True, exist_ok=True)
         kept: _Kept | None = None

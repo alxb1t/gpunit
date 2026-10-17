@@ -96,7 +96,7 @@ def test_an_old_key_line_echoed_into_a_full_tail_is_no_older_boot(
     echoed = ["gpunit host key: SHA256:forged", "x step: the command"]
     # The twin's read is a line short of the bound, and opens with boot's first line.
     head = [] if full else [CEILING_LINE]
-    filler = ["command output"] * (5000 - len(echoed) - len(head) - (0 if full else 1))
+    filler = ["command output"] * ((5000 if full else 4999) - len(head) - len(echoed))
     provider = FakeProvider(logs=[[*head, *filler, *echoed]])
 
     assert gpunit(["up"], provider=provider) == 1

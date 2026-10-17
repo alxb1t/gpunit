@@ -116,10 +116,13 @@ def _sweep(name: str, provider: Provider, state: State) -> int:
     for volume_id in listed:
         if volume_id in known:
             continue
-        question = f"delete volume {volume_id}, named {name} but in no record?"
         # No script or agent answers for an unrecorded volume: 0011 design D5.
         try:
-            answer = _ask(question) if sys.stdin.isatty() else None
+            answer = (
+                _ask(f"delete volume {volume_id}, named {name} but in no record?")
+                if sys.stdin.isatty()
+                else None
+            )
         except KeyboardInterrupt:
             log.say(
                 f"the sweep stopped at volume {volume_id}; it and the rest are kept; "
@@ -212,10 +215,8 @@ def _agree(
     most = most_cost(size_gb, ceiling_s)
     log.say(f"price: ${VOLUME_GB_MONTH}/GB a month")
     log.say(f"at most ${most} for {size_gb} GB over {_hours(ceiling_s)}")
-    if yes:
-        return
     try:
-        agreed = _ask(f"{question} for at most ${most}?")
+        agreed = yes or _ask(f"{question} for at most ${most}?")
     except KeyboardInterrupt:
         agreed = False
     if not agreed:

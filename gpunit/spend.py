@@ -78,7 +78,7 @@ def spend(provider: Provider, days: int, *, as_json: bool) -> int:
     log.say(STILL_BILLING)
     today = _midnight(last)
     billed_today = {cost.volume_id for cost in volumes if cost.start >= today}
-    # A volume deleted today still bills today: 0011 design D7.
+    # A volume the ledger records as deleted is not named: 0011 design D7.
     for volume_id in sorted((billed_today & set(windows)) - ledger.deleted()):
         # Before today's midnight: a volume deleted at its end today still bills today.
         if windows[volume_id].ends < today:

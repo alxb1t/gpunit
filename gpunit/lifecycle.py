@@ -25,7 +25,7 @@ from gpunit.provider import (
     pod_name,
 )
 from gpunit.spec import Spec
-from gpunit.state import Record, State
+from gpunit.state import Record, State, Window
 
 POLL_S = 5
 # The statuses of a container that is not running; two polls in a row end the wait.
@@ -261,12 +261,18 @@ def _report(info: PodInfo | None, record: Record, as_json: bool) -> None:
         print(" ".join(f"{key}={value}" for key, value in report.items()))
 
 
-def _in_window(spec: Spec, state: State) -> Spec:
-    """Return `spec` mounting the window volume; refuse a session that outlives it."""
+def live_window(state: State) -> Window:
+    """Return the recorded window volume; refuse when none is up."""
     window = state.window()
     # A volume still recorded after the sweep is one whose delete failed.
     if window is None or window.ends_within(0):
         log.refuse("no window volume is up; run gpunit volume up")
+    return window
+
+
+def _in_window(spec: Spec, state: State) -> Spec:
+    """Return `spec` mounting the window volume; refuse a session that outlives it."""
+    window = live_window(state)
     if window.ends_within(spec.ceiling_s + spec.timeout_s):
         log.refuse(
             f"the volume ends at {window.ends}; shorten the ceiling or run gpunit "
