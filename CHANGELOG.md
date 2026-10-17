@@ -10,7 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `boot/boot.py`: the pod's boot in stdlib Python 3.10, one function a step, every `boot:*` scenario unit-tested in
-  `tests/test_boot_steps.py`; it prints `boot.sh`'s lines and needs neither `curl` nor `env` (`0012`).
+  `tests/test_boot_steps.py`; it prints `boot.sh`'s lines and needs neither `curl` nor `env`. It pauses 1s after its
+  key line, so RunPod's log keeps it before `step: the command` (`0012`).
 - The gate holds `boot/boot.py` at 100 % line and branch coverage (`pytest-cov`) and type-checks it as Python 3.10.
 
 ### Changed
@@ -26,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   name the Python files (`0012`).
 - `gpunit-vllm`, `gpunit-live` and `gpunit-live-dead` rebuilt on `boot.py` at `v0.8-rc2` and re-pinned by digest
   (`0012`).
+- `make live`, `make live-dead`, `make live-volume` and `make live-serve` passed on the `v0.8-rc2` images; their
+  tails are in `live/last_run.txt` and `live/serve_last_run.txt` (`0012`).
 
 ### Removed
 

@@ -208,3 +208,51 @@ Connection reset by 213.173.108.167 port 15603
 check passed: the dead pod ended the wait and was deleted
 2026-10-16T12:17:00Z volume 7jdg95brhb deleted
 The account's pod and network-volume listings (RunPod's REST v2, read after the runs) were empty.
+
+2026-10-17 — make live-serve, 0012-boot-in-python
+
+`boot.py` and `launch.py` on `gpunit-vllm` at `v0.8-rc2`, at `01ba5d9`: the endpoint answered one chat request and
+one tool call, then a new pod chatted one prompt from the window volume's weights. The `loading:` lines and the
+tunnel's `channel 2: open failed` lines are left out. An earlier run on `v0.8-rc1` failed its second session with
+`no host-key line within 60s`, the key line merged after `step: the command` (design D1).
+
+2026-10-17T15:49:44Z data centre: EUR-IS-1
+2026-10-17T15:49:44Z price: $0.07/GB a month
+2026-10-17T15:49:44Z at most $0.01 for 40 GB over 1h
+2026-10-17T15:49:44Z volume zuyinldzth up in EUR-IS-1, 40 GB, until 2026-10-17T16:49:44Z
+2026-10-17T15:49:45Z price: NVIDIA RTX A5000 $0.27/h
+2026-10-17T15:49:45Z price: NVIDIA GeForce RTX 4090 $0.89/h
+2026-10-17T15:49:46Z price: NVIDIA L4 $0.59/h
+2026-10-17T15:49:46Z at most $0.75 for 1800s and a 1200s wait for SSH
+2026-10-17T15:49:48Z creating on NVIDIA RTX A5000
+2026-10-17T15:49:49Z create on 'NVIDIA RTX A5000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-17T15:49:49Z creating on NVIDIA GeForce RTX 4090
+2026-10-17T15:49:50Z pod tzoyygfgkmy5jd created; waiting for SSH
+2026-10-17T15:56:01Z host key verified: SHA256:fCeC3UdWI2ADXxZdZAe0n6CKQxB4zRXuiQOCoapyDHk
+2026-10-17T15:56:01Z session up: pod tzoyygfgkmy5jd, root@157.157.221.29 -p 31596
+2026-10-17T15:58:28Z qwen3-4b answers on http://127.0.0.1:60753/v1
+2026-10-17T15:58:28Z serving until interrupted or the ceiling; Ctrl-C ends the session
+{"id":"chatcmpl-a781642b57f1d4a1","object":"chat.completion","created":1792252708,"model":"qwen3-4b","choices":[{"index":0,"message":{"role":"assistant","content":"Hello!","refusal":null,"annotations":null,"audio":null,"function_call":null,"reasoning":null},"logprobs":null,"finish_reason":"stop","stop_reason":null,"token_ids":null,"routed_experts":null}],"service_tier":null,"system_fingerprint":"vllm-0.31.0-8f880aa1","usage":{"prompt_tokens":18,"total_tokens":21,"completion_tokens":3,"prompt_tokens_details":null,"completion_tokens_details":{"reasoning_tokens":0}},"prompt_logprobs":null,"prompt_token_ids":null,"prompt_text":null,"kv_transfer_params":null,"ec_transfer_params":null,"metrics":null}
+tool call: get_weather {"city": "Paris"}
+2026-10-17T15:58:30Z pod tzoyygfgkmy5jd deleted
+2026-10-17T15:58:30Z price: $0.07/GB a month
+2026-10-17T15:58:30Z at most $0.01 for 40 GB over 1h
+2026-10-17T15:58:30Z volume zuyinldzth extended until 2026-10-17T16:58:30Z
+2026-10-17T15:58:31Z price: NVIDIA RTX A5000 $0.27/h
+2026-10-17T15:58:31Z price: NVIDIA GeForce RTX 4090 $0.89/h
+2026-10-17T15:58:32Z price: NVIDIA L4 $0.59/h
+2026-10-17T15:58:32Z at most $0.75 for 1800s and a 1200s wait for SSH
+2026-10-17T15:58:34Z creating on NVIDIA RTX A5000
+2026-10-17T15:58:35Z create on 'NVIDIA RTX A5000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-17T15:58:35Z creating on NVIDIA GeForce RTX 4090
+2026-10-17T15:58:36Z pod gpk106ntjy70yd created; waiting for SSH
+2026-10-17T16:07:17Z host key verified: SHA256:eE2NAySl25Sq/NACC4BiQ8cbIwRBQMGmag9nm6tqTRY
+2026-10-17T16:07:17Z session up: pod gpk106ntjy70yd, root@157.157.221.29 -p 31674
+2026-10-17T16:09:40Z qwen3-4b answers on http://127.0.0.1:61034/v1
+> 4
+>
+2026-10-17T16:09:42Z pod gpk106ntjy70yd deleted
+2026-10-17T16:09:43Z volume zuyinldzth deleted
+
+The account's pod listing (RunPod's REST v2, read after the runs) was empty; its network-volume listing held
+`gpunit-isekai` alone, isekai's own volume, made by none of these runs.

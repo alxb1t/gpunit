@@ -12,7 +12,7 @@ task names.
 - [x] 4 — The live scripts
 - [x] 5 — The handover
 - [x] 6 — ⚠️ **HUMAN** — the images
-- [ ] 7 — ⚠️ **HUMAN · METERED** — make live, make live-dead, make live-volume, make live-serve
+- [x] 7 — ⚠️ **HUMAN · METERED** — make live, make live-dead, make live-volume, make live-serve
 
 ## 1 — boot.py
 
@@ -70,5 +70,5 @@ task names.
 
 ## 7 — ⚠️ **HUMAN · METERED** — make live, make live-dead, make live-volume, make live-serve
 
-- [ ] 7.1 **HUMAN · METERED** — with `RUNPOD_API_KEY` set, run `make live`, `make live-dead`, `make live-volume` and `make live-serve`; confirm through the RunPod console that no pod and no `gpunit-` volume is left; append the tails per [D13](design.md#d13), each under `<date> — make <target>, 0012-boot-in-python`. A failed target is a halt: say so and keep its lines.
+- [x] 7.1 **HUMAN · METERED** — with `RUNPOD_API_KEY` set, run `make live`, `make live-dead`, `make live-volume` and `make live-serve`; confirm through the RunPod console that no pod and no `gpunit-` volume is left; append the tails per [D13](design.md#d13), each under `<date> — make <target>, 0012-boot-in-python`. A failed target is a halt: say so and keep its lines.
   Verify: `grep -c -E '^[0-9]{4}-[0-9]{2}-[0-9]{2} — make live(-dead|-volume)?, 0012-boot-in-python$' live/last_run.txt` prints `3`, and `grep -c -E '^[0-9]{4}-[0-9]{2}-[0-9]{2} — make live-serve, 0012-boot-in-python$' live/serve_last_run.txt` prints `1`.
