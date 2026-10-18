@@ -5,7 +5,7 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 
 ## Progress
 
-- [ ] 1 — The lookup
+- [x] 1 — The lookup
 - [ ] 2 — The rows
 - [ ] 3 — The launcher
 - [ ] 4 — The CLI
@@ -16,13 +16,13 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 
 ## 1 — The lookup
 
-- [ ] 1.1 **HALT CHECK** — none of this change exists yet, and the cards it closes are in the backlog.
+- [x] 1.1 **HALT CHECK** — none of this change exists yet, and the cards it closes are in the backlog.
   Verify: `grep -c -E 'GPUNIT_MODELS|XDG_CONFIG_HOME' gpunit/serve/table.py` prints `0`, `grep -c '"--no-enable-log-requests"' gpunit/serve/models.toml` prints `2`, `grep -c 'no-enable-log-requests' serve/launch.py` prints `0`, `test -e live/models.toml; echo $?` prints `1`, and `grep -c -E '^- \*\*0013·(R1|R2|R3|R5|R6|R7|S4|S5) ' .minions/backlog.md` prints `8`.
-- [ ] 1.2 In `tests/conftest.py`'s `isolated_home`, delete `GPUNIT_MODELS` and `XDG_CONFIG_HOME` from the environment, per [D1](design.md#d1).
+- [x] 1.2 In `tests/conftest.py`'s `isolated_home`, delete `GPUNIT_MODELS` and `XDG_CONFIG_HOME` from the environment, per [D1](design.md#d1).
   Verify: `grep -c -E 'delenv\("(GPUNIT_MODELS|XDG_CONFIG_HOME)"' tests/conftest.py` prints `2`.
-- [ ] 1.3 Add `user_file` and `rows`, `Row.source`, `Table.user` and `Table.replaced` to `gpunit/serve/table.py`, per [D1](design.md#d1) and [D2](design.md#d2); bind the `serve:rows:` keys `models-flag-first`, `env-before-xdg`, `xdg-default`, `no-file-bundled-only`, `named-file-missing-refused` and `merged` in `tests/test_serve_table.py`.
+- [x] 1.3 Add `user_file` and `rows`, `Row.source`, `Table.user` and `Table.replaced` to `gpunit/serve/table.py`, per [D1](design.md#d1) and [D2](design.md#d2); bind the `serve:rows:` keys `models-flag-first`, `env-before-xdg`, `xdg-default`, `no-file-bundled-only`, `named-file-missing-refused` and `merged` in `tests/test_serve_table.py`.
   Verify: `grep -c -E '"serve:rows:(models-flag-first|env-before-xdg|xdg-default|no-file-bundled-only|named-file-missing-refused|merged)"' tests/test_serve_table.py` prints a number of at least `6`, and `uv run pytest -q tests/test_serve_table.py` exits 0.
-- [ ] 1.4 Make `_known` in `gpunit/cli.py`, and `serve`, `down` and `_window_spec` in `gpunit/serve/session.py`, read `table.rows(None)`; `_known` prints [D2](design.md#d2)'s replace line; bind `serve:rows:same-name-replaces` in `tests/test_cli.py`.
+- [x] 1.4 Make `_known` in `gpunit/cli.py`, and `serve`, `down` and `_window_spec` in `gpunit/serve/session.py`, read `table.rows(None)`; `_known` prints [D2](design.md#d2)'s replace line; bind `serve:rows:same-name-replaces` in `tests/test_cli.py`.
   Verify: `cat gpunit/cli.py gpunit/serve/session.py | grep -c 'table\.load('` prints `0`, `grep -c 'replaces the bundled' gpunit/cli.py` prints `1`, `grep -c '"serve:rows:same-name-replaces"' tests/test_cli.py` prints `1`, and `uv run pytest -q` exits 0.
 
 ## 2 — The rows

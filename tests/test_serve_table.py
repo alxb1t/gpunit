@@ -5,6 +5,8 @@ import pytest
 from gpunit import log
 from gpunit.serve import table
 from gpunit.spec import DIGEST, Port
+from tests.fakes import FakeProvider
+from tests.helpers import NO_REQUESTS, gpunit
 
 PINNED = "1cfa9a7208912126459214e8b04321603b3df60c"
 LARGER_PINNED = "017b9c7af6b5689d5dd426a76e0bc077eb5ca20a"
@@ -121,3 +123,134 @@ def test_a_row_becomes_the_sessions_spec() -> None:
         "VLLM_API_KEY": "k" * 43,
     }
     assert not any(name.startswith("GPUNIT_") for name in spec.env)
+
+
+GRANITE = """\
+[models."granite-4.0-micro"]
+repo = "ibm-granite/granite-4.0-micro"
+revision = "56111ae135df9c53a78c99028e7bc24035a9e979"
+served = "granite-4.0-micro"
+args = ["--max-model-len", "16384", "--enable-auto-tool-choice", "--tool-call-parser",
+        "hermes"]
+vram_gb = 24
+gpus = ["NVIDIA RTX A5000", "NVIDIA GeForce RTX 4090", "NVIDIA L4"]
+disk_gb = 40
+"""
+
+
+def _user_file(path: Path, name: str = "granite-4.0-micro") -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(GRANITE.replace("granite-4.0-micro", name), encoding="utf-8")
+    return path
+
+
+def _user_rows(given: Path | None = None) -> list[str]:
+    return sorted(set(table.rows(given).models) - set(table.load().models))
+
+
+@pytest.mark.spec("serve:rows:models-flag-first")
+@pytest.mark.parametrize("flag", [True, False], ids=["given", "twin-not-given"])
+def test_the_given_file_comes_first(
+    flag: bool, tmp_path: Path, isolated_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    given = _user_file(tmp_path / "given.toml", "given")
+    monkeypatch.setenv("GPUNIT_MODELS", str(_user_file(tmp_path / "env.toml", "env")))
+    _user_file(isolated_home / ".config" / "gpunit" / "models.toml", "default")
+
+    assert _user_rows(given if flag else None) == (["given"] if flag else ["env"])
+
+
+@pytest.mark.spec("serve:rows:env-before-xdg")
+@pytest.mark.parametrize("value", ["set", "", None], ids=["set", "empty", "unset"])
+def test_the_environment_comes_before_the_default(
+    value: str | None,
+    tmp_path: Path,
+    isolated_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _user_file(isolated_home / ".config" / "gpunit" / "models.toml", "default")
+    if value == "set":
+        monkeypatch.setenv(
+            "GPUNIT_MODELS", str(_user_file(tmp_path / "env.toml", "env"))
+        )
+    elif value == "":
+        monkeypatch.setenv("GPUNIT_MODELS", "")
+
+    assert _user_rows() == (["env"] if value == "set" else ["default"])
+
+
+@pytest.mark.spec("serve:rows:xdg-default")
+@pytest.mark.parametrize(
+    "xdg",
+    ["absolute", "relative", "empty", None],
+    ids=["absolute", "relative", "empty", "unset"],
+)
+def test_the_default_follows_xdg(
+    xdg: str | None,
+    tmp_path: Path,
+    isolated_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _user_file(tmp_path / "cfg" / "gpunit" / "models.toml", "xdg")
+    _user_file(tmp_path / "rel" / "gpunit" / "models.toml", "relative")
+    _user_file(isolated_home / ".config" / "gpunit" / "models.toml", "home")
+    monkeypatch.chdir(tmp_path)
+    if xdg == "absolute":
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
+    elif xdg == "relative":
+        # The XDG base directory spec: a relative path is ignored.
+        monkeypatch.setenv("XDG_CONFIG_HOME", "rel")
+    elif xdg == "empty":
+        monkeypatch.setenv("XDG_CONFIG_HOME", "")
+
+    assert _user_rows() == (["xdg"] if xdg == "absolute" else ["home"])
+
+
+@pytest.mark.spec("serve:rows:no-file-bundled-only")
+def test_no_user_file_leaves_the_bundled_rows_alone(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    found = table.rows()
+
+    assert found == table.load()
+    assert found.user is None
+    assert found.replaced == ()
+    assert all(row.source == "bundled" for row in found.models.values())
+    assert capsys.readouterr().err == ""
+
+
+@pytest.mark.spec("serve:rows:named-file-missing-refused")
+@pytest.mark.parametrize("there", [False, True], ids=["missing", "twin-there"])
+def test_a_named_file_that_cannot_be_read_is_refused(
+    there: bool,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    path = tmp_path / "rows.toml"
+    if there:
+        _user_file(path)
+    monkeypatch.setenv("GPUNIT_MODELS", str(path))
+    monkeypatch.chdir(tmp_path)
+    argv = ["down", "--serve", "qwen3-4b"]
+
+    if there:
+        assert gpunit(argv, provider=FakeProvider()) == 0
+        return
+    assert gpunit(argv, provider=NO_REQUESTS) == 1
+    assert f"refused: {path}: " in capsys.readouterr().err
+
+
+@pytest.mark.spec("serve:rows:merged")
+def test_the_user_rows_join_the_bundled_rows(tmp_path: Path) -> None:
+    path = _user_file(tmp_path / "rows.toml")
+
+    found = table.rows(path)
+
+    assert sorted(found.models) == ["granite-4.0-micro", "qwen3-4b", "qwen3.8-27b"]
+    assert all(row.image == found.image for row in found.models.values())
+    assert found.image == table.load().image
+    assert found.models["granite-4.0-micro"].source == str(path)
+    assert found.models["qwen3-4b"].source == "bundled"
+    assert found.user == path
+    assert found.replaced == ()

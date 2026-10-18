@@ -53,7 +53,7 @@ def serve(
     opener: urllib.request.OpenerDirector | None = None,
 ) -> int:
     """Serve `name` until the session ends; return the exit code `gpunit run` would."""
-    row = table.load().models[name]
+    row = table.rows(None).models[name]
     key = secrets.token_urlsafe(32)
     spec = row.spec(ceiling_s, volume, max_hourly, key, _free_port())
     if volume is None and State(home(name)).window() is not None:
@@ -98,7 +98,7 @@ def serve(
 
 def down(name: str, provider: Provider) -> int:
     """Tear down the session `serve` left for `name`; return 0, or 1 on a fault."""
-    spec = table.load().models[name].spec(0, None, None, "", table.PORT)
+    spec = table.rows(None).models[name].spec(0, None, None, "", table.PORT)
     return lifecycle.down(spec, provider, State(home(name)))
 
 
@@ -118,7 +118,7 @@ def volume_down(name: str, provider: Provider) -> int:
 
 
 def _window_spec(name: str, ceiling_s: int) -> Spec:
-    row = table.load().models[name]
+    row = table.rows(None).models[name]
     spec = row.spec(0, None, None, "", table.PORT)
     return replace(spec, volume_gb=row.disk_gb, volume_ceiling_s=ceiling_s)
 

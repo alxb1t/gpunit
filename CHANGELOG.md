@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `serve` reads the operator's own rows beside the bundled ones, from `GPUNIT_MODELS` or
+  `$XDG_CONFIG_HOME/gpunit/models.toml`; a row of a bundled name replaces it, said in one line (`0014`).
+
 ## [0.9.0] - 2026-10-18
 
 ### Added
