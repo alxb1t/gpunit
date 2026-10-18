@@ -11,7 +11,7 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 - [x] 4 — The CLI
 - [x] 5 — The handover
 - [x] 6 — The cards
-- [ ] 7 — ⚠️ **HUMAN** — the serve image
+- [x] 7 — ⚠️ **HUMAN** — the serve image
 - [ ] 8 — ⚠️ **HUMAN · METERED** — make live-serve on live/models.toml
 
 ## 1 — The lookup
@@ -76,9 +76,9 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 
 ## 7 — ⚠️ **HUMAN** — the serve image
 
-- [ ] 7.1 **HUMAN** — `git push -u origin v0.10_your_own_rows`, then `gh workflow run build-serve-image.yml --ref v0.10_your_own_rows -f tag=v0.10-rc1`, and `gh run watch` on its run, per [D11](design.md#d11).
+- [x] 7.1 **HUMAN** — `git push -u origin v0.10_your_own_rows`, then `gh workflow run build-serve-image.yml --ref v0.10_your_own_rows -f tag=v0.10-rc1`, and `gh run watch` on its run, per [D11](design.md#d11).
   Verify: `gh run list --workflow build-serve-image.yml --branch v0.10_your_own_rows --status success --limit 1 --json databaseId --jq length` prints `1`.
-- [ ] 7.2 **HUMAN** — print the digest with `docker buildx imagetools inspect ghcr.io/alxb1t/gpunit-vllm:v0.10-rc1 | sed -n 's/^Digest: *//p'`, then set `gpunit/serve/models.toml:2` to `image = "ghcr.io/alxb1t/gpunit-vllm@<that digest>"`, per [D11](design.md#d11).
+- [x] 7.2 **HUMAN** — print the digest with `docker buildx imagetools inspect ghcr.io/alxb1t/gpunit-vllm:v0.10-rc1 | sed -n 's/^Digest: *//p'`, then set `gpunit/serve/models.toml:2` to `image = "ghcr.io/alxb1t/gpunit-vllm@<that digest>"`, per [D11](design.md#d11).
   Verify: `grep -c '1a83cf6c73421810210eabb14772c892bbf3086359486c1676da02725dd8ee8b' gpunit/serve/models.toml` prints `0`, and `uv run pytest -q tests/test_serve_table.py` exits 0.
 
 ## 8 — ⚠️ **HUMAN · METERED** — make live-serve on live/models.toml

@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `serve/launch.py` sets `DO_NOT_TRACK`, `HF_HUB_DISABLE_TELEMETRY` and `VLLM_NO_USAGE_STATS` and passes
   `--no-enable-log-requests` last, for every row; the bundled rows drop the flag (`0014`).
+- The serve image rebuilt as `gpunit-vllm:v0.10-rc1`, for the new launcher, and re-pinned by digest (`0014`).
 
 ### Fixed
 
