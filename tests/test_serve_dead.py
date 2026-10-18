@@ -1,6 +1,12 @@
+from pathlib import Path
+
 import pytest
 
-from live.serve_dead import check
+from gpunit.serve import table
+from live import serve_dead
+from live.serve_dead import MODEL, check
+
+ROOT = Path(__file__).parent.parent
 
 # What a run that proves the scenario prints, in the order gpunit says it.
 PROVED = [
@@ -47,3 +53,31 @@ def test_a_run_that_misses_a_part_fails_naming_it(
 
     assert len(failures) == 1
     assert failures[0].startswith(failure)
+
+
+@pytest.mark.spec("serve:wait:dead-pod-ends-the-wait")
+def test_the_proof_reads_the_bundled_table_alone(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # The operator's own healthy row of the proof's name, by both ways it is found.
+    own = (ROOT / "live" / "models.toml").read_text(encoding="utf-8")
+    own = own.replace("granite-4.0-micro", MODEL)
+    named = tmp_path / "models.toml"
+    named.write_text(own, encoding="utf-8")
+    default = tmp_path / "config" / "gpunit" / "models.toml"
+    default.parent.mkdir(parents=True)
+    default.write_text(own, encoding="utf-8")
+    monkeypatch.setenv("GPUNIT_MODELS", str(named))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    seen: list[tuple[str, str]] = []
+
+    def window(model: str, body: object) -> int:
+        # The patched `prove` and the `volume` children read this environment.
+        seen.append((model, table.rows().models[model].source))
+        return 0
+
+    monkeypatch.setattr(serve_dead, "serve_window", window)
+
+    assert serve_dead.main() == 0
+
+    assert seen == [(MODEL, "bundled")]

@@ -9,6 +9,7 @@ import dataclasses
 import os
 import re
 import sys
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -92,7 +93,12 @@ def prove() -> int:
 
 def main() -> int:
     """Prove the dead serve inside the row's window volume, deleted however it ends."""
-    return serve_window(MODEL, prove)
+    # The bundled table alone, here and in each child: a user row of MODEL's name
+    # would replace the broken row and serve a healthy model to the ceiling.
+    os.environ.pop("GPUNIT_MODELS", None)
+    with tempfile.TemporaryDirectory() as empty:
+        os.environ["XDG_CONFIG_HOME"] = empty
+        return serve_window(MODEL, prove)
 
 
 if __name__ == "__main__":

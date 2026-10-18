@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `serve` takes no `datacenters`; `_free_port`'s comment names `127.0.0.1` (`0013·R1`, `R2`, `R3`, `S5`).
 - README's *Measured minimum* and the threat model's G6 name the restricted key's console settings:
   `api.runpod.io/graphql` Read / Write, `api.runpod.ai` None (`0013·R5`).
+- `make live-serve-dead` reads the bundled table alone, so an operator's own `qwen3-4b` row cannot replace the
+  broken one and serve a healthy model to the ceiling (`0014·R1`).
 
 ## [0.9.0] - 2026-10-18
 
