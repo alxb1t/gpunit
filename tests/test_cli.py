@@ -142,9 +142,17 @@ def test_an_unknown_model_exits_2_naming_the_tables_models(
 
 
 @pytest.mark.spec("cli:verbs:serve-unknown-model-exits-2")
-@pytest.mark.parametrize("name", ["own", "qwen3-4b"], ids=["added", "replaced"])
+@pytest.mark.parametrize(
+    ("name", "held"),
+    [
+        ("own", "own ({path}), qwen3-4b (bundled), qwen3.8-27b (bundled)"),
+        ("qwen3-4b", "qwen3-4b ({path}), qwen3.8-27b (bundled)"),
+    ],
+    ids=["added", "replaced"],
+)
 def test_an_unknown_model_names_a_user_rows_file(
     name: str,
+    held: str,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -156,11 +164,7 @@ def test_an_unknown_model_names_a_user_rows_file(
 
     argv = ["serve", "no-such-model", "--ceiling", "1h"]
     assert gpunit(argv, provider=NO_REQUESTS) == 2
-    held = {
-        "own": f"own ({path}), qwen3-4b (bundled), qwen3.8-27b (bundled)",
-        "qwen3-4b": f"qwen3-4b ({path}), qwen3.8-27b (bundled)",
-    }
-    assert f"it holds {held[name]}" in capsys.readouterr().err
+    assert f"it holds {held.format(path=path)}" in capsys.readouterr().err
 
 
 # A user row of qwen3-4b's name, on one card the bundled row also lists.
@@ -232,7 +236,7 @@ def test_models_without_a_model_exits_2_naming_serve(
 
 
 # The row only `rows.toml` holds: its card and disk name it in each request.
-GRANITE = OWN_QWEN.replace("Qwen/Qwen3-4B", "ibm-granite/granite-4.0-micro").replace(
+OWN_ROW = OWN_QWEN.replace("Qwen/Qwen3-4B", "ibm-granite/granite-4.0-micro").replace(
     "disk_gb = 40", "disk_gb = 33"
 )
 
@@ -247,7 +251,7 @@ def test_each_verb_naming_a_model_reads_the_given_file(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     (tmp_path / "rows.toml").write_text(
-        GRANITE.format(name='"granite-4.0-micro"'), encoding="utf-8"
+        OWN_ROW.format(name='"granite-4.0-micro"'), encoding="utf-8"
     )
     flag = ["--models", "rows.toml"] if given else []
     name = "granite-4.0-micro"

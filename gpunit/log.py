@@ -1,5 +1,6 @@
 """Write gpunit's own lines, each opening with the UTC time, to stderr or a sink."""
 
+import functools
 import os
 import sys
 import time
@@ -59,8 +60,13 @@ def clean(text: str, keep: str = "") -> str:
 
     e.g. "\x1b]0;owned\x07loading\x1b[2J 50%" → "]0;ownedloading[2J 50%"
     """
-    drop = _CONTROL if not keep else {c: None for c in _CONTROL if chr(c) not in keep}
-    return text.translate(drop)
+    return text.translate(_drop(keep))
+
+
+# Cached: the chat cleans each streamed part with the same `keep`.
+@functools.cache
+def _drop(keep: str) -> dict[int, None]:
+    return {c: None for c in _CONTROL if chr(c) not in keep}
 
 
 def say(text: str) -> None:

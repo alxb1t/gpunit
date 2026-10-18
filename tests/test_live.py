@@ -192,10 +192,11 @@ def test_the_live_user_file_joins_the_bundled_rows() -> None:
     path = ROOT / "live" / "models.toml"
 
     found = table.rows(path)
+    bundled = table.load()
 
     assert found.models["granite-4.0-micro"].source == str(path)
-    assert found.models["granite-4.0-micro"].image == table.load().image
-    assert table.load().models.keys() < found.models.keys()
+    assert found.models["granite-4.0-micro"].image == bundled.image
+    assert bundled.models.keys() < found.models.keys()
     assert found.replaced == ()
 
 

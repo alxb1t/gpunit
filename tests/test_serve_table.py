@@ -276,12 +276,12 @@ def test_a_user_file_naming_an_image_is_refused(
 
 @pytest.mark.spec("serve:rows:checked-as-bundled")
 @pytest.mark.parametrize(
-    ("old", "new", "named"),
+    ("old", "new", "named", "row"),
     [
-        ('"56111ae135df9c53a78c99028e7bc24035a9e979"', '"main"', "'revision'"),
-        ("disk_gb = 40\n", "", "'disk_gb' is required"),
-        ('"16384"', '"16384 tokens"', "a space"),
-        (GRANITE, "", "'models' must hold at least one row"),
+        ('"56111ae135df9c53a78c99028e7bc24035a9e979"', '"main"', "'revision'", True),
+        ("disk_gb = 40\n", "", "'disk_gb' is required", True),
+        ('"16384"', '"16384 tokens"', "a space", True),
+        (GRANITE, "", "'models' must hold at least one row", False),
     ],
     ids=["moving-revision", "missing-field", "spaced-arg", "empty-file"],
 )
@@ -289,6 +289,7 @@ def test_a_user_row_is_checked_as_a_bundled_row_is(
     old: str,
     new: str,
     named: str,
+    row: bool,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -304,8 +305,7 @@ def test_a_user_row_is_checked_as_a_bundled_row_is(
     err = capsys.readouterr().err
     assert f"refused: {path}: " in err
     assert named in err
-    if named != "'models' must hold at least one row":
-        assert "models.granite-4.0-micro" in err
+    assert ("models.granite-4.0-micro" in err) is row
 
 
 @pytest.mark.spec("serve:rows:logging-on-refused")

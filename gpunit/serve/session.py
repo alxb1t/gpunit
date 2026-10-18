@@ -126,7 +126,7 @@ def volume_down(name: str, provider: Provider, models: Path | None = None) -> in
     return volume.down(_window_spec(name, 0, models), provider, State(home(name)))
 
 
-def _window_spec(name: str, ceiling_s: int, models: Path | None = None) -> Spec:
+def _window_spec(name: str, ceiling_s: int, models: Path | None) -> Spec:
     row = table.rows(models).models[name]
     spec = row.spec(0, None, None, "", table.PORT)
     return replace(spec, volume_gb=row.disk_gb, volume_ceiling_s=ceiling_s)

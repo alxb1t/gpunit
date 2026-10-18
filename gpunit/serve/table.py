@@ -4,7 +4,7 @@ import os
 import re
 import tomllib
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from gpunit import log
@@ -91,7 +91,7 @@ def load(path: Path = TABLE) -> Table:
     image = raw.get("image")
     if not isinstance(image, str) or not DIGEST.search(image):
         log.refuse(f"{path}: 'image' must end in @sha256:<64 hex>, not a tag")
-    return Table(image=image, models=_rows(path, image, raw, "bundled"))
+    return Table(image=image, models=_rows(path, image, raw))
 
 
 def user_file(given: Path | None) -> Path | None:
@@ -119,12 +119,16 @@ def rows(given: Path | None = None) -> Table:
     if path is None:
         return bundled
     raw = _read(path)
-    for key in sorted(raw.keys() - {"models"}):
+    extra = sorted(raw.keys() - {"models"})
+    if extra:
         log.refuse(
-            f"{path}: unknown key {key!r}; a user file holds [models.<name>] rows"
+            f"{path}: unknown key {extra[0]!r}; a user file holds [models.<name>] rows"
             " alone, served on the bundled image"
         )
-    own = _rows(path, bundled.image, raw, str(path))
+    own = {
+        name: replace(row, source=str(path))
+        for name, row in _rows(path, bundled.image, raw).items()
+    }
     return Table(
         image=bundled.image,
         models={**bundled.models, **own},
@@ -140,16 +144,14 @@ def _read(path: Path) -> dict[str, object]:
         log.refuse(f"{path}: {fault}")
 
 
-def _rows(
-    path: Path, image: str, raw: dict[str, object], source: str
-) -> dict[str, Row]:
+def _rows(path: Path, image: str, raw: dict[str, object]) -> dict[str, Row]:
     models = raw.get("models")
     if not isinstance(models, dict) or not models:
         log.refuse(f"{path}: 'models' must hold at least one row")
-    return {name: _row(path, name, image, row, source) for name, row in models.items()}
+    return {name: _row(path, name, image, row) for name, row in models.items()}
 
 
-def _row(path: Path, name: str, image: str, raw: object, source: str) -> Row:
+def _row(path: Path, name: str, image: str, raw: object) -> Row:
     where = f"{path}: models.{name}"
     if not isinstance(raw, dict):
         log.refuse(f"{where} must be a table")
@@ -171,7 +173,6 @@ def _row(path: Path, name: str, image: str, raw: object, source: str) -> Row:
         vram_gb=raw["vram_gb"],
         gpus=strings(where, "gpus", raw["gpus"]),
         disk_gb=raw["disk_gb"],
-        source=source,
     )
 
 
