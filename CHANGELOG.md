@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   model it exits `2` (`0014`).
 - README's *Your own rows*; `live/models.toml`, the `granite-4.0-micro` row `make live-serve` proves; the threat
   model's F13 and T55, the user file. T34 is `partly`: `serve` pods ignore `datacenters` (`0014`).
+- `make live-serve` proved a user file's row, `granite-4.0-micro` from `live/models.toml`, on a restricted key
+  (`live/serve_last_run.txt`, `0014`).
 - A user row passes the bundled rows' checks, and a user file holds rows alone; any row holding
   `--enable-log-requests` is refused. The unknown-model usage error names each row's source (`0014`).
 
@@ -30,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   steer the terminal; the conversation keeps the part as streamed (`0013·S4`).
 - `docs/threat-model.md` re-cites `gpunit/spec.py` and `gpunit/volume.py`; README names the ledger's fields and that
   `serve` takes no `datacenters`; `_free_port`'s comment names `127.0.0.1` (`0013·R1`, `R2`, `R3`, `S5`).
+- README's *Measured minimum* and the threat model's G6 name the restricted key's console settings:
+  `api.runpod.io/graphql` Read / Write, `api.runpod.ai` None (`0013·R5`).
 
 ## [0.9.0] - 2026-10-18
 

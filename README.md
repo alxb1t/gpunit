@@ -344,9 +344,9 @@ Keep private data off stdout and off the volume: both outlive the command.
   list, logs, delete); network volumes (create, read, list, delete); billing (read).
 - **Where it goes:** a request header to `https://api.runpod.io/v2`, never argv, never a redirect; `run`'s command
   does not get it in its environment, though it can read gpunit's (step 3).
-- **Measured minimum:** a restricted key, made in the console at its narrowest settings, covers every call above
-  (2026-10-18, [the probe](docs/threat-model.md#7-the-probe)). RunPod offers no scope finer than the account's pods,
-  volumes and billing, so a leaked key still reaches all of them.
+- **Measured minimum:** a restricted key, made in the console with `api.runpod.io/graphql` Read / Write and
+  `api.runpod.ai` None, covers every call above (2026-10-18, [the probe](docs/threat-model.md#7-the-probe)). RunPod
+  offers no scope finer than the account's pods, volumes and billing, so a leaked key still reaches all of them.
 
 ### Accepted risks
 

@@ -12,7 +12,7 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 - [x] 5 — The handover
 - [x] 6 — The cards
 - [x] 7 — ⚠️ **HUMAN** — the serve image
-- [ ] 8 — ⚠️ **HUMAN · METERED** — make live-serve on live/models.toml
+- [x] 8 — ⚠️ **HUMAN · METERED** — make live-serve on live/models.toml
 
 ## 1 — The lookup
 
@@ -83,8 +83,8 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 
 ## 8 — ⚠️ **HUMAN · METERED** — make live-serve on live/models.toml
 
-- [ ] 8.1 **HUMAN · METERED** — on [D12](design.md#d12)'s restricted key as `RUNPOD_API_KEY`, run `GPUNIT_MODELS=live/models.toml make live-serve MODEL=granite-4.0-micro`, then `uv run gpunit spend --days 1`; confirm in the console that no pod and no `gpunit-` volume is left.
+- [x] 8.1 **HUMAN · METERED** — on [D12](design.md#d12)'s restricted key as `RUNPOD_API_KEY`, run `GPUNIT_MODELS=live/models.toml make live-serve MODEL=granite-4.0-micro`, then `uv run gpunit spend --days 1`; confirm in the console that no pod and no `gpunit-` volume is left.
   Append the tail to `live/serve_last_run.txt` under `<date> — make live-serve granite-4.0-micro, 0014-your-own-rows`. A failed run is a halt: say so and keep its lines.
   Verify: `grep -c -E '^[0-9]{4}-[0-9]{2}-[0-9]{2} — make live-serve granite-4\.0-micro, 0014-your-own-rows$' live/serve_last_run.txt` prints `1`.
-- [ ] 8.2 **HUMAN** — in `README.md`'s `- **Measured minimum:**` line and `docs/threat-model.md`'s `- **G6 measured:**` line, "made in the console at its narrowest settings" → "made in the console with <8.1's per-API settings, as the console names them>", dated as 8.1, per [D9](design.md#d9) (`0013·R5`).
+- [x] 8.2 **HUMAN** — in `README.md`'s `- **Measured minimum:**` line and `docs/threat-model.md`'s `- **G6 measured:**` line, "made in the console at its narrowest settings" → "made in the console with <8.1's per-API settings, as the console names them>", dated as 8.1, per [D9](design.md#d9) (`0013·R5`).
   Verify: `cat README.md docs/threat-model.md | grep -c 'at its narrowest settings'` prints `0`, and `grep -c '^- \*\*Measured minimum:\*\* ' README.md` prints `1`.
