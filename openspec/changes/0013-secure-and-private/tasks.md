@@ -9,7 +9,7 @@ The laptop's fixes, the tunnel, placement, serve's logging, the `0012` cards and
 - [x] 2 — The tunnel
 - [x] 3 — Placement
 - [x] 4 — Serve
-- [ ] 5 — The cards
+- [x] 5 — The cards
 - [ ] 6 — The docs
 - [ ] 7 — ⚠️ **HUMAN · METERED** — the probe
 
@@ -51,13 +51,13 @@ The laptop's fixes, the tunnel, placement, serve's logging, the `0012` cards and
 
 ## 5 — The cards
 
-- [ ] 5.1 Bind `test_no_ca_store_refuses_before_the_arm` and `test_a_ca_directory_alone_is_a_store` in `tests/test_boot_steps.py` to `boot:refuse:no-ca-store`, per [D11](design.md#d11) (`0012·R5`).
+- [x] 5.1 Bind `test_no_ca_store_refuses_before_the_arm` and `test_a_ca_directory_alone_is_a_store` in `tests/test_boot_steps.py` to `boot:refuse:no-ca-store`, per [D11](design.md#d11) (`0012·R5`).
   Verify: `grep -c '"boot:refuse:no-ca-store"' tests/test_boot_steps.py` prints `2`, `grep -c '"boot:refuse:no-sshd"' tests/test_boot_steps.py` prints `2`, and `uv run pytest -q tests/test_boot_steps.py` exits 0.
-- [ ] 5.2 Reword the comment at `boot/boot.py:105`, and rename `test_no_ca_store_names_the_cause` and reword its comment in `tests/test_boot_steps.py`, per [D11](design.md#d11) (`0012·R6`).
-  Verify: `grep -c 'a missing CA store' boot/boot.py` prints `0`, `grep -c 'def test_an_untrusted_certificate_names_the_cause' tests/test_boot_steps.py` prints `1`, `grep -c 'test_no_ca_store_names_the_cause' tests/test_boot_steps.py` prints `0`, and `uv run pytest -q --cov tests/test_boot_steps.py` exits 0.
-- [ ] 5.3 In `README.md`'s `make live-dead` paragraph, add [D11](design.md#d11)'s sentences (`0012·R8`).
+- [x] 5.2 Reword the comment at `boot/boot.py:105`, and rename `test_no_ca_store_names_the_cause` and reword its comment in `tests/test_boot_steps.py`, per [D11](design.md#d11) (`0012·R6`).
+  Verify: `grep -c 'a missing CA store' boot/boot.py` prints `0`, `grep -c 'def test_an_untrusted_certificate_names_the_cause' tests/test_boot_steps.py` prints `1`, `grep -c 'test_no_ca_store_names_the_cause' tests/test_boot_steps.py` prints `0`, and `uv run pytest -q tests/test_boot_steps.py --cov` exits 0.
+- [x] 5.3 In `README.md`'s `make live-dead` paragraph, add [D11](design.md#d11)'s sentences (`0012·R8`).
   Verify: `grep -c -F 'In a checkout that records a pod it exits' README.md` prints `1`.
-- [ ] 5.4 Bind `test_dead_leaves_a_recorded_pod_alone` in `tests/test_live.py` to `session:wait:dead-proof-spares-a-record`, per [D11](design.md#d11) (`0012·R9`).
+- [x] 5.4 Bind `test_dead_leaves_a_recorded_pod_alone` in `tests/test_live.py` to `session:wait:dead-proof-spares-a-record`, per [D11](design.md#d11) (`0012·R9`).
   Verify: `grep -B2 'def test_dead_leaves_a_recorded_pod_alone' tests/test_live.py | grep -c 'session:wait:dead-proof-spares-a-record'` prints `1`, and `uv run pytest -q tests/test_live.py` exits 0.
 
 ## 6 — The docs

@@ -102,7 +102,7 @@ def _answer(environ: Mapping[str, str]) -> str:
     except urllib.error.HTTPError as error:
         return str(error.code)
     except (OSError, http.client.HTTPException) as error:
-        # The cause, a missing CA store say, holds no key.
+        # The cause, a store that does not trust RunPod's certificate say, holds no key.
         return f"000 ({getattr(error, 'reason', error)})"
 
 

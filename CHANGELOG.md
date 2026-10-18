@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `pod.log` keeps them as read (`0013`).
 - A tunnel's local port that another process took refuses and tears down, before the tunnel opens and in place of a
   reopen, so no traffic reaches a squatter; the busy-port probe reads `::1` as well as `127.0.0.1` (`0013`).
+- The `0012` cards: the CA-store tests bind `boot:refuse:no-ca-store` and `live/dead.py`'s guard binds
+  `session:wait:dead-proof-spares-a-record`; `boot.py`'s stop comment names an untrusted certificate; README says
+  `make live-dead` deletes what `up` left and rents nothing over a recorded pod (`0013`).
 
 ## [0.8.0] - 2026-10-17
 

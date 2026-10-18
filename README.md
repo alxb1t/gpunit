@@ -321,7 +321,9 @@ the volume for one chat request and one tool call through [live/tool_call.py](li
 loads them from it. `MODEL` defaults to `qwen3-4b`.
 
 `make live-dead` boots an image whose container exits at once, and passes when `up` exits `1` and prints its refusal
-as `reason: <line>`. RunPod may restart such a container, so the reason can be the 120s wait's end.
+as `reason: <line>`, then deletes what `up` left; a failed `gpunit down` fails it.
+In a checkout that records a pod it exits `1` and rents nothing. RunPod may restart such a container, so the reason
+can be the 120s wait's end.
 
 `make live-serve-dead` serves `qwen3-4b` with an argument vLLM refuses, inside its working window, through
 [live/serve_dead.py](live/serve_dead.py): it passes when the dead-pod refusal, the crash's lines from `pod.log` and

@@ -109,7 +109,7 @@ def test_dead_deletes_ups_pod_however_up_ends(
     assert order == ["up", "down", "status"]
 
 
-@pytest.mark.spec("session:wait:dead-pod-tears-down")
+@pytest.mark.spec("session:wait:dead-proof-spares-a-record")
 @pytest.mark.parametrize("held", ["pod", "pending"])
 def test_dead_leaves_a_recorded_pod_alone(
     monkeypatch: pytest.MonkeyPatch,
