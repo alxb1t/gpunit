@@ -323,9 +323,10 @@ its gaps: [docs/threat-model.md](docs/threat-model.md).
 - **The window volume:** unencrypted, since RunPod offers no encryption for network volumes, and reachable through
   RunPod's S3 API without a pod, until `volume down` or the first command past its ceiling deletes it.
 - **Placement:** `datacenters` names where pods and window volumes may go. A pod RunPod places elsewhere is torn
-  down, and bills until its delete.
+  down, and bills until its delete. `serve` takes no `datacenters` yet: a served model's pod and its window volume go
+  wherever RunPod places them.
 - **The laptop:** `.gpunit/`, at `0700`, holds the session key, the record and the host key; `serve`'s `pod.log` is
-  at `0600`; the ledger, ids and times alone, is at `0600`.
+  at `0600`; the ledger, pod and volume ids, project, card, image and times, is at `0600`.
 
 Keep private data off stdout and off the volume: both outlive the command.
 

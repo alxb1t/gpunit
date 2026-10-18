@@ -10,7 +10,7 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 - [x] 3 — The launcher
 - [x] 4 — The CLI
 - [x] 5 — The handover
-- [ ] 6 — The cards
+- [x] 6 — The cards
 - [ ] 7 — ⚠️ **HUMAN** — the serve image
 - [ ] 8 — ⚠️ **HUMAN · METERED** — make live-serve on live/models.toml
 
@@ -63,15 +63,15 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 
 ## 6 — The cards
 
-- [ ] 6.1 Re-cite `gpunit/spec.py` and `gpunit/volume.py` in `docs/threat-model.md`, row by row, per [D9](design.md#d9)'s table (`0013·R1`).
+- [x] 6.1 Re-cite `gpunit/spec.py` and `gpunit/volume.py` in `docs/threat-model.md`, row by row, per [D9](design.md#d9)'s table (`0013·R1`).
   Verify: `grep -v -E '^(\| T55 |13\. )' docs/threat-model.md | grep -c -E ':103-104|:75-83|:198-206|:202-203|:200-216|:219-235|:107-110|spec\.py:25., .:105.'` prints `0`, and `grep -v -E '^(\| T55 |13\. )' docs/threat-model.md | grep -o -E ':107-108|:111-116|:101-103|:79-87|volume\.py:194|volume\.py:216-232|:199-207|:203-204' | wc -l | tr -d ' '` prints a number of at least `10`.
-- [ ] 6.2 In `README.md`'s laptop bullet, the ledger's text → [D9](design.md#d9)'s, with `card, image and times` on one line (`0013·R2`).
+- [x] 6.2 In `README.md`'s laptop bullet, the ledger's text → [D9](design.md#d9)'s, with `card, image and times` on one line (`0013·R2`).
   Verify: `grep -c 'ids and times alone' README.md` prints `0`, and `grep -c -F 'card, image and times' README.md` prints `1`.
-- [ ] 6.3 Reword `_free_port`'s comment in `gpunit/serve/session.py`, per [D9](design.md#d9) (`0013·R3`).
+- [x] 6.3 Reword `_free_port`'s comment in `gpunit/serve/session.py`, per [D9](design.md#d9) (`0013·R3`).
   Verify: `grep -c 'a port busy on 127.0.0.1 is never refused after a yes' gpunit/serve/session.py` prints `1`.
-- [ ] 6.4 Give `log.clean` its `keep` parameter in `gpunit/log.py`, clean each streamed part in `gpunit/serve/chat.py`, and name the chat in T39, per [D9](design.md#d9) (`0013·S4`); bind `serve:chat:streamed-text-cleaned` in `tests/test_serve_chat.py`.
+- [x] 6.4 Give `log.clean` its `keep` parameter in `gpunit/log.py`, clean each streamed part in `gpunit/serve/chat.py`, and name the chat in T39, per [D9](design.md#d9) (`0013·S4`); bind `serve:chat:streamed-text-cleaned` in `tests/test_serve_chat.py`.
   Verify: `grep -c 'log.clean(part, keep=' gpunit/serve/chat.py` prints `1`, `grep -c '"serve:chat:streamed-text-cleaned"' tests/test_serve_chat.py` prints `1`, `grep -E '^\| T39 ' docs/threat-model.md | grep -c 'gpunit/serve/chat.py'` prints `1`, and `uv run pytest -q tests/test_serve_chat.py tests/test_serve_session.py` exits 0.
-- [ ] 6.5 Add [D9](design.md#d9)'s `serve` sentence to T34's mitigation in `docs/threat-model.md` and to README's *Placement* bullet (`0013·S5`).
+- [x] 6.5 Add [D9](design.md#d9)'s `serve` sentence to T34's mitigation in `docs/threat-model.md` and to README's *Placement* bullet (`0013·S5`).
   Verify: `grep -c 'takes no .datacenters. yet' README.md` prints `1`, and `grep -E '^\| T34 ' docs/threat-model.md | grep -c 'takes no .datacenters. yet'` prints `1`.
 
 ## 7 — ⚠️ **HUMAN** — the serve image

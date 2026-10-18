@@ -144,7 +144,7 @@ def most_cost(hourly: Decimal, spec: Spec) -> Decimal:
 
 
 def _free_port() -> int:
-    # Picked before the price, so a busy local port is never refused after a yes.
+    # Picked before the price, so a port busy on 127.0.0.1 is never refused after a yes.
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         return probe.getsockname()[1]

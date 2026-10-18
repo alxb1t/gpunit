@@ -23,6 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `serve/launch.py` sets `DO_NOT_TRACK`, `HF_HUB_DISABLE_TELEMETRY` and `VLLM_NO_USAGE_STATS` and passes
   `--no-enable-log-requests` last, for every row; the bundled rows drop the flag (`0014`).
 
+### Fixed
+
+- The chat prints each streamed part without control characters but newline and tab, so a model's answer cannot
+  steer the terminal; the conversation keeps the part as streamed (`0013·S4`).
+- `docs/threat-model.md` re-cites `gpunit/spec.py` and `gpunit/volume.py`; README names the ledger's fields and that
+  `serve` takes no `datacenters`; `_free_port`'s comment names `127.0.0.1` (`0013·R1`, `R2`, `R3`, `S5`).
+
 ## [0.9.0] - 2026-10-18
 
 ### Added
