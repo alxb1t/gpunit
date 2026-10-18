@@ -285,7 +285,7 @@ def test_a_dead_tunnel_is_reopened(
     assert gpunit(["run", "--", *command], provider=FakeProvider()) == 0
     opened = tunnels.read_text(encoding="utf-8").splitlines()
     assert len(opened) >= 2
-    assert f"-L{free_port}:localhost:8188" in opened[0]
+    assert f"-L127.0.0.1:{free_port}:localhost:8188" in opened[0]
     assert "ExitOnForwardFailure=yes" in opened[0]
     assert "-F none" in opened[0]
     assert "IdentitiesOnly=yes" in opened[0]

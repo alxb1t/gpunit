@@ -176,9 +176,11 @@ class _Signals:
     def _handle(self, number: int, frame: FrameType | None) -> None:
         if self._fired:
             return
+        if (refusal := self._refusal) is not None:
+            # Not latched: a block that swallows the `Refused` still ends on a signal.
+            self._refusal = None
+            log.refuse(refusal)
         self._fired = True
-        if self._refusal is not None:
-            log.refuse(self._refusal)
         raise Interrupted(number)
 
     def refuse(self, text: str) -> None:
@@ -282,9 +284,27 @@ class _Backoff:
 
 
 def _tunnel_argv(spec: Spec, ssh: Sequence[str]) -> list[str]:
-    forwards = [f"-L{port.local}:localhost:{port.remote}" for port in spec.ports]
+    # One forward per loopback family: `-L<local>:localhost:` binds both and counts
+    # one bound as set up, so a family another process holds would not trip
+    # `ExitOnForwardFailure`; a bind address makes each family fail on its own.
+    binds = ["127.0.0.1", "[::1]"] if _binds_v6_loopback() else ["127.0.0.1"]
+    forwards = [
+        f"-L{bind}:{port.local}:localhost:{port.remote}"
+        for port in spec.ports
+        for bind in binds
+    ]
     options = ["-N", "-o", "ExitOnForwardFailure=yes", "-o", "BatchMode=yes"]
     return [ssh[0], *options, *forwards, *ssh[1:]]
+
+
+def _binds_v6_loopback() -> bool:
+    """Return whether `::1` binds here; on a host without it, nobody can hold it."""
+    try:
+        with socket.socket(socket.AF_INET6) as probe:
+            probe.bind(("::1", 0))
+            return True
+    except OSError:
+        return False
 
 
 def _kill(child: subprocess.Popen[bytes]) -> None:

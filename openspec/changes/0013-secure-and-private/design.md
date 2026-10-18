@@ -14,7 +14,9 @@ brief in the operator's notebook; its ids are `G…` (gaps) and `T…` (threats)
 - **G3, T9:** `_Tunnel._watch` reopens a dead tunnel with backoff (`gpunit/library.py:193-205`); the busy-port probe
   reads `127.0.0.1` alone, once, before `up` (`gpunit/library.py:265-274`, called at `:90`); the tunnel opens after
   `up`, minutes later (`:113-114`). `ssh` exits on a forward it cannot bind (`ExitOnForwardFailure`, `:252`), so a
-  taken port shows as a tunnel that dies at once, as a dead one does.
+  taken port shows as a tunnel that dies at once, as a dead one does. *Corrected at the converge (security S1):*
+  `-L<local>:localhost:<remote>` binds `127.0.0.1` and `::1`, and OpenSSH counts the forward as set up when either
+  binds, so a port taken on one family alone does not end `ssh`; [D5](#d5) binds each family as its own forward.
 - **G7, T25, T26:** `_env` refuses `GPUNIT_*` names only (`gpunit/spec.py:184-190`).
 - **G8, T34:** `create` sends `dataCenterIds` only with a volume (`gpunit/runpod.py:130-142`); `volume up`'s choice
   reads stock with no filter (`gpunit/volume.py:187-209`); `PodInfo` holds no data centre (`gpunit/provider.py:83-88`).
@@ -142,6 +144,11 @@ _watch: child exits ─▶ _taken? ── yes ─▶ refuse, stop watching
 - **In `_watch`** (`:193-205`): on the child's exit, and again when a reopen is due, `_taken`; a taken port calls the
   refusal of [D6](#d6) with `local port N is taken by another process; the tunnel cannot hold it`, and the watcher
   returns. A free port keeps today's backoff, its log line and its waits.
+- **One forward per loopback family** (converge, security S1): `_tunnel_argv` passes
+  `-L127.0.0.1:<local>:localhost:<remote>`, and `-L[::1]:<local>:localhost:<remote>` when `::1` binds on the host.
+  A family another process holds then fails its own forward, `ExitOnForwardFailure` ends `ssh`, and the watcher's
+  `_taken` refuses. Checked by hand against OpenSSH 10.3p1: with `127.0.0.1` or `::1` held, `localhost` stays up on
+  the other family; the per-family forwards exit `255`, `Could not request local forwarding`.
 - **`serve`** picks its port free on `127.0.0.1` (`gpunit/serve/session.py:137-141`); `_open`'s probe now reads `::1`
   too.
 
@@ -151,8 +158,10 @@ The watcher thread cannot raise in the main thread, and the block may sit in a b
 `child.wait()`.
 
 - **`_Signals.refuse(text)`** stores `text`, then `signal.pthread_kill(threading.main_thread().ident, signal.SIGINT)`.
-- **`_Signals._handle`**, when a text is stored and it has not fired: sets `_fired`, then `log.refuse(text)`, which
-  says the line and raises `log.Refusal` (`gpunit.Refused`) in the main thread. With no text, `Interrupted` as now.
+- **`_Signals._handle`**, when a text is stored and it has not fired: clears the text, then `log.refuse(text)`, which
+  says the line and raises `log.Refusal` (`gpunit.Refused`) in the main thread. It does not set `_fired`, so a block
+  that swallows the `Refused` still ends on a later signal (converge, security S2). With no text, `Interrupted` as
+  now.
 - **`_Tunnel(argv, spec, refuse)`** takes the callable; `_open` passes `signals.refuse`.
 - **`run._command`:** `except library.Interrupted:` → `except (library.Interrupted, log.Refusal):` — it ends the child
   before re-raising. `outcome` already maps `log.Refusal` to `1`.
@@ -317,7 +326,8 @@ None.
 ## Risks / Trade-offs
 
 - **A squatter can bind in the seconds between `ssh`'s start and its bind** → [D5](#d5) narrows the window from
-  minutes to seconds; `serve`'s first poll may reach it in that window. T9 stays `partly` in the threat model.
+  minutes to seconds: the squatter's family fails its forward, and the watcher refuses within a poll of `ssh`'s
+  exit; `serve`'s first poll may reach it in that window. T9 stays `partly` in the threat model.
 - **`pthread_kill` with `SIGINT` from the watcher** → the handler is gpunit's while the session is open, and the
   teardown ignores signals; a library consumer sees `Refused`, as for any refusal.
 - **`dataCenterIds` may only order RunPod's choice** → [D8](#d8)'s wait check tears down a pod outside the list; it

@@ -56,10 +56,12 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    no session nonce, so `up` tears the pod down and names `v0.6.0`.
 
 3. **Install and run.** The key comes from the environment alone; gpunit reads no `.env`. `run`'s command on the
-   laptop gets no `RUNPOD_API_KEY`: it never needs the account key. The command's environment on the pod does not
-   carry `RUNPOD_API_KEY` either: boot keeps it to stop the pod. The command runs as root beside boot, though, so it
-   can still read the key from boot's own environment in `/proc`; run nothing on the pod you would not trust with
-   the key.
+   laptop gets no `RUNPOD_API_KEY`: it never needs the account key. It runs as you beside gpunit, though, so it can
+   still read the key from gpunit's own environment (`/proc/<pid>/environ` on Linux, `ps -E` on macOS); run nothing
+   on the laptop you would not trust with the key. The command's environment on the pod does not carry
+   `RUNPOD_API_KEY` either: boot keeps it to stop the pod. The command runs as root beside boot, though, so it can
+   still read the key from boot's own environment in `/proc`; run nothing on the pod you would not trust with the
+   key.
 
    ```sh
    uv add --dev git+https://github.com/alxb1t/gpunit@v0.8.0
@@ -299,7 +301,7 @@ Keep private data off stdout and off the volume: both outlive the command.
 - **The calls gpunit makes with it:** the catalogue (GPU types, their stock, the data centres); pods (create, read,
   list, logs, delete); network volumes (create, read, list, delete); billing (read).
 - **Where it goes:** a request header to `https://api.runpod.io/v2`, never argv, never a redirect; `run`'s command
-  does not get it.
+  does not get it in its environment, though it can read gpunit's (step 3).
 - **Measured minimum:** a restricted key, made in the console at its narrowest settings, covers every call above
   (2026-10-18, [the probe](docs/threat-model.md#7-the-probe)). RunPod offers no scope finer than the account's pods,
   volumes and billing, so a leaked key still reaches all of them.
