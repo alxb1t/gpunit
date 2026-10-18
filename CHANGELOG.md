@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `datacenters = [...]` in `gpunit.toml`, an optional allow-list: the create names it, a mounted volume or a pod
   reported outside it refuses or tears down, and `volume up`'s stock choice stays within it (`0013`).
+- `docs/threat-model.md`: what gpunit protects, from whom, and each threat's status at `v0.9`; README's
+  *Security and privacy* says where data lands, how to pass a secret, the key's calls and the accepted risks.
+  `CLAUDE.md` holds that a change touching a trust boundary updates the model (`0013`).
 
 ### Changed
 

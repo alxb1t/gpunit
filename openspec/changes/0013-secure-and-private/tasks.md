@@ -10,7 +10,7 @@ The laptop's fixes, the tunnel, placement, serve's logging, the `0012` cards and
 - [x] 3 — Placement
 - [x] 4 — Serve
 - [x] 5 — The cards
-- [ ] 6 — The docs
+- [x] 6 — The docs
 - [ ] 7 — ⚠️ **HUMAN · METERED** — the probe
 
 ## 1 — The laptop
@@ -62,11 +62,11 @@ The laptop's fixes, the tunnel, placement, serve's logging, the `0012` cards and
 
 ## 6 — The docs
 
-- [ ] 6.1 In `README.md`, add the `datacenters` line, the `[env]` comment, step 3's sentence and `## Security and privacy`, per [D13](design.md#d13).
+- [x] 6.1 In `README.md`, add the `datacenters` line, the `[env]` comment, step 3's sentence and `## Security and privacy`, per [D13](design.md#d13).
   Verify: `grep -c '^## Security and privacy$' README.md` prints `1`, `grep -c -E '^### (Where your data lands|Secrets|The account key|Accepted risks)$' README.md` prints `4`, `grep -c 'datacenters = \["EU-RO-1"\]' README.md` prints `1`, and `grep -c 'RUNPOD_\* names are refused here' README.md` prints `1`.
-- [ ] 6.2 Write `docs/threat-model.md` from [the draft](threat-model-draft.md) in this change's directory, brought to `v0.9`'s state, per [D14](design.md#d14).
+- [x] 6.2 Write `docs/threat-model.md` from [the draft](threat-model-draft.md) in this change's directory, brought to `v0.9`'s state, per [D14](design.md#d14).
   Verify: `grep -c -E '^\| T[0-9]+ ' docs/threat-model.md` prints `54`, `grep -E '^\| T(17|21|26|30|34|39) ' docs/threat-model.md | grep -c '| mitigated |'` prints `6`, `grep -E '^\| T[0-9]+ ' docs/threat-model.md | grep '| gap |' | cut -d'|' -f2 | tr -d ' ' | paste -sd, -` prints `T22,T24,T54`, `grep -c '^## 7. The probe$' docs/threat-model.md` prints `1`, and `grep -c -E '^type: |draft' docs/threat-model.md` prints `0`.
-- [ ] 6.3 In `CLAUDE.md`, name `docs/threat-model.md` in the layout and add the trust-boundary invariant, per [D14](design.md#d14).
+- [x] 6.3 In `CLAUDE.md`, name `docs/threat-model.md` in the layout and add the trust-boundary invariant, per [D14](design.md#d14).
   Verify: `grep -c 'docs/threat-model.md' CLAUDE.md` prints a number of at least `2`, and `grep -c 'touches a trust boundary' CLAUDE.md` prints `1`.
 
 ## 7 — ⚠️ **HUMAN · METERED** — the probe

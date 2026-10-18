@@ -36,6 +36,8 @@ CLI is recorded, not pinned: `@fission-ai/openspec@1.11.0`, resolved on `PATH`.
   carries `@pytest.mark.spec("<scenario key>")`.
 - **`live/`** — the metered proof on a real pod, run by hand: `live/*.py`, one script a `make live-*` target, and
   `live/window.py`, their shared steps and the window volume's teardown.
+- **`docs/threat-model.md`** — what gpunit protects, from whom, and what holds: the assets, the flows, each threat's
+  status and the probe's results.
 - **`openspec/`** — the living specs in `specs/`; the changes in `changes/`, the shipped ones in `changes/archive/`.
 - **`.minions/`** — run artefacts, **gitignored**; nothing in it is tracked.
 - **`CHANGELOG.md`** — Keep a Changelog: each phase appends under `## [Unreleased]`, the release cuts it.
@@ -50,6 +52,8 @@ CLI is recorded, not pinned: `@fission-ai/openspec@1.11.0`, resolved on `PATH`.
 - **`make live`, `make live-volume`, `make live-serve`, `make live-dead` and `make live-serve-dead` are never in CI:**
   they rent a real pod or volume; the gate fakes every provider answer.
 - **A patch closes cards and fixes; it adds no verb, `gpunit.toml` key or exit code.**
+- **A change that touches a trust boundary updates `docs/threat-model.md`**: a new flow, secret, file mode, network
+  call or log line.
 
 ## Guardrails (hold for every role)
 
