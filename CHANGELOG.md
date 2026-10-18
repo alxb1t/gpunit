@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-18
+
+### Added
+
+- `serve` reads the operator's own rows beside the bundled ones, from `GPUNIT_MODELS` or
+  `$XDG_CONFIG_HOME/gpunit/models.toml`; a row of a bundled name replaces it, said in one line (`0014`).
+- `--models <path>` on `serve`, `down --serve` and `volume up|down --serve` names the user file first; without a
+  model it exits `2` (`0014`).
+- README's *Your own rows*; `live/models.toml`, the `granite-4.0-micro` row `make live-serve` proves; the threat
+  model's F13 and T55, the user file. T34 is `partly`: `serve` pods ignore `datacenters` (`0014`).
+- `make live-serve` proved a user file's row, `granite-4.0-micro` from `live/models.toml`, on a restricted key
+  (`live/serve_last_run.txt`, `0014`).
+- A user row passes the bundled rows' checks, and a user file holds rows alone; any row holding
+  `--enable-log-requests` is refused. The unknown-model usage error names each row's source (`0014`).
+
+### Changed
+
+- `serve/launch.py` sets `DO_NOT_TRACK`, `HF_HUB_DISABLE_TELEMETRY` and `VLLM_NO_USAGE_STATS` and passes
+  `--no-enable-log-requests` last, for every row; the bundled rows drop the flag (`0014`).
+- The serve image rebuilt as `gpunit-vllm:v0.10-rc1`, for the new launcher, and re-pinned by digest (`0014`).
+
+### Fixed
+
+- The chat prints each streamed part without control characters but newline and tab, so a model's answer cannot
+  steer the terminal; the conversation keeps the part as streamed (`0013·S4`).
+- `docs/threat-model.md` re-cites `gpunit/spec.py` and `gpunit/volume.py`; README names the ledger's fields and that
+  `serve` takes no `datacenters`; `_free_port`'s comment names `127.0.0.1` (`0013·R1`, `R2`, `R3`, `S5`).
+- README's *Measured minimum* and the threat model's G6 name the restricted key's console settings:
+  `api.runpod.io/graphql` Read / Write, `api.runpod.ai` None (`0013·R5`).
+- `make live-serve-dead` reads the bundled table alone, so an operator's own `qwen3-4b` row cannot replace the
+  broken one and serve a healthy model to the ceiling (`0014·R1`).
+- A row's `args` holding a flag the launcher sets — `--revision`, `--code-revision`, `--tokenizer-revision`,
+  `--served-model-name`, `--host`, `--port` or `--api-key`, `_` read as `-`, alone or as `--flag=value` — is
+  refused, so a user row cannot repin its weights or code; T13, T55 and README *Your own rows* say so (`0014·S2`).
+- The threat model's T30 cites the live run on `v0.10-rc1` for the quiet flag and its *Gaps* intro names `v0.10`;
+  the bundled table's header names the user file's rows beside its own (`0014·R2`, `R3`, `R4`).
+
 ## [0.9.0] - 2026-10-18
 
 ### Added

@@ -256,3 +256,52 @@ tool call: get_weather {"city": "Paris"}
 
 The account's pod listing (RunPod's REST v2, read after the runs) was empty; its network-volume listing held
 `gpunit-isekai` alone, isekai's own volume, made by none of these runs.
+
+2026-10-18 — make live-serve granite-4.0-micro, 0014-your-own-rows
+
+`GPUNIT_MODELS=live/models.toml make live-serve MODEL=granite-4.0-micro`, on `gpunit-vllm` at `v0.10-rc1`, at
+`73bf274`, on a restricted key made in the console with `api.runpod.io/graphql` Read / Write and `api.runpod.ai`
+None: the user file's row, not a Qwen model, answered one chat request and one tool call through `hermes`, then a
+new pod chatted one prompt from the window volume's weights; `uv run gpunit spend --days 1` on the same key read the
+billing. The `loading:` lines and the tunnel's `channel 2: open failed` lines are left out. An earlier run the same
+day, on an All key, passed the same way.
+
+2026-10-18T15:34:46Z data centre: EU-RO-1
+2026-10-18T15:34:46Z price: $0.07/GB a month
+2026-10-18T15:34:46Z at most $0.01 for 40 GB over 1h
+2026-10-18T15:34:47Z volume t7332e85q8 up in EU-RO-1, 40 GB, until 2026-10-18T16:34:47Z
+2026-10-18T15:34:47Z price: NVIDIA RTX A5000 $0.27/h
+2026-10-18T15:34:48Z price: NVIDIA GeForce RTX 4090 $0.89/h
+2026-10-18T15:34:48Z price: NVIDIA L4 $0.59/h
+2026-10-18T15:34:48Z at most $0.75 for 1800s and a 1200s wait for SSH
+2026-10-18T15:34:51Z creating on NVIDIA RTX A5000
+2026-10-18T15:34:52Z create on 'NVIDIA RTX A5000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-18T15:34:52Z creating on NVIDIA GeForce RTX 4090
+2026-10-18T15:34:53Z pod 83hgiyc3rg1bdz created; waiting for SSH
+2026-10-18T15:35:04Z host key verified: SHA256:BxbA9l1r+DkOyoCNS+SFoPenrqpp7RRwColtmAc+9QM
+2026-10-18T15:35:04Z session up: pod 83hgiyc3rg1bdz, root@213.173.107.224 -p 19421
+2026-10-18T15:36:13Z granite-4.0-micro answers on http://127.0.0.1:52857/v1
+2026-10-18T15:36:13Z serving until interrupted or the ceiling; Ctrl-C ends the session
+{"id":"chatcmpl-a3706f1969a81290","object":"chat.completion","created":1792337773,"model":"granite-4.0-micro","choices":[{"index":0,"message":{"role":"assistant","content":"Greetings.","refusal":null,"annotations":null,"audio":null,"function_call":null,"reasoning":null},"logprobs":null,"finish_reason":"stop","stop_reason":null,"token_ids":null,"routed_experts":null}],"service_tier":null,"system_fingerprint":"vllm-0.31.0-eb46f3f6","usage":{"prompt_tokens":36,"total_tokens":39,"completion_tokens":3,"prompt_tokens_details":null,"completion_tokens_details":null},"prompt_logprobs":null,"prompt_token_ids":null,"prompt_text":null,"kv_transfer_params":null,"ec_transfer_params":null,"metrics":null}
+tool call: get_weather {"city": "Paris"}
+2026-10-18T15:36:15Z pod 83hgiyc3rg1bdz deleted
+2026-10-18T15:36:15Z price: $0.07/GB a month
+2026-10-18T15:36:15Z at most $0.01 for 40 GB over 1h
+2026-10-18T15:36:15Z volume t7332e85q8 extended until 2026-10-18T16:36:15Z
+2026-10-18T15:36:16Z price: NVIDIA RTX A5000 $0.27/h
+2026-10-18T15:36:16Z price: NVIDIA GeForce RTX 4090 $0.89/h
+2026-10-18T15:36:17Z price: NVIDIA L4 $0.59/h
+2026-10-18T15:36:17Z at most $0.75 for 1800s and a 1200s wait for SSH
+2026-10-18T15:36:19Z creating on NVIDIA RTX A5000
+2026-10-18T15:36:20Z create on 'NVIDIA RTX A5000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-18T15:36:20Z creating on NVIDIA GeForce RTX 4090
+2026-10-18T15:36:21Z pod 5owbuwyiw13qfz created; waiting for SSH
+2026-10-18T15:43:35Z host key verified: SHA256:8NJE9+9lFc7wUnxWeaJu/DNPUCXL3SKFYBEz5eaqzC0
+2026-10-18T15:43:35Z session up: pod 5owbuwyiw13qfz, root@213.173.99.6 -p 11927
+2026-10-18T15:45:35Z granite-4.0-micro answers on http://127.0.0.1:52913/v1
+> The answer is 4.
+> 
+2026-10-18T15:45:36Z pod 5owbuwyiw13qfz deleted
+2026-10-18T15:45:37Z volume t7332e85q8 deleted
+
+The account's pod and network-volume listings (RunPod's REST v2, read after the run) were empty.

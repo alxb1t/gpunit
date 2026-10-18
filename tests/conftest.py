@@ -55,6 +55,9 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     # No test may write the operator's ledger or serve state (0007 design D5).
     place = tmp_path / "home"
     monkeypatch.setenv("HOME", str(place))
+    # Nor read the operator's own model rows: 0014 design D1.
+    monkeypatch.delenv("GPUNIT_MODELS", raising=False)
+    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
     return place
 
 

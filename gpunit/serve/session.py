@@ -51,9 +51,10 @@ def serve(
     ask: Callable[[str], str] = input,
     read: Callable[[str], str] | None = None,
     opener: urllib.request.OpenerDirector | None = None,
+    models: Path | None = None,
 ) -> int:
     """Serve `name` until the session ends; return the exit code `gpunit run` would."""
-    row = table.load().models[name]
+    row = table.rows(models).models[name]
     key = secrets.token_urlsafe(32)
     spec = row.spec(ceiling_s, volume, max_hourly, key, _free_port())
     if volume is None and State(home(name)).window() is not None:
@@ -96,29 +97,37 @@ def serve(
     return outcome(body)
 
 
-def down(name: str, provider: Provider) -> int:
+def down(name: str, provider: Provider, models: Path | None = None) -> int:
     """Tear down the session `serve` left for `name`; return 0, or 1 on a fault."""
-    spec = table.load().models[name].spec(0, None, None, "", table.PORT)
+    spec = table.rows(models).models[name].spec(0, None, None, "", table.PORT)
     return lifecycle.down(spec, provider, State(home(name)))
 
 
-def volume_up(name: str, ceiling_s: int, *, yes: bool, provider: Provider) -> int:
+def volume_up(
+    name: str,
+    ceiling_s: int,
+    *,
+    yes: bool,
+    provider: Provider,
+    models: Path | None = None,
+) -> int:
     """Make or extend the window volume `serve` mounts for `name`, of its row's disk."""
     place = home(name)
     place.mkdir(mode=0o700, parents=True, exist_ok=True)
-    return volume.up(_window_spec(name, ceiling_s), provider, State(place), yes=yes)
+    spec = _window_spec(name, ceiling_s, models)
+    return volume.up(spec, provider, State(place), yes=yes)
 
 
-def volume_down(name: str, provider: Provider) -> int:
+def volume_down(name: str, provider: Provider, models: Path | None = None) -> int:
     """Delete the window volume `volume_up` made for `name`.
 
     Return 0, 1, or 130 on Ctrl-C at the sweep.
     """
-    return volume.down(_window_spec(name, 0), provider, State(home(name)))
+    return volume.down(_window_spec(name, 0, models), provider, State(home(name)))
 
 
-def _window_spec(name: str, ceiling_s: int) -> Spec:
-    row = table.load().models[name]
+def _window_spec(name: str, ceiling_s: int, models: Path | None) -> Spec:
+    row = table.rows(models).models[name]
     spec = row.spec(0, None, None, "", table.PORT)
     return replace(spec, volume_gb=row.disk_gb, volume_ceiling_s=ceiling_s)
 
@@ -135,7 +144,7 @@ def most_cost(hourly: Decimal, spec: Spec) -> Decimal:
 
 
 def _free_port() -> int:
-    # Picked before the price, so a busy local port is never refused after a yes.
+    # Picked before the price, so a port busy on 127.0.0.1 is never refused after a yes.
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         return probe.getsockname()[1]

@@ -8,6 +8,7 @@ from typing import cast
 
 import pytest
 
+from gpunit.serve import table
 from live import dead, serve, volume
 from live.window import report, run, window
 
@@ -184,6 +185,19 @@ class Runs:
 def body(code: int, order: list[str]) -> int:
     order.append("body")
     return code
+
+
+@pytest.mark.spec("serve:rows:merged")
+def test_the_live_user_file_joins_the_bundled_rows() -> None:
+    path = ROOT / "live" / "models.toml"
+
+    found = table.rows(path)
+    bundled = table.load()
+
+    assert found.models["granite-4.0-micro"].source == str(path)
+    assert found.models["granite-4.0-micro"].image == bundled.image
+    assert bundled.models.keys() < found.models.keys()
+    assert found.replaced == ()
 
 
 @pytest.mark.spec("volume:down:deletes")

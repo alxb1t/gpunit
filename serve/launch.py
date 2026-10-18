@@ -1,7 +1,8 @@
-"""Start vLLM on the serve image's row, the weights on the window volume, if set.
+"""Start vLLM on the serve image's row, quiet, the weights on the window volume, if set.
 
 e.g. GPUNIT_VOLUME_PATH=/runpod-volume → HF_HOME=/runpod-volume/huggingface, then
-`vllm serve <SERVE_REPO> …`. Why Python, not `sh -c`: 0012 design D9.
+`vllm serve <SERVE_REPO> … --no-enable-log-requests`. Why Python, not `sh -c`: 0012
+design D9.
 
     CMD ["python3", "/opt/gpunit/launch.py"]
 """
@@ -14,6 +15,10 @@ def main() -> None:
     volume = os.environ.get("GPUNIT_VOLUME_PATH")
     if volume:
         os.environ["HF_HOME"] = f"{volume}/huggingface"
+    # Whatever the pod's environment holds: every row passes here (0014 design D6).
+    os.environ.update(
+        DO_NOT_TRACK="1", HF_HUB_DISABLE_TELEMETRY="1", VLLM_NO_USAGE_STATS="1"
+    )
     # Loopback only: the laptop reaches it over the session's tunnel. vLLM reads
     # VLLM_API_KEY itself. split() undoes table.py's join, without a shell's globbing.
     os.execvp(
@@ -31,6 +36,8 @@ def main() -> None:
             "--port",
             "8000",
             *os.environ.get("SERVE_ARGS", "").split(),
+            # Last: argparse keeps the last of a flag, so no row outvotes it.
+            "--no-enable-log-requests",
         ],
     )
 

@@ -136,7 +136,152 @@ def test_an_unknown_model_exits_2_naming_the_tables_models(
     monkeypatch.chdir(tmp_path)
 
     assert gpunit(argv, provider=NO_REQUESTS) == 2
-    assert "it holds qwen3-4b, qwen3.8-27b" in capsys.readouterr().err
+    assert (
+        "it holds qwen3-4b (bundled), qwen3.8-27b (bundled)" in capsys.readouterr().err
+    )
+
+
+@pytest.mark.spec("cli:verbs:serve-unknown-model-exits-2")
+@pytest.mark.parametrize(
+    ("name", "held"),
+    [
+        ("own", "own ({path}), qwen3-4b (bundled), qwen3.8-27b (bundled)"),
+        ("qwen3-4b", "qwen3-4b ({path}), qwen3.8-27b (bundled)"),
+    ],
+    ids=["added", "replaced"],
+)
+def test_an_unknown_model_names_a_user_rows_file(
+    name: str,
+    held: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    path = tmp_path / "rows.toml"
+    path.write_text(OWN_QWEN.format(name=name), encoding="utf-8")
+    monkeypatch.setenv("GPUNIT_MODELS", str(path))
+    monkeypatch.chdir(tmp_path)
+
+    argv = ["serve", "no-such-model", "--ceiling", "1h"]
+    assert gpunit(argv, provider=NO_REQUESTS) == 2
+    assert f"it holds {held.format(path=path)}" in capsys.readouterr().err
+
+
+# A user row of qwen3-4b's name, on one card the bundled row also lists.
+OWN_QWEN = """\
+[models.{name}]
+repo = "Qwen/Qwen3-4B"
+revision = "1cfa9a7208912126459214e8b04321603b3df60c"
+served = "qwen3-4b"
+args = ["--max-model-len", "8192"]
+vram_gb = 24
+gpus = ["NVIDIA L4"]
+disk_gb = 40
+"""
+
+
+@pytest.mark.spec("serve:rows:same-name-replaces")
+@pytest.mark.parametrize("name", ["qwen3-4b", "own"], ids=["same", "twin-other"])
+def test_a_user_row_replaces_the_bundled_row_of_its_name(
+    name: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    path = tmp_path / "rows.toml"
+    path.write_text(OWN_QWEN.format(name=name), encoding="utf-8")
+    monkeypatch.setenv("GPUNIT_MODELS", str(path))
+    monkeypatch.chdir(tmp_path)
+    provider = FakeProvider()
+
+    # No card is cheap enough: `serve` asks the prices of its row's cards, then refuses.
+    argv = ["serve", "qwen3-4b", "--ceiling", "1h", "--max-hourly", "0.0001"]
+    assert gpunit(argv, provider=provider) == 1
+    replaced = [
+        line
+        for line in capsys.readouterr().err.splitlines()
+        if "replaces the bundled" in line
+    ]
+    if name == "qwen3-4b":
+        assert provider.named("gpu") == [("NVIDIA L4",)]
+        assert len(replaced) == 1
+        assert replaced[0].endswith(f" {path} replaces the bundled qwen3-4b")
+    else:
+        # The twin: no namesake, so the bundled row's cards are asked and no line said.
+        assert len(provider.named("gpu")) == 3
+        assert replaced == []
+
+
+@pytest.mark.spec("cli:verbs:models-without-serve-exits-2")
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["down", "--models", "rows.toml"],
+        ["volume", "up", "--models", "rows.toml"],
+        ["volume", "down", "--models", "rows.toml"],
+    ],
+    ids=["down", "volume-up", "volume-down"],
+)
+def test_models_without_a_model_exits_2_naming_serve(
+    argv: list[str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    write_spec(tmp_path)
+
+    assert gpunit(argv, provider=NO_REQUESTS) == 2
+    assert "--models goes with --serve" in capsys.readouterr().err
+
+
+# The row only `rows.toml` holds: its card and disk name it in each request.
+OWN_ROW = OWN_QWEN.replace("Qwen/Qwen3-4B", "ibm-granite/granite-4.0-micro").replace(
+    "disk_gb = 40", "disk_gb = 33"
+)
+
+
+@pytest.mark.spec("cli:verbs:models-on-each-serve-verb")
+@pytest.mark.parametrize("given", [True, False], ids=["given", "twin-not-given"])
+def test_each_verb_naming_a_model_reads_the_given_file(
+    given: bool,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "rows.toml").write_text(
+        OWN_ROW.format(name='"granite-4.0-micro"'), encoding="utf-8"
+    )
+    flag = ["--models", "rows.toml"] if given else []
+    name = "granite-4.0-micro"
+    provider = FakeProvider(volume_creates=["v3"])
+
+    codes = [
+        gpunit(
+            ["serve", name, "--ceiling", "1h", "--max-hourly", "0.0001", *flag],
+            provider=provider,
+        ),
+        gpunit(["down", "--serve", name, *flag], provider=provider),
+        gpunit(
+            ["volume", "up", "--serve", name, "--ceiling", "1h", "--yes", *flag],
+            provider=provider,
+        ),
+        gpunit(["volume", "down", "--serve", name, *flag], provider=provider),
+    ]
+
+    if not given:
+        # The twin: without the file, each verb refuses the name before a request.
+        assert codes == [2, 2, 2, 2]
+        assert provider.calls == []
+        return
+    # `serve` refuses at the price: no card is that cheap.
+    assert codes == [1, 0, 0, 0]
+    assert set(provider.named("gpu")) == {("NVIDIA L4",)}
+    assert [project for project, _ in provider.named("list")] == [f"serve-{name}"]
+    assert [size for _, size, _ in provider.named("create_volume")] == [33]
+    assert provider.named("delete_volume") == [("v3",)]
+    assert "no model" not in capsys.readouterr().err
 
 
 @pytest.fixture

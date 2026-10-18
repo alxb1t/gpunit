@@ -231,3 +231,37 @@ def test_a_server_error_drops_the_turn_and_the_chat_goes_on(
     assert "the model did not answer" in capsys.readouterr().err
     assert "Hi" in written
     assert opener.sent(1)["messages"] == [{"role": "user", "content": "kept"}]
+
+
+@pytest.mark.spec("serve:chat:streamed-text-cleaned")
+@pytest.mark.parametrize("guarded", [True, False], ids=["cleaned", "twin-uncleaned"])
+def test_streamed_text_is_cleaned_and_kept_as_streamed(
+    guarded: bool, model: ModelServer, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    streamed = "\x1b]52;c;b3du\x07two\n\tlines"
+    model.parts = [streamed]
+    written: list[str] = []
+
+    def write(text: str) -> None:
+        written.append(text)
+        model.written.release()
+
+    if not guarded:
+        # The twin: without the cleaning, the clipboard escape reaches the terminal.
+        monkeypatch.setattr(log, "clean", lambda text, keep="": text)
+    chat.run(
+        model.base_url,
+        KEY,
+        "qwen3-4b",
+        False,
+        reader("hi", "again"),
+        write,
+        opener=OPENER,
+    )
+
+    assert (written[0] == "]52;c;b3dutwo\n\tlines") is guarded
+    assert model.requests[1][2]["messages"] == [
+        {"role": "user", "content": "hi"},
+        {"role": "assistant", "content": streamed},
+        {"role": "user", "content": "again"},
+    ]

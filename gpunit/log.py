@@ -1,5 +1,6 @@
 """Write gpunit's own lines, each opening with the UTC time, to stderr or a sink."""
 
+import functools
 import os
 import sys
 import time
@@ -54,12 +55,18 @@ def redirect(sink: Callable[[str], None]) -> Generator[None, None, None]:
 _CONTROL = dict.fromkeys([*range(0x20), *range(0x7F, 0xA0)])
 
 
-def clean(text: str) -> str:
-    r"""Return `text` without C0, DEL or C1, so a pod's line cannot steer the terminal.
+def clean(text: str, keep: str = "") -> str:
+    r"""Return `text` without C0, DEL or C1 but `keep`, so it cannot steer the terminal.
 
     e.g. "\x1b]0;owned\x07loading\x1b[2J 50%" → "]0;ownedloading[2J 50%"
     """
-    return text.translate(_CONTROL)
+    return text.translate(_drop(keep))
+
+
+# Cached: the chat cleans each streamed part with the same `keep`.
+@functools.cache
+def _drop(keep: str) -> dict[int, None]:
+    return {c: None for c in _CONTROL if chr(c) not in keep}
 
 
 def say(text: str) -> None:

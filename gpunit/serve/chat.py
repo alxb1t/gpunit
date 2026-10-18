@@ -99,7 +99,8 @@ def _stream(
             choices = json.loads(data).get("choices") or [{}]
             part = (choices[0].get("delta") or {}).get("content")
             if part:
-                write(part)
+                # Cleaned on the screen alone: the conversation keeps the model's words.
+                write(log.clean(part, keep="\n\t"))
                 parts.append(part)
     return "".join(parts)
 

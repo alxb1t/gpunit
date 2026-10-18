@@ -1,9 +1,10 @@
-"""Load the bundled model table, and turn a row into the `Spec` it is served on."""
+"""Load the bundled model table and the user file, and turn a row into its `Spec`."""
 
+import os
 import re
 import tomllib
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from gpunit import log
@@ -40,6 +41,8 @@ class Row:
     vram_gb: int
     gpus: tuple[str, ...]
     disk_gb: int
+    # The user file's path for a user row.
+    source: str = "bundled"
 
     def spec(
         self,
@@ -74,28 +77,78 @@ class Row:
 
 @dataclass(frozen=True)
 class Table:
-    """The image every row serves on, and the rows by name."""
+    """The image every row serves on, the rows by name, and the user file read."""
 
     image: str
     models: Mapping[str, Row]
+    user: Path | None = None
+    replaced: tuple[str, ...] = ()
 
 
 def load(path: Path = TABLE) -> Table:
     """Return the table at `path`; refuse, naming the row and field, on any fault."""
-    try:
-        raw = tomllib.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as fault:
-        log.refuse(f"{path}: {fault}")
+    raw = _read(path)
     image = raw.get("image")
     if not isinstance(image, str) or not DIGEST.search(image):
         log.refuse(f"{path}: 'image' must end in @sha256:<64 hex>, not a tag")
+    return Table(image=image, models=_rows(path, image, raw))
+
+
+def user_file(given: Path | None) -> Path | None:
+    """Return the user file to read: `given`, `GPUNIT_MODELS`, or the XDG default.
+
+    e.g. None, no GPUNIT_MODELS, no XDG_CONFIG_HOME → ~/.config/gpunit/models.toml
+    """
+    if given is not None:
+        return given
+    named = os.environ.get("GPUNIT_MODELS")
+    if named:
+        return Path(named)
+    # A relative XDG_CONFIG_HOME is ignored, as the XDG base directory spec says.
+    base = os.environ.get("XDG_CONFIG_HOME", "")
+    config = Path(base) if os.path.isabs(base) else Path.home() / ".config"
+    default = config / "gpunit" / "models.toml"
+    return default if default.is_file() else None
+
+
+def rows(given: Path | None = None) -> Table:
+    """Return the bundled rows and the user file's; a user row replaces its namesake."""
+    # The module's `load`, looked up at the call: live/serve_dead.py patches it.
+    bundled = load()
+    path = user_file(given)
+    if path is None:
+        return bundled
+    raw = _read(path)
+    extra = sorted(raw.keys() - {"models"})
+    if extra:
+        log.refuse(
+            f"{path}: unknown key {extra[0]!r}; a user file holds [models.<name>] rows"
+            " alone, served on the bundled image"
+        )
+    own = {
+        name: replace(row, source=str(path))
+        for name, row in _rows(path, bundled.image, raw).items()
+    }
+    return Table(
+        image=bundled.image,
+        models={**bundled.models, **own},
+        user=path,
+        replaced=tuple(sorted(own.keys() & bundled.models.keys())),
+    )
+
+
+def _read(path: Path) -> dict[str, object]:
+    try:
+        return tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as fault:
+        log.refuse(f"{path}: {fault}")
+
+
+def _rows(path: Path, image: str, raw: dict[str, object]) -> dict[str, Row]:
     models = raw.get("models")
     if not isinstance(models, dict) or not models:
         log.refuse(f"{path}: 'models' must hold at least one row")
-    return Table(
-        image=image,
-        models={name: _row(path, name, image, row) for name, row in models.items()},
-    )
+    return {name: _row(path, name, image, row) for name, row in models.items()}
 
 
 def _row(path: Path, name: str, image: str, raw: object) -> Row:
@@ -123,8 +176,33 @@ def _row(path: Path, name: str, image: str, raw: object) -> Row:
     )
 
 
+# The flags `serve/launch.py` and the pod's environment set: the pin, the name, the
+# loopback bind and the key. 0014·S2.
+_LAUNCHERS = frozenset(
+    {
+        "--revision",
+        "--code-revision",
+        "--tokenizer-revision",
+        "--served-model-name",
+        "--host",
+        "--port",
+        "--api-key",
+    }
+)
+
+
 def _args(where: str, items: list[object]) -> tuple[str, ...]:
     args = strings(where, "args", items)
     if any(" " in arg for arg in args):
         log.refuse(f"{where}: 'args' holds an argument with a space, which sh splits")
+    # Refused before a pod is rented, whatever the launcher does: 0014 design D4.
+    if "--enable-log-requests" in args:
+        log.refuse(
+            f"{where}: 'args' holds --enable-log-requests; request logging stays off"
+        )
+    # vLLM reads `_` as `-` and keeps a flag's last value, so a row's own would win.
+    for arg in args:
+        flag = arg.split("=", 1)[0].replace("_", "-")
+        if flag in _LAUNCHERS:
+            log.refuse(f"{where}: 'args' holds {flag}; the launcher sets it")
     return args
