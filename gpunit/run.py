@@ -49,7 +49,7 @@ def outcome(body: Callable[[], int]) -> int:
 
 
 def _command(spec: Spec, opened: library.Session, command: list[str]) -> int:
-    env = os.environ | {
+    env = {k: v for k, v in os.environ.items() if k != "RUNPOD_API_KEY"} | {
         "GPUNIT_HOST": opened.host,
         "GPUNIT_SSH": shlex.join(opened.ssh),
     }

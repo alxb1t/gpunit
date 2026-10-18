@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING:** `run`'s command gets no `RUNPOD_API_KEY`: it never needs the account key (`0013`).
+- `[env]` refuses `RUNPOD_*` names, as it refuses `GPUNIT_*`; a `{{ RUNPOD_SECRET_name }}` value passes as written.
+  `.gpunit/` is set to `0700` on every write, a found one too (`0013`).
+
+### Fixed
+
+- `serve`'s printed pod-log lines drop C0, DEL and C1 characters, so a pod's output cannot steer the terminal;
+  `pod.log` keeps them as read (`0013`).
+
 ## [0.8.0] - 2026-10-17
 
 ### Added

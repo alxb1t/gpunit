@@ -5,7 +5,7 @@ The laptop's fixes, the tunnel, placement, serve's logging, the `0012` cards and
 
 ## Progress
 
-- [ ] 1 — The laptop
+- [x] 1 — The laptop
 - [ ] 2 — The tunnel
 - [ ] 3 — Placement
 - [ ] 4 — Serve
@@ -15,15 +15,15 @@ The laptop's fixes, the tunnel, placement, serve's logging, the `0012` cards and
 
 ## 1 — The laptop
 
-- [ ] 1.1 **HALT CHECK** — none of this change exists yet, the cards it closes are in the backlog, and the draft [D14](design.md#d14) copies is on disk.
+- [x] 1.1 **HALT CHECK** — none of this change exists yet, the cards it closes are in the backlog, and the draft [D14](design.md#d14) copies is on disk.
   Verify: `grep -c -E 'RUNPOD_|datacenters' gpunit/spec.py` prints `0`, `grep -c 'enable-log-requests' gpunit/serve/models.toml` prints `0`, `test -e docs/threat-model.md; echo $?` prints `1`, `grep -c -E '^- \*\*0012·R[3-9] ' .minions/backlog.md` prints `7`, and `test -f openspec/changes/0013-secure-and-private/threat-model-draft.md; echo $?` prints `0`.
-- [ ] 1.2 Drop `RUNPOD_API_KEY` from `run`'s command environment in `gpunit/run.py`, per [D1](design.md#d1); bind `run:handover:no-account-key` in `tests/test_run.py`.
+- [x] 1.2 Drop `RUNPOD_API_KEY` from `run`'s command environment in `gpunit/run.py`, per [D1](design.md#d1); bind `run:handover:no-account-key` in `tests/test_run.py`.
   Verify: `grep -c '"run:handover:no-account-key"' tests/test_run.py` prints `1`, and `uv run pytest -q tests/test_run.py` exits 0.
-- [ ] 1.3 Refuse `RUNPOD_*` names in `gpunit/spec.py`'s `_env`, per [D2](design.md#d2); bind `spec:file:env-runpod-refused` in `tests/test_spec.py` and `spec:file:env-secret-reference-kept` in `tests/test_runpod.py`.
+- [x] 1.3 Refuse `RUNPOD_*` names in `gpunit/spec.py`'s `_env`, per [D2](design.md#d2); bind `spec:file:env-runpod-refused` in `tests/test_spec.py` and `spec:file:env-secret-reference-kept` in `tests/test_runpod.py`.
   Verify: `grep -c '"spec:file:env-runpod-refused"' tests/test_spec.py` prints `1`, `grep -c '"spec:file:env-secret-reference-kept"' tests/test_runpod.py` prints `1`, and `uv run pytest -q tests/test_spec.py tests/test_runpod.py` exits 0.
-- [ ] 1.4 Set `.gpunit/` to `0700` in `State._mkdir`, `gpunit/state.py`, per [D3](design.md#d3); bind `session:key:dir-private` in `tests/test_state.py`.
+- [x] 1.4 Set `.gpunit/` to `0700` in `State._mkdir`, `gpunit/state.py`, per [D3](design.md#d3); bind `session:key:dir-private` in `tests/test_state.py`.
   Verify: `grep -c 'self.dir.chmod(0o700)' gpunit/state.py` prints `1`, and `uv run pytest -q tests/test_state.py` exits 0.
-- [ ] 1.5 Add `log.clean` to `gpunit/log.py` and use it at `gpunit/serve/session.py:229` and `:267`, per [D4](design.md#d4); bind `serve:wait:log-lines-cleaned` in `tests/test_serve_session.py`.
+- [x] 1.5 Add `log.clean` to `gpunit/log.py` and use it at `gpunit/serve/session.py:229` and `:267`, per [D4](design.md#d4); bind `serve:wait:log-lines-cleaned` in `tests/test_serve_session.py`.
   Verify: `grep -c 'log.clean(' gpunit/serve/session.py` prints `2`, `grep -c '"serve:wait:log-lines-cleaned"' tests/test_serve_session.py` prints a number of at least `1`, and `uv run pytest -q tests/test_serve_session.py` exits 0.
 
 ## 2 — The tunnel

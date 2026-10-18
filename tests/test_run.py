@@ -11,9 +11,21 @@ import pytest
 
 from gpunit import library, run
 from gpunit.provider import GpuInfo, Lost
+from gpunit.runpod import RunPod
 from gpunit.state import State
-from tests.fakes import RECORD, FakeProvider
+from tests.fakes import (
+    BOOT_LOG,
+    RECORD,
+    FakeOpener,
+    FakeProvider,
+    fixture,
+    log_stream,
+    page,
+    quiet,
+)
 from tests.helpers import NO_REQUESTS, gpunit, with_port
+
+KEY = "rpa_account_key"
 
 
 @pytest.fixture
@@ -48,6 +60,31 @@ def test_the_environment_names_the_session(
     assert env["GPUNIT_PORT_8188"] == str(free_port)
     assert env["GPUNIT_SSH"].startswith("ssh -F none -o IdentitiesOnly=yes -i ")
     assert env["GPUNIT_SSH"].endswith(" root@203.0.113.7 -p 40022")
+
+
+@pytest.mark.spec("run:handover:no-account-key")
+def test_the_command_gets_no_account_key(
+    cwd: Path, monkeypatch: pytest.MonkeyPatch, capfd: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("RUNPOD_API_KEY", KEY)
+    opener = FakeOpener(
+        (200, page([], None)),
+        (200, fixture("gpu.json")),
+        (200, fixture("gpu.json")),
+        (201, fixture("pod_created.json")),
+        (200, fixture("pod_running.json")),
+        quiet(log_stream(*BOOT_LOG)),
+        (204, b""),
+        (200, page([], None)),
+    )
+
+    assert gpunit(["run", "--", "env"], provider=RunPod(opener=opener)) == 0
+    env = dict(line.split("=", 1) for line in capfd.readouterr().out.splitlines())
+    assert "RUNPOD_API_KEY" not in env
+    assert env["GPUNIT_HOST"] == "203.0.113.7"
+    assert opener.answers == []
+    headers = {request.get_header("Authorization") for request in opener.requests}
+    assert headers == {f"Bearer {KEY}"}
 
 
 @pytest.mark.spec("cli:exits:stdout-is-the-commands")

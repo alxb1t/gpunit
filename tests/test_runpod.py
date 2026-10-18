@@ -136,6 +136,20 @@ def test_the_ceiling_and_the_key_win_over_the_spec_env() -> None:
     }
 
 
+@pytest.mark.spec("spec:file:env-secret-reference-kept")
+def test_a_secret_reference_reaches_the_create_as_written() -> None:
+    provider, opener = runpod((201, fixture("pod_created.json")))
+    spec = dataclasses.replace(SPEC, env={"HF_TOKEN": "{{ RUNPOD_SECRET_hf_token }}"})
+
+    provider.create(
+        spec, "RTX 4090", "ssh-ed25519 AAAA gpunit-isekai", 2700, nonce=NONCE
+    )
+
+    env = opener.sent()["env"]
+    assert isinstance(env, dict)
+    assert env["HF_TOKEN"] == "{{ RUNPOD_SECRET_hf_token }}"
+
+
 @pytest.mark.spec("session:place:400-moves-on")
 def test_a_400_create_is_refused_with_the_problem() -> None:
     provider, _ = runpod((400, fixture("problem.json")))

@@ -135,6 +135,29 @@ def test_a_gpunit_variable_in_env_is_refused(
         assert load_spec(path).env == {key: "/data"}
 
 
+@pytest.mark.spec("spec:file:env-runpod-refused")
+@pytest.mark.parametrize(
+    ("key", "refused"),
+    [("RUNPOD_API_KEY", True), ("MY_RUNPOD_API_KEY", False)],
+    ids=["runpod", "twin-other"],
+)
+def test_a_runpod_variable_in_env_is_refused(
+    key: str,
+    refused: bool,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    path = write_spec(tmp_path, VALID + f'[env]\n{key} = "rpa_x"\n')
+
+    if refused:
+        assert gpunit(["up"], provider=NO_REQUESTS) == 1
+        assert f"env {key!r} is RunPod's" in capsys.readouterr().err
+    else:
+        assert load_spec(path).env == {key: "rpa_x"}
+
+
 @pytest.mark.spec("spec:file:volume-keys")
 def test_the_window_volumes_keys_load(tmp_path: Path) -> None:
     window = 'volume_gb = 60\nvolume_ceiling = "4h"\nvolume_datacenter = "EU-RO-1"\n'

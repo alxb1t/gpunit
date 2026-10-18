@@ -31,6 +31,18 @@ def test_the_key_files_are_0600(tmp_path: Path) -> None:
     assert public.startswith("ssh-ed25519 ") and public.endswith(" gpunit-isekai")
 
 
+@pytest.mark.spec("session:key:dir-private")
+def test_a_found_directory_is_made_private(tmp_path: Path) -> None:
+    state = State(tmp_path)
+    state.dir.mkdir()
+    state.dir.chmod(0o755)
+    assert state.dir.stat().st_mode & 0o777 == 0o755
+
+    state.keygen("gpunit-isekai")
+
+    assert state.dir.stat().st_mode & 0o777 == 0o700
+
+
 @pytest.mark.spec("volume:up:datacenter-from-stock")
 def test_the_window_round_trips(tmp_path: Path) -> None:
     state = State(tmp_path)

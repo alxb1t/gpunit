@@ -185,6 +185,8 @@ def _env(path: Path, table: dict[str, object]) -> dict[str, str]:
     for key, value in table.items():
         if key.startswith("GPUNIT_"):
             log.refuse(f"{path}: env {key!r} is gpunit's; [env] may name no GPUNIT_*")
+        if key.startswith("RUNPOD_"):
+            log.refuse(f"{path}: env {key!r} is RunPod's; [env] may name no RUNPOD_*")
         if not isinstance(value, str):
             log.refuse(f"{path}: env {key!r} must be str, not {type(value).__name__}")
     return {key: value for key, value in table.items() if isinstance(value, str)}
