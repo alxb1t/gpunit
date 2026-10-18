@@ -118,7 +118,13 @@ def rows(given: Path | None = None) -> Table:
     path = user_file(given)
     if path is None:
         return bundled
-    own = _rows(path, bundled.image, _read(path), str(path))
+    raw = _read(path)
+    for key in sorted(raw.keys() - {"models"}):
+        log.refuse(
+            f"{path}: unknown key {key!r}; a user file holds [models.<name>] rows"
+            " alone, served on the bundled image"
+        )
+    own = _rows(path, bundled.image, raw, str(path))
     return Table(
         image=bundled.image,
         models={**bundled.models, **own},
@@ -173,4 +179,9 @@ def _args(where: str, items: list[object]) -> tuple[str, ...]:
     args = strings(where, "args", items)
     if any(" " in arg for arg in args):
         log.refuse(f"{where}: 'args' holds an argument with a space, which sh splits")
+    # Refused before a pod is rented, whatever the launcher does: 0014 design D4.
+    if "--enable-log-requests" in args:
+        log.refuse(
+            f"{where}: 'args' holds --enable-log-requests; request logging stays off"
+        )
     return args

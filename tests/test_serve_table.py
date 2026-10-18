@@ -254,3 +254,97 @@ def test_the_user_rows_join_the_bundled_rows(tmp_path: Path) -> None:
     assert found.models["qwen3-4b"].source == "bundled"
     assert found.user == path
     assert found.replaced == ()
+
+
+@pytest.mark.spec("serve:rows:image-refused")
+@pytest.mark.parametrize("top", ["image", None], ids=["image", "twin-rows-alone"])
+def test_a_user_file_naming_an_image_is_refused(
+    top: str | None, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    path = _user_file(tmp_path / "rows.toml")
+    if top is not None:
+        line = f'{top} = "ghcr.io/ada/vllm@sha256:{"b" * 64}"\n'
+        path.write_text(line + path.read_text(encoding="utf-8"), encoding="utf-8")
+
+    if top is None:
+        assert "granite-4.0-micro" in table.rows(path).models
+        return
+    with pytest.raises(log.Refusal):
+        table.rows(path)
+    err = capsys.readouterr().err
+    assert f"{path}: unknown key 'image'" in err
+
+
+@pytest.mark.spec("serve:rows:checked-as-bundled")
+@pytest.mark.parametrize(
+    ("old", "new", "named"),
+    [
+        ('"56111ae135df9c53a78c99028e7bc24035a9e979"', '"main"', "'revision'"),
+        ("disk_gb = 40\n", "", "'disk_gb' is required"),
+        ('"16384"', '"16384 tokens"', "a space"),
+        (GRANITE, "", "'models' must hold at least one row"),
+    ],
+    ids=["moving-revision", "missing-field", "spaced-arg", "empty-file"],
+)
+def test_a_user_row_is_checked_as_a_bundled_row_is(
+    old: str,
+    new: str,
+    named: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    path = _user_file(tmp_path / "rows.toml")
+    text = path.read_text(encoding="utf-8")
+    assert old in text
+    path.write_text(text.replace(old, new), encoding="utf-8")
+    monkeypatch.setenv("GPUNIT_MODELS", str(path))
+    monkeypatch.chdir(tmp_path)
+
+    assert gpunit(["down", "--serve", "qwen3-4b"], provider=NO_REQUESTS) == 1
+    err = capsys.readouterr().err
+    assert f"refused: {path}: " in err
+    assert named in err
+    if named != "'models' must hold at least one row":
+        assert "models.granite-4.0-micro" in err
+
+
+@pytest.mark.spec("serve:rows:logging-on-refused")
+@pytest.mark.parametrize(
+    ("flag", "refused"),
+    [
+        ("--enable-log-requests", True),
+        ("--no-enable-log-requests", False),
+        ("--enable-log-requests=yes", False),
+    ],
+    ids=["on", "twin-off", "twin-not-the-flag"],
+)
+def test_a_row_turning_request_logging_on_is_refused(
+    flag: str, refused: bool, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    path = _user_file(tmp_path / "rows.toml")
+    text = path.read_text(encoding="utf-8")
+    path.write_text(text.replace('"hermes"]', f'"hermes", "{flag}"]'), encoding="utf-8")
+
+    if not refused:
+        assert flag in table.rows(path).models["granite-4.0-micro"].args
+        return
+    with pytest.raises(log.Refusal):
+        table.rows(path)
+    err = capsys.readouterr().err
+    assert (
+        f"{path}: models.granite-4.0-micro: 'args' holds --enable-log-requests" in err
+    )
+
+
+@pytest.mark.spec("serve:rows:logging-on-refused")
+def test_a_bundled_row_turning_request_logging_on_is_refused(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    path = _bundled_with('"16384"', '"16384", "--enable-log-requests"', tmp_path)
+
+    with pytest.raises(log.Refusal):
+        table.load(path)
+    assert (
+        "models.qwen3-4b: 'args' holds --enable-log-requests" in capsys.readouterr().err
+    )

@@ -136,7 +136,31 @@ def test_an_unknown_model_exits_2_naming_the_tables_models(
     monkeypatch.chdir(tmp_path)
 
     assert gpunit(argv, provider=NO_REQUESTS) == 2
-    assert "it holds qwen3-4b, qwen3.8-27b" in capsys.readouterr().err
+    assert (
+        "it holds qwen3-4b (bundled), qwen3.8-27b (bundled)" in capsys.readouterr().err
+    )
+
+
+@pytest.mark.spec("cli:verbs:serve-unknown-model-exits-2")
+@pytest.mark.parametrize("name", ["own", "qwen3-4b"], ids=["added", "replaced"])
+def test_an_unknown_model_names_a_user_rows_file(
+    name: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    path = tmp_path / "rows.toml"
+    path.write_text(OWN_QWEN.format(name=name), encoding="utf-8")
+    monkeypatch.setenv("GPUNIT_MODELS", str(path))
+    monkeypatch.chdir(tmp_path)
+
+    argv = ["serve", "no-such-model", "--ceiling", "1h"]
+    assert gpunit(argv, provider=NO_REQUESTS) == 2
+    held = {
+        "own": f"own ({path}), qwen3-4b (bundled), qwen3.8-27b (bundled)",
+        "qwen3-4b": f"qwen3-4b ({path}), qwen3.8-27b (bundled)",
+    }
+    assert f"it holds {held[name]}" in capsys.readouterr().err
 
 
 # A user row of qwen3-4b's name, on one card the bundled row also lists.

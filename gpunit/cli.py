@@ -215,6 +215,8 @@ def _known(model: str) -> None:
     found = table.rows(None)
     if found.replaced:
         log.say(f"{found.user} replaces the bundled {', '.join(found.replaced)}")
-    models = sorted(found.models)
-    if model not in models:
-        raise Usage(f"no model {model!r} in the table; it holds {', '.join(models)}")
+    if model not in found.models:
+        held = ", ".join(
+            f"{name} ({found.models[name].source})" for name in sorted(found.models)
+        )
+        raise Usage(f"no model {model!r} in the table; it holds {held}")

@@ -6,7 +6,7 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 ## Progress
 
 - [x] 1 — The lookup
-- [ ] 2 — The rows
+- [x] 2 — The rows
 - [ ] 3 — The launcher
 - [ ] 4 — The CLI
 - [ ] 5 — The handover
@@ -27,11 +27,11 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 
 ## 2 — The rows
 
-- [ ] 2.1 Refuse a user file's top-level key other than `models` in `gpunit/serve/table.py`, per [D3](design.md#d3); bind `serve:rows:image-refused` and `serve:rows:checked-as-bundled` in `tests/test_serve_table.py`.
+- [x] 2.1 Refuse a user file's top-level key other than `models` in `gpunit/serve/table.py`, per [D3](design.md#d3); bind `serve:rows:image-refused` and `serve:rows:checked-as-bundled` in `tests/test_serve_table.py`.
   Verify: `grep -c 'a user file holds' gpunit/serve/table.py` prints `1`, `grep -c -E '"serve:rows:(image-refused|checked-as-bundled)"' tests/test_serve_table.py` prints a number of at least `2`, and `uv run pytest -q tests/test_serve_table.py` exits 0.
-- [ ] 2.2 Refuse `--enable-log-requests` in `_args`, `gpunit/serve/table.py`, per [D4](design.md#d4); bind `serve:rows:logging-on-refused` in `tests/test_serve_table.py`.
+- [x] 2.2 Refuse `--enable-log-requests` in `_args`, `gpunit/serve/table.py`, per [D4](design.md#d4); bind `serve:rows:logging-on-refused` in `tests/test_serve_table.py`.
   Verify: `grep -c 'request logging stays off' gpunit/serve/table.py` prints `1`, `grep -c '"serve:rows:logging-on-refused"' tests/test_serve_table.py` prints a number of at least `1`, and `uv run pytest -q tests/test_serve_table.py` exits 0.
-- [ ] 2.3 Name each row's source in `_known`'s usage error, `gpunit/cli.py`, per [D5](design.md#d5); in `tests/test_cli.py`, `test_an_unknown_model_exits_2_naming_the_tables_models` expects `it holds qwen3-4b (bundled), qwen3.8-27b (bundled)`, and a user row's case is added under `cli:verbs:serve-unknown-model-exits-2`.
+- [x] 2.3 Name each row's source in `_known`'s usage error, `gpunit/cli.py`, per [D5](design.md#d5); in `tests/test_cli.py`, `test_an_unknown_model_exits_2_naming_the_tables_models` expects `it holds qwen3-4b (bundled), qwen3.8-27b (bundled)`, and a user row's case is added under `cli:verbs:serve-unknown-model-exits-2`.
   Verify: `grep -c 'qwen3-4b (bundled), qwen3.8-27b (bundled)' tests/test_cli.py` prints a number of at least `1`, and `uv run pytest -q tests/test_cli.py` exits 0.
 
 ## 3 — The launcher
