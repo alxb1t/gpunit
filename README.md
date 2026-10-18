@@ -300,8 +300,9 @@ Keep private data off stdout and off the volume: both outlive the command.
   list, logs, delete); network volumes (create, read, list, delete); billing (read).
 - **Where it goes:** a request header to `https://api.runpod.io/v2`, never argv, never a redirect; `run`'s command
   does not get it.
-- **The minimum a restricted key needs** is measured by hand, since RunPod documents no REST v2 scope for these
-  calls: [the probe](docs/threat-model.md#7-the-probe).
+- **Measured minimum:** a restricted key, made in the console at its narrowest settings, covers every call above
+  (2026-10-18, [the probe](docs/threat-model.md#7-the-probe)). RunPod offers no scope finer than the account's pods,
+  volumes and billing, so a leaked key still reaches all of them.
 
 ### Accepted risks
 
@@ -309,6 +310,10 @@ Keep private data off stdout and off the volume: both outlive the command.
   the inspection; no confidential computing is offered.
 - **Every local user reaches `GPUNIT_PORT_*`.** A forwarded port listens on loopback with no authentication of its
   own: on a shared machine, the app behind it needs its own.
+- **Every SSH key registered in your RunPod account opens a root shell on every gpunit pod**, through RunPod's SSH
+  proxy, whatever the pod's `authorized_keys` holds. Register only keys you would trust with that, or none.
+- **The pod's own key reads the account's billing:** every pod's id and cost. It lists no pod and reads no other
+  pod; a command on the pod can read it from boot's environment.
 - **The session key sits unencrypted in `.gpunit/`**, for one session: it is deleted with the pod. Keep `.gpunit/`
   out of git, backups and sync folders.
 

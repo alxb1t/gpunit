@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/threat-model.md`: what gpunit protects, from whom, and each threat's status at `v0.9`; README's
   *Security and privacy* says where data lands, how to pass a secret, the key's calls and the accepted risks.
   `CLAUDE.md` holds that a change touching a trust boundary updates the model (`0013`).
+- The probe, by hand: a restricted key covers every call gpunit makes; the pod's own key reads its pod and the
+  account's billing, and nothing else read; an account SSH key opens a root shell on a gpunit pod through RunPod's
+  SSH proxy. README's *Accepted risks* names the last two; `docs/threat-model.md` holds no gap (`0013`).
 
 ### Changed
 

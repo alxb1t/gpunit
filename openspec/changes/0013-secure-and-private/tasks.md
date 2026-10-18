@@ -11,7 +11,7 @@ The laptop's fixes, the tunnel, placement, serve's logging, the `0012` cards and
 - [x] 4 — Serve
 - [x] 5 — The cards
 - [x] 6 — The docs
-- [ ] 7 — ⚠️ **HUMAN · METERED** — the probe
+- [x] 7 — ⚠️ **HUMAN · METERED** — the probe
 
 ## 1 — The laptop
 
@@ -71,9 +71,9 @@ The laptop's fixes, the tunnel, placement, serve's logging, the `0012` cards and
 
 ## 7 — ⚠️ **HUMAN · METERED** — the probe
 
-- [ ] 7.1 **HUMAN · METERED** — G6: with a console-made restricted key as `RUNPOD_API_KEY`, run `make live`, `make live-volume` and `uv run gpunit spend --days 1`, widening per [D15](design.md#d15); append their tails to `live/last_run.txt`, each under `<date> — make <target>, 0013-secure-and-private`; add `- **Measured minimum:** …` to README and `- **G6 measured:** …` to `docs/threat-model.md`.
+- [x] 7.1 **HUMAN · METERED** — G6: with a console-made restricted key as `RUNPOD_API_KEY`, run `make live`, `make live-volume` and `uv run gpunit spend --days 1`, widening per [D15](design.md#d15); append their tails to `live/last_run.txt`, each under `<date> — make <target>, 0013-secure-and-private`; add `- **Measured minimum:** …` to README and `- **G6 measured:** …` to `docs/threat-model.md`.
   Verify: `grep -c -E '^[0-9]{4}-[0-9]{2}-[0-9]{2} — make live(-volume)?, 0013-secure-and-private$' live/last_run.txt` prints `2`, `grep -c '^- \*\*Measured minimum:\*\* ' README.md` prints `1`, and `grep -c '^- \*\*G6 measured:\*\* ' docs/threat-model.md` prints `1`.
-- [ ] 7.2 **HUMAN · METERED** — G5: run [D15](design.md#d15)'s laptop block, then its pod block on the pod's shell, `<other>` the id the laptop block prints; add `- **G5 measured:** <each path's status>` under `## 7. The probe` in `docs/threat-model.md`.
+- [x] 7.2 **HUMAN · METERED** — G5: run [D15](design.md#d15)'s laptop block, then its pod block on the pod's shell, `<other>` the id the laptop block prints; add `- **G5 measured:** <each path's status>` under `## 7. The probe` in `docs/threat-model.md`.
   Verify: `grep -c '^- \*\*G5 measured:\*\* ' docs/threat-model.md` prints `1`.
-- [ ] 7.3 **HUMAN · METERED** — G12: compare `authorized_keys` and try `ssh.proxy`, per [D15](design.md#d15); add `- **G12 measured:** …`; set T22, T24 and T54 from the results; then [D15](design.md#d15)'s end.
+- [x] 7.3 **HUMAN · METERED** — G12: compare `authorized_keys` and try `ssh.proxy`, per [D15](design.md#d15); add `- **G12 measured:** …`; set T22, T24 and T54 from the results; then [D15](design.md#d15)'s end.
   Verify: `grep -c '^- \*\*G12 measured:\*\* ' docs/threat-model.md` prints `1`, and `grep -E '^\| T(22|24|54) ' docs/threat-model.md | grep -c '| gap |'` prints `0`.

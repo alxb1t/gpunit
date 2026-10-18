@@ -465,3 +465,91 @@ no session is recorded
 
 The account's pod listing (RunPod's REST v2, read after the runs) was empty; its network-volume listing held
 `gpunit-isekai` alone, isekai's own volume, made by none of these runs.
+
+2026-10-18 — make live, 0013-secure-and-private
+On a console-made restricted key as RUNPOD_API_KEY (0013 design D15, G6).
+
+2026-10-18T11:37:41Z creating on NVIDIA RTX A4500
+2026-10-18T11:37:41Z create on 'NVIDIA RTX A4500' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-18T11:37:41Z creating on NVIDIA RTX A5000
+2026-10-18T11:37:42Z create on 'NVIDIA RTX A5000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-18T11:37:42Z creating on NVIDIA A40
+2026-10-18T11:37:43Z pod sfluwraub52gqj created; waiting for SSH
+2026-10-18T11:37:59Z host key verified: SHA256:cV2nkAwxZkkLIkJj3NVNsX7s1c5LEp1Ewf0Hl0ATaGU
+2026-10-18T11:37:59Z session up: pod sfluwraub52gqj, root@63.141.33.137 -p 22181
+Sun Oct 18 11:38:01 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.178.04             Driver Version: 580.178.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A40                     On  |   00000000:56:00.0 Off |                  Off |
+|  0%   25C    P8             30W /  300W |       1MiB /  49140MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+2026-10-18T11:38:02Z pod sfluwraub52gqj deleted
+uv run gpunit status --spec live/gpunit.toml
+no session is recorded
+
+2026-10-18 — make live-volume, 0013-secure-and-private
+On the same restricted key.
+
+NVIDIA RTX A4500: $0.25/h
+NVIDIA RTX A5000: $0.27/h
+NVIDIA A40: $0.59/h
+NVIDIA RTX A6000: $0.59/h
+NVIDIA RTX PRO 4500 Blackwell: $0.72/h
+NVIDIA GeForce RTX 4090: $0.89/h
+at most $0.26 for 600s and a 420s wait for SSH
+2026-10-18T11:38:24Z data centre: EU-RO-1
+2026-10-18T11:38:24Z price: $0.07/GB a month
+2026-10-18T11:38:24Z at most $0.01 for 10 GB over 1h
+2026-10-18T11:38:25Z volume 0hfe1ysbbo up in EU-RO-1, 10 GB, until 2026-10-18T12:08:25Z
+2026-10-18T11:38:28Z creating on NVIDIA RTX A4500
+2026-10-18T11:38:29Z create on 'NVIDIA RTX A4500' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-18T11:38:29Z creating on NVIDIA RTX A5000
+2026-10-18T11:38:29Z create on 'NVIDIA RTX A5000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-18T11:38:29Z creating on NVIDIA A40
+2026-10-18T11:38:30Z create on 'NVIDIA A40' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-18T11:38:30Z creating on NVIDIA RTX A6000
+2026-10-18T11:38:30Z create on 'NVIDIA RTX A6000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-18T11:38:30Z creating on NVIDIA RTX PRO 4500 Blackwell
+2026-10-18T11:38:33Z pod 2r44lds4pmbtcs created; waiting for SSH
+2026-10-18T11:39:12Z host key verified: SHA256:SKK0iBNTSn+aHPIuaGgYEe2ymW/RZVcQH2I+Qkkesso
+2026-10-18T11:39:12Z session up: pod 2r44lds4pmbtcs, root@213.173.107.21 -p 25855
+2026-10-18T11:39:15Z pod 2r44lds4pmbtcs deleted
+2026-10-18T11:39:19Z creating on NVIDIA RTX A4500
+2026-10-18T11:39:20Z create on 'NVIDIA RTX A4500' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-18T11:39:20Z creating on NVIDIA RTX A5000
+2026-10-18T11:39:20Z create on 'NVIDIA RTX A5000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-18T11:39:20Z creating on NVIDIA A40
+2026-10-18T11:39:21Z create on 'NVIDIA A40' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-18T11:39:21Z creating on NVIDIA RTX A6000
+2026-10-18T11:39:21Z create on 'NVIDIA RTX A6000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-18T11:39:21Z creating on NVIDIA RTX PRO 4500 Blackwell
+2026-10-18T11:39:23Z pod af3uax9gk0kid7 created; waiting for SSH
+2026-10-18T11:39:45Z host key verified: SHA256:BljoFxgVXA96UbGm1uViWJTlN0pOhifVFCjZgloet9w
+2026-10-18T11:39:45Z session up: pod af3uax9gk0kid7, root@213.173.111.4 -p 40485
+2026-10-18T11:39:47Z pod af3uax9gk0kid7 deleted
+wrote: 2026-10-18T11:39:14Z
+read: 2026-10-18T11:39:14Z
+2026-10-18T11:39:48Z volume 0hfe1ysbbo deleted
+no session is recorded
+
+2026-10-18 — gpunit spend --days 1, 0013-secure-and-private, on the same restricted key: exit 0
+2026-10-18T11:39:53Z the current UTC day is still being billed; its figures can change
+spend, 2026-10-18 → 2026-10-18 (UTC)
+pods      <another project>      2 pods  $1.11
+pods      unattributed         0 pods  $0.00
+total                                  $1.11
+(The other project's name is withheld here; the day's live pods were not yet billed.)
