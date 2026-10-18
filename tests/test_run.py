@@ -15,14 +15,9 @@ from gpunit.provider import GpuInfo, Lost
 from gpunit.runpod import RunPod
 from gpunit.state import State
 from tests.fakes import (
-    BOOT_LOG,
     RECORD,
-    FakeOpener,
     FakeProvider,
-    fixture,
-    log_stream,
-    page,
-    quiet,
+    session_opener,
 )
 from tests.helpers import NO_REQUESTS, gpunit, with_port
 
@@ -77,16 +72,7 @@ def test_the_command_gets_no_account_key(
     cwd: Path, monkeypatch: pytest.MonkeyPatch, capfd: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setenv("RUNPOD_API_KEY", KEY)
-    opener = FakeOpener(
-        (200, page([], None)),
-        (200, fixture("gpu.json")),
-        (200, fixture("gpu.json")),
-        (201, fixture("pod_created.json")),
-        (200, fixture("pod_running.json")),
-        quiet(log_stream(*BOOT_LOG)),
-        (204, b""),
-        (200, page([], None)),
-    )
+    opener = session_opener()
 
     assert gpunit(["run", "--", "env"], provider=RunPod(opener=opener)) == 0
     env = dict(line.split("=", 1) for line in capfd.readouterr().out.splitlines())

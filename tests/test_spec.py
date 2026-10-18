@@ -258,23 +258,19 @@ def test_an_empty_allow_list_is_refused(
 
 @pytest.mark.spec("spec:file:volume-datacenter-outside-refused")
 @pytest.mark.parametrize(
-    ("verb", "datacenter", "refused"),
-    [
-        (["up"], "CA-MTL-4", True),
-        (["volume", "up"], "CA-MTL-4", True),
-        (["up"], "EU-RO-1", False),
-    ],
+    ("verb", "refused"),
+    [(["up"], True), (["volume", "up"], True), (["up"], False)],
     ids=["up", "volume-up", "twin-inside"],
 )
 def test_a_window_volume_outside_the_allow_list_is_refused(
     verb: list[str],
-    datacenter: str,
     refused: bool,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     monkeypatch.chdir(tmp_path)
+    datacenter = "CA-MTL-4" if refused else "EU-RO-1"
     window = (
         'datacenters = ["EU-RO-1"]\nvolume_gb = 60\nvolume_ceiling = "4h"\n'
         f'volume_datacenter = "{datacenter}"\n'

@@ -71,6 +71,10 @@ class Spec:
     timeout_s: int = DEFAULT_TIMEOUT_S
     env: Mapping[str, str] = field(default_factory=dict)
 
+    def allows(self, datacenter: str | None) -> bool:
+        """Return whether `datacenters` lets `datacenter` in; unset, it lets any in."""
+        return not self.datacenters or datacenter in self.datacenters
+
 
 def parse_ceiling(text: str) -> int:
     """Return a duration's seconds, the unit required; raise `ValueError` otherwise.
@@ -104,14 +108,16 @@ def load_spec(path: Path) -> Spec:
         log.refuse(f"{path}: 'image' must end in @sha256:<64 hex>, not a tag")
     ceiling_s = _duration(path, "ceiling", raw["ceiling"])
     volume_ceiling_s = _volume_ceiling(path, raw)
-    datacenters = _strings(path, "datacenters", raw.get("datacenters"))
+    datacenters = (
+        strings(path, "datacenters", raw["datacenters"]) if "datacenters" in raw else ()
+    )
     dc = raw.get("volume_datacenter")
     if datacenters and dc is not None and dc not in datacenters:
         log.refuse(f"{path}: 'volume_datacenter' {dc!r} is not in 'datacenters'")
     return Spec(
         project=raw["project"],
         image=raw["image"],
-        gpus=_strings(path, "gpus", raw["gpus"]),
+        gpus=strings(path, "gpus", raw["gpus"]),
         vram_gb=raw["vram_gb"],
         ceiling_s=ceiling_s,
         disk_gb=raw["disk_gb"],
@@ -162,16 +168,11 @@ def _duration(path: Path, key: str, text: str) -> int:
         )
 
 
-def _strings(path: Path, key: str, items: list[object] | None) -> tuple[str, ...]:
-    """Return the list's strings; refuse an empty list, or one holding another type.
-
-    An absent key, `None`, is the empty tuple.
-    """
-    if items is None:
-        return ()
+def strings(where: str | Path, key: str, items: list[object]) -> tuple[str, ...]:
+    """Return the list's strings; refuse an empty list, or one holding another type."""
     names = tuple(item for item in items if isinstance(item, str))
     if not names or len(names) != len(items):
-        log.refuse(f"{path}: {key!r} must be a non-empty list of strings")
+        log.refuse(f"{where}: {key!r} must be a non-empty list of strings")
     return names
 
 

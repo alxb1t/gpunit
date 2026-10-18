@@ -282,3 +282,17 @@ class FakeOpener(urllib.request.OpenerDirector):
         data = self.requests[index].data
         assert isinstance(data, bytes)
         return json.loads(data)
+
+
+def session_opener() -> FakeOpener:
+    """Return an opener scripted for one whole session on RunPod: up, then down."""
+    return FakeOpener(
+        (200, page([], None)),
+        (200, fixture("gpu.json")),
+        (200, fixture("gpu.json")),
+        (201, fixture("pod_created.json")),
+        (200, fixture("pod_running.json")),
+        quiet(log_stream(*BOOT_LOG)),
+        (204, b""),
+        (200, page([], None)),
+    )

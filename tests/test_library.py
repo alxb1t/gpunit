@@ -18,14 +18,9 @@ from gpunit.runpod import RunPod
 from gpunit.spec import Spec, load_spec
 from gpunit.state import State
 from tests.fakes import (
-    BOOT_LOG,
     RECORD,
-    FakeOpener,
     FakeProvider,
-    fixture,
-    log_stream,
-    page,
-    quiet,
+    session_opener,
 )
 from tests.helpers import IMAGE, NO_REQUESTS, install_stubs, with_port
 
@@ -329,16 +324,7 @@ def test_the_key_comes_from_the_mapping(
     cwd: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("RUNPOD_API_KEY", raising=False)
-    opener = FakeOpener(
-        (200, page([], None)),
-        (200, fixture("gpu.json")),
-        (200, fixture("gpu.json")),
-        (201, fixture("pod_created.json")),
-        (200, fixture("pod_running.json")),
-        quiet(log_stream(*BOOT_LOG)),
-        (204, b""),
-        (200, page([], None)),
-    )
+    opener = session_opener()
     monkeypatch.setattr(
         library, "RunPod", lambda environ: RunPod(environ, opener=opener)
     )

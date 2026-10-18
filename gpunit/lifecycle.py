@@ -94,7 +94,7 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
             volume = provider.volume(spec.volume)
         except (Unknown, Lost) as fault:
             log.refuse(f"volume {spec.volume} could not be read: {fault}")
-        if spec.datacenters and volume.datacenter not in spec.datacenters:
+        if not spec.allows(volume.datacenter):
             log.refuse(
                 f"volume {spec.volume} is in {volume.datacenter}, "
                 f"outside datacenters {', '.join(spec.datacenters)}"
@@ -373,18 +373,18 @@ def _wait(spec: Spec, provider: Provider, state: State, record: Record) -> Recor
             )
         if info is None:
             return None
-        allowed = spec.datacenters
         # RunPod calls the create's data centres preferred: 0013 design D8.
-        if allowed and info.datacenter and info.datacenter not in allowed:
-            _tear_down(
-                spec,
-                provider,
-                state,
-                f"pod {record.id} was placed in {info.datacenter}, "
-                f"outside datacenters {', '.join(allowed)}",
-            )
-        placed = not allowed or info.datacenter is not None
-        return info if info.host and info.port and placed else None
+        if not spec.allows(info.datacenter):
+            if info.datacenter is not None:
+                _tear_down(
+                    spec,
+                    provider,
+                    state,
+                    f"pod {record.id} was placed in {info.datacenter}, "
+                    f"outside datacenters {', '.join(spec.datacenters)}",
+                )
+            return None
+        return info if info.host and info.port else None
 
     info = _poll(spec.timeout_s, mapped)
     if info is None:

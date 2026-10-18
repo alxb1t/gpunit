@@ -191,6 +191,7 @@ def _datacenter(spec: Spec, provider: Provider) -> str:
         standard = provider.volume_datacenters()
     except Lost as fault:
         log.refuse(f"the data centres could not be read: {fault}")
+    standard = {dc for dc in standard if spec.allows(dc)}
     cards = lifecycle.placeable(spec, provider)
     for card in cards:
         try:
@@ -198,11 +199,7 @@ def _datacenter(spec: Spec, provider: Provider) -> str:
         except (Unknown, Lost) as fault:
             log.refuse(f"the stock of {card!r} could not be read: {fault}")
         placed = [
-            (dc, level)
-            for dc, level in stocked
-            if dc in standard
-            and level in STOCK
-            and (not spec.datacenters or dc in spec.datacenters)
+            (dc, level) for dc, level in stocked if dc in standard and level in STOCK
         ]
         if placed:
             # `min` keeps the provider's order among equal levels.
