@@ -229,3 +229,61 @@ def test_a_volume_size_out_of_range_is_refused(
         assert "'volume_gb' must be from 10 to 4000" in capsys.readouterr().err
     else:
         assert load_spec(path).volume_gb == size
+
+
+@pytest.mark.spec("spec:file:datacenters-load")
+def test_the_allow_list_loads_in_its_order(tmp_path: Path) -> None:
+    text = VALID + 'datacenters = ["EU-RO-1", "EU-SE-1"]\n'
+
+    assert load_spec(write_spec(tmp_path, text)).datacenters == ("EU-RO-1", "EU-SE-1")
+    assert load_spec(write_spec(tmp_path)).datacenters == ()
+
+
+@pytest.mark.spec("spec:file:datacenters-empty-refused")
+@pytest.mark.parametrize(
+    "value", ["[]", '["EU-RO-1", 7]', '"EU-RO-1"'], ids=["empty", "int", "string"]
+)
+def test_an_empty_allow_list_is_refused(
+    value: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    write_spec(tmp_path, VALID + f"datacenters = {value}\n")
+
+    assert gpunit(["up"], provider=NO_REQUESTS) == 1
+    assert "'datacenters' must be" in capsys.readouterr().err
+
+
+@pytest.mark.spec("spec:file:volume-datacenter-outside-refused")
+@pytest.mark.parametrize(
+    ("verb", "datacenter", "refused"),
+    [
+        (["up"], "CA-MTL-4", True),
+        (["volume", "up"], "CA-MTL-4", True),
+        (["up"], "EU-RO-1", False),
+    ],
+    ids=["up", "volume-up", "twin-inside"],
+)
+def test_a_window_volume_outside_the_allow_list_is_refused(
+    verb: list[str],
+    datacenter: str,
+    refused: bool,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    window = (
+        'datacenters = ["EU-RO-1"]\nvolume_gb = 60\nvolume_ceiling = "4h"\n'
+        f'volume_datacenter = "{datacenter}"\n'
+    )
+    path = write_spec(tmp_path, VALID + window)
+
+    if refused:
+        assert gpunit(verb, provider=NO_REQUESTS) == 1
+        err = capsys.readouterr().err
+        assert "'volume_datacenter' 'CA-MTL-4' is not in 'datacenters'" in err
+    else:
+        assert load_spec(path).volume_datacenter == datacenter

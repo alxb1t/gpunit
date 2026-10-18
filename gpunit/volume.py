@@ -198,13 +198,20 @@ def _datacenter(spec: Spec, provider: Provider) -> str:
         except (Unknown, Lost) as fault:
             log.refuse(f"the stock of {card!r} could not be read: {fault}")
         placed = [
-            (dc, level) for dc, level in stocked if dc in standard and level in STOCK
+            (dc, level)
+            for dc, level in stocked
+            if dc in standard
+            and level in STOCK
+            and (not spec.datacenters or dc in spec.datacenters)
         ]
         if placed:
             # `min` keeps the provider's order among equal levels.
             return min(placed, key=lambda pair: STOCK.index(pair[1]))[0]
+    within = (
+        f" within datacenters {', '.join(spec.datacenters)}" if spec.datacenters else ""
+    )
     log.refuse(
-        "no card of gpus is in stock in a data centre with standard volumes: "
+        f"no card of gpus is in stock in a data centre with standard volumes{within}: "
         + ", ".join(cards)
     )
 

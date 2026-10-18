@@ -7,7 +7,7 @@ The laptop's fixes, the tunnel, placement, serve's logging, the `0012` cards and
 
 - [x] 1 — The laptop
 - [x] 2 — The tunnel
-- [ ] 3 — Placement
+- [x] 3 — Placement
 - [ ] 4 — Serve
 - [ ] 5 — The cards
 - [ ] 6 — The docs
@@ -35,13 +35,13 @@ The laptop's fixes, the tunnel, placement, serve's logging, the `0012` cards and
 
 ## 3 — Placement
 
-- [ ] 3.1 Load `datacenters` in `gpunit/spec.py` and refuse a `volume_datacenter` outside it, per [D7](design.md#d7); bind `spec:file:datacenters-load`, `spec:file:datacenters-empty-refused` and `spec:file:volume-datacenter-outside-refused` in `tests/test_spec.py`.
+- [x] 3.1 Load `datacenters` in `gpunit/spec.py` and refuse a `volume_datacenter` outside it, per [D7](design.md#d7); bind `spec:file:datacenters-load`, `spec:file:datacenters-empty-refused` and `spec:file:volume-datacenter-outside-refused` in `tests/test_spec.py`.
   Verify: `grep -c -E '"spec:file:(datacenters-load|datacenters-empty-refused|volume-datacenter-outside-refused)"' tests/test_spec.py` prints a number of at least `3`, and `uv run pytest -q tests/test_spec.py` exits 0.
-- [ ] 3.2 Add `PodInfo.datacenter` in `gpunit/provider.py`; read `dataCenterId` in `RunPod.get` and send `datacenters` in `RunPod.create`, `gpunit/runpod.py`, per [D8](design.md#d8); bind `session:datacenters:create-names-them` and `session:datacenters:unset-names-none` in `tests/test_runpod.py`.
+- [x] 3.2 Add `PodInfo.datacenter` in `gpunit/provider.py`; read `dataCenterId` in `RunPod.get` and send `datacenters` in `RunPod.create`, `gpunit/runpod.py`, per [D8](design.md#d8); bind `session:datacenters:create-names-them` and `session:datacenters:unset-names-none` in `tests/test_runpod.py`.
   Verify: `grep -c '"dataCenterId"' gpunit/runpod.py` prints `1`, `grep -c -E '"session:datacenters:(create-names-them|unset-names-none)"' tests/test_runpod.py` prints a number of at least `2`, and `uv run pytest -q tests/test_runpod.py` exits 0.
-- [ ] 3.3 Refuse a mounted volume outside `datacenters` in `lifecycle.up`, and check the pod's data centre in `_wait`, `gpunit/lifecycle.py`, per [D8](design.md#d8); let `tests/fakes.py`'s `FakeProvider` answer a data centre; bind the `session:datacenters:` keys `volume-outside-refuses`, `pod-outside-tears-down` and `unread-is-not-yet` in `tests/test_up.py`.
+- [x] 3.3 Refuse a mounted volume outside `datacenters` in `lifecycle.up`, and check the pod's data centre in `_wait`, `gpunit/lifecycle.py`, per [D8](design.md#d8); let `tests/fakes.py`'s `FakeProvider` answer a data centre; bind the `session:datacenters:` keys `volume-outside-refuses`, `pod-outside-tears-down` and `unread-is-not-yet` in `tests/test_up.py`.
   Verify: `grep -c -E '"session:datacenters:(volume-outside-refuses|pod-outside-tears-down|unread-is-not-yet)"' tests/test_up.py` prints a number of at least `3`, and `uv run pytest -q` exits 0.
-- [ ] 3.4 Keep `volume up`'s stock choice within `datacenters` in `gpunit/volume.py`'s `_datacenter`, per [D9](design.md#d9); bind `volume:up:datacenter-within-allow-list` and `volume:up:no-stock-in-allow-list-refuses` in `tests/test_volume.py`.
+- [x] 3.4 Keep `volume up`'s stock choice within `datacenters` in `gpunit/volume.py`'s `_datacenter`, per [D9](design.md#d9); bind `volume:up:datacenter-within-allow-list` and `volume:up:no-stock-in-allow-list-refuses` in `tests/test_volume.py`.
   Verify: `grep -c -E '"volume:up:(datacenter-within-allow-list|no-stock-in-allow-list-refuses)"' tests/test_volume.py` prints a number of at least `2`, and `uv run pytest -q tests/test_volume.py` exits 0.
 
 ## 4 — Serve

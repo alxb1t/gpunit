@@ -66,6 +66,37 @@ def test_the_highest_stock_wins_and_a_card_under_the_floor_is_not_read(
     assert provider.named("create_volume") == [("gpunit-isekai", 60, "CA-MTL-4")]
 
 
+@pytest.mark.spec("volume:up:datacenter-within-allow-list")
+def test_the_stock_choice_stays_within_the_allow_list(cwd: Path) -> None:
+    write_spec(cwd, CARDS + 'datacenters = ["EU-SE-1"]\n')
+    provider = FakeProvider(
+        volume_datacenters={"EU-RO-1", "EU-SE-1"},
+        stocks={"NVIDIA A40": [("EU-RO-1", "HIGH"), ("EU-SE-1", "LOW")]},
+    )
+
+    assert gpunit(["volume", "up", "--yes"], provider=provider) == 0
+    assert provider.named("create_volume") == [("gpunit-isekai", 60, "EU-SE-1")]
+
+
+@pytest.mark.spec("volume:up:no-stock-in-allow-list-refuses")
+def test_no_stock_within_the_allow_list_refuses(
+    cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_spec(cwd, CARDS + 'datacenters = ["EU-SE-1"]\n')
+    provider = FakeProvider(
+        volume_datacenters={"EU-RO-1", "EU-SE-1"},
+        stocks={"NVIDIA A40": [("EU-RO-1", "HIGH")], "NVIDIA L40": []},
+    )
+
+    assert gpunit(["volume", "up", "--yes"], provider=provider) == 1
+    assert provider.named("create_volume") == []
+    err = capsys.readouterr().err
+    assert (
+        "no card of gpus is in stock in a data centre with standard volumes "
+        "within datacenters EU-SE-1: NVIDIA A40, NVIDIA L40"
+    ) in err
+
+
 @pytest.mark.spec("volume:up:datacenter-given")
 def test_the_given_data_centre_reads_no_stock(cwd: Path) -> None:
     write_spec(cwd, WINDOW + 'volume_datacenter = "CA-MTL-4"\n')

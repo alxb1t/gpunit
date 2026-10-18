@@ -188,6 +188,65 @@ def test_one_dead_poll_is_not_yet(cwd: Path, gets: list[PodInfo | None]) -> None
     assert len(provider.named("get")) == len(gets)
 
 
+@pytest.mark.spec("session:datacenters:volume-outside-refuses")
+@pytest.mark.parametrize("window", [False, True], ids=["volume", "window"])
+def test_a_mounted_volume_outside_the_allow_list_refuses(
+    window: bool, cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    allow = 'datacenters = ["EU-RO-1"]\n'
+    if window:
+        write_spec(cwd, WINDOW + allow)
+        open_window(cwd, 4 * 3600, "v1", "CA-MTL-4")
+    else:
+        write_spec(cwd, VALID + allow + 'volume = "v1"\n')
+    provider = FakeProvider(volumes={"v1": VolumeInfo("CA-MTL-4", 60)})
+
+    assert gpunit(["up"], provider=provider) == 1
+    err = capsys.readouterr().err
+    assert "volume v1 is in CA-MTL-4, outside datacenters EU-RO-1" in err
+    assert creates(provider) == []
+
+
+IN_TEXAS = PodInfo("RUNNING", "203.0.113.7", 40022, "US-TX-3")
+
+
+@pytest.mark.spec("session:datacenters:pod-outside-tears-down")
+def test_a_pod_placed_outside_the_allow_list_is_torn_down(
+    cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_spec(cwd, VALID + 'datacenters = ["EU-RO-1", "EU-SE-1"]\n')
+    provider = FakeProvider(gets=[IN_TEXAS])
+
+    assert gpunit(["up"], provider=provider) == 1
+    err = capsys.readouterr().err
+    assert (
+        "pod pod-1 was placed in US-TX-3, outside datacenters EU-RO-1, EU-SE-1" in err
+    )
+    assert provider.named("delete") == [("pod-1",)]
+    assert len(provider.named("get")) == 1
+    assert not (cwd / ".gpunit" / "pod").exists()
+
+
+@pytest.mark.spec("session:datacenters:unset-names-none")
+def test_no_allow_list_takes_the_pod_where_it_is(cwd: Path) -> None:
+    # The twin of the tear-down: the same pod, no `datacenters`.
+    provider = FakeProvider(gets=[IN_TEXAS])
+
+    assert gpunit(["up"], provider=provider) == 0
+    assert provider.named("delete") == []
+
+
+@pytest.mark.spec("session:datacenters:unread-is-not-yet")
+def test_a_pod_with_no_datacenter_yet_is_not_up(cwd: Path) -> None:
+    write_spec(cwd, VALID + 'datacenters = ["EU-RO-1"]\n')
+    unread = PodInfo("RUNNING", "203.0.113.7", 40022)
+    provider = FakeProvider(gets=[unread, RUNNING])
+
+    assert gpunit(["up"], provider=provider) == 0
+    assert len(provider.named("get")) == 2
+    assert provider.named("delete") == []
+
+
 @pytest.mark.spec("session:volume:unreadable-refuses")
 def test_an_unreadable_volume_refuses(
     cwd: Path, capsys: pytest.CaptureFixture[str]

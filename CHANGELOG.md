@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `datacenters = [...]` in `gpunit.toml`, an optional allow-list: the create names it, a mounted volume or a pod
+  reported outside it refuses or tears down, and `volume up`'s stock choice stays within it (`0013`).
+
 ### Changed
 
 - **BREAKING:** `run`'s command gets no `RUNPOD_API_KEY`: it never needs the account key (`0013`).

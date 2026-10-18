@@ -81,11 +81,12 @@ class VolumeInfo:
 
 @dataclass(frozen=True)
 class PodInfo:
-    """A pod's status, and its public SSH address once mapped."""
+    """A pod's status, its public SSH address once mapped, and its data centre."""
 
     status: str
     host: str | None
     port: int | None
+    datacenter: str | None = None
 
 
 @dataclass(frozen=True)

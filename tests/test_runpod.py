@@ -195,6 +195,39 @@ def test_get_reads_the_direct_ssh_address_or_none() -> None:
     assert provider.get("pod-abc123") == PodInfo("RUNNING", "203.0.113.7", 40022)
 
 
+@pytest.mark.spec("session:datacenters:pod-outside-tears-down")
+def test_get_reads_the_pods_datacenter() -> None:
+    placed = json.loads(fixture("pod_running.json")) | {"dataCenterId": "US-TX-3"}
+    unplaced = json.loads(fixture("pod_running.json")) | {"dataCenterId": None}
+    provider, _ = runpod(
+        (200, json.dumps(placed).encode()), (200, json.dumps(unplaced).encode())
+    )
+
+    assert provider.get("pod-abc123") == PodInfo(
+        "RUNNING", "203.0.113.7", 40022, "US-TX-3"
+    )
+    assert provider.get("pod-abc123") == PodInfo("RUNNING", "203.0.113.7", 40022)
+
+
+@pytest.mark.spec("session:datacenters:create-names-them")
+def test_the_create_names_the_allow_list() -> None:
+    provider, opener = runpod((201, fixture("pod_created.json")))
+    spec = dataclasses.replace(SPEC, datacenters=("EU-RO-1", "EU-SE-1"))
+
+    provider.create(spec, "RTX 4090", "key", 2700, nonce=NONCE)
+
+    assert opener.sent()["dataCenterIds"] == ["EU-RO-1", "EU-SE-1"]
+
+
+@pytest.mark.spec("session:datacenters:unset-names-none")
+def test_no_allow_list_names_no_datacenter() -> None:
+    provider, opener = runpod((201, fixture("pod_created.json")))
+
+    provider.create(SPEC, "RTX 4090", "key", 2700, nonce=NONCE)
+
+    assert "dataCenterIds" not in opener.sent()
+
+
 @pytest.mark.spec("session:hostkey:match-recorded")
 def test_the_logs_last_fingerprint_wins() -> None:
     provider, opener = runpod((200, fixture("log.txt")))
