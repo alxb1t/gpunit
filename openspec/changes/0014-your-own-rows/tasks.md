@@ -9,7 +9,7 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 - [x] 2 — The rows
 - [x] 3 — The launcher
 - [x] 4 — The CLI
-- [ ] 5 — The handover
+- [x] 5 — The handover
 - [ ] 6 — The cards
 - [ ] 7 — ⚠️ **HUMAN** — the serve image
 - [ ] 8 — ⚠️ **HUMAN · METERED** — make live-serve on live/models.toml
@@ -50,15 +50,15 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 
 ## 5 — The handover
 
-- [ ] 5.1 In `README.md`, add `### Your own rows` and the edits to *Serve a model*'s intro, *The verbs* and *The proof*, per [D8](design.md#d8).
+- [x] 5.1 In `README.md`, add `### Your own rows` and the edits to *Serve a model*'s intro, *The verbs* and *The proof*, per [D8](design.md#d8).
   Verify: `grep -c '^### Your own rows$' README.md` prints `1`, `grep -c 'GPUNIT_MODELS=live/models.toml make live-serve MODEL=granite-4.0-micro' README.md` prints `1`, `grep -o -e '\[--models PATH\]' README.md | wc -l | tr -d ' '` prints a number of at least `3`, and `grep -c 'read the bundled model table instead' README.md` prints `0`.
-- [ ] 5.2 In `CLAUDE.md`'s layout, edit the `table.py`, `serve/launch.py` and `live/` entries, per [D8](design.md#d8); keep `lookup and merge` and `logging and telemetry off` each on one line.
+- [x] 5.2 In `CLAUDE.md`'s layout, edit the `table.py`, `serve/launch.py` and `live/` entries, per [D8](design.md#d8); keep `lookup and merge` and `logging and telemetry off` each on one line.
   Verify: `grep -c 'lookup and merge' CLAUDE.md` prints `1`, `grep -c 'logging and telemetry off' CLAUDE.md` prints `1`, and `grep -c 'live/models.toml' CLAUDE.md` prints `1`.
-- [ ] 5.3 Write `live/models.toml` holding [D3](design.md#d3)'s row, per [D12](design.md#d12); in `tests/test_live.py`, a test under `serve:rows:merged` reads it through `table.rows` and finds `granite-4.0-micro`, sourced from the file, beside the bundled rows.
+- [x] 5.3 Write `live/models.toml` holding [D3](design.md#d3)'s row, per [D12](design.md#d12); in `tests/test_live.py`, a test under `serve:rows:merged` reads it through `table.rows` and finds `granite-4.0-micro`, sourced from the file, beside the bundled rows.
   Verify: `grep -c -x -F '[models."granite-4.0-micro"]' live/models.toml` prints `1`, `grep -c -x -F 'revision = "56111ae135df9c53a78c99028e7bc24035a9e979"' live/models.toml` prints `1`, `grep -c '"serve:rows:merged"' tests/test_live.py` prints `1`, and `uv run pytest -q tests/test_live.py` exits 0.
-- [ ] 5.4 In `docs/threat-model.md`, add F13 and T55, edit T13, the *Counts* line and the STRIDE index, per [D8](design.md#d8).
+- [x] 5.4 In `docs/threat-model.md`, add F13 and T55, edit T13, the *Counts* line and the STRIDE index, per [D8](design.md#d8).
   Verify: `grep -c -E '^\| T[0-9]+ ' docs/threat-model.md` prints `55`, `grep -E '^\| T55 ' docs/threat-model.md | grep -c '| partly |'` prints `1`, `grep -c '^13\. \*\*F13, the user file' docs/threat-model.md` prints `1`, `grep -c 'Counts: 55 threats. \*\*mitigated 28 · partly 14 · gap 0 · accepted 13.\*\*' docs/threat-model.md` prints `1`, `grep -c '^| F13 user file ' docs/threat-model.md` prints `1`, and `grep -E '^\| T13 ' docs/threat-model.md | grep -c 'a user row may'` prints `1`.
-- [ ] 5.5 In `docs/threat-model.md`, move the quiet's citations to `serve/launch.py` in F3, T30, T42 and G9, set T34's status to `partly`, and set line 3 and *Sources* to `v0.10`, per [D8](design.md#d8).
+- [x] 5.5 In `docs/threat-model.md`, move the quiet's citations to `serve/launch.py` in F3, T30, T42 and G9, set T34's status to `partly`, and set line 3 and *Sources* to `v0.10`, per [D8](design.md#d8).
   Verify: `grep -E '^\| T(30|42) ' docs/threat-model.md | grep -c 'serve/launch.py'` prints `2`, `grep -E '^\| T34 ' docs/threat-model.md | grep -c '| partly |'` prints `1`, `grep -c 'gpunit/serve/models.toml:9' docs/threat-model.md` prints `0`, `grep -c 'what holds at .v0.10.' docs/threat-model.md` prints `1`, and `grep -c '^\*\*gpunit at .v0.10.\*\*$' docs/threat-model.md` prints `1`.
 
 ## 6 — The cards

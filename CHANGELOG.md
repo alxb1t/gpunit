@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `$XDG_CONFIG_HOME/gpunit/models.toml`; a row of a bundled name replaces it, said in one line (`0014`).
 - `--models <path>` on `serve`, `down --serve` and `volume up|down --serve` names the user file first; without a
   model it exits `2` (`0014`).
+- README's *Your own rows*; `live/models.toml`, the `granite-4.0-micro` row `make live-serve` proves; the threat
+  model's F13 and T55, the user file. T34 is `partly`: `serve` pods ignore `datacenters` (`0014`).
 - A user row passes the bundled rows' checks, and a user file holds rows alone; any row holding
   `--enable-log-requests` is refused. The unknown-model usage error names each row's source (`0014`).
 

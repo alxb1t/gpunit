@@ -118,7 +118,8 @@ with gpunit.session("gpunit.toml", environ={"RUNPOD_API_KEY": key}, say=my_log) 
 
 `gpunit serve <model> --ceiling 2h` boots vLLM on a rented card and opens a chat in the terminal; `--api` gives an
 OpenAI-compatible endpoint on loopback instead. The models it knows are rows of
-[gpunit/serve/models.toml](gpunit/serve/models.toml), each at a pinned revision, all on one image pinned by digest:
+[gpunit/serve/models.toml](gpunit/serve/models.toml) and of [your own file](#your-own-rows), each at a pinned
+revision, all on one image pinned by digest:
 
 - **`qwen3-4b`** — Qwen3-4B on a 24 GB card, for cents an hour: the row that proves `serve`.
 - **`qwen3.8-27b`** — Qwen3.8-27B at FP8 on a 48 GB card, tool calls through the `qwen3_coder` parser; its dearest
@@ -179,6 +180,46 @@ A warp is ...
   The key rides the pod's environment, so RunPod can read it; it lives one session.
 - **The session's files** are under `~/.local/state/gpunit/serve/<model>/`, wherever the command runs: one session
   per model. After a failed teardown, `gpunit down --serve <model>` deletes what is left.
+
+### Your own rows
+
+**A model gpunit does not bundle is a row in your own file,** outside every repo. One file is read:
+
+```
+--models <path>             set ─▶ that file
+GPUNIT_MODELS, non-empty    set ─▶ that file
+XDG_CONFIG_HOME, absolute   set ─▶ $XDG_CONFIG_HOME/gpunit/models.toml ┐ a file ─▶ its rows
+otherwise                       ─▶ ~/.config/gpunit/models.toml        ┘ none   ─▶ bundled rows alone
+```
+
+```toml
+# ~/.config/gpunit/models.toml — rows alone; every row runs the bundled gpunit-vllm image
+[models."granite-4.0-micro"]
+repo = "ibm-granite/granite-4.0-micro"
+revision = "56111ae135df9c53a78c99028e7bc24035a9e979"
+served = "granite-4.0-micro"
+args = ["--max-model-len", "16384", "--enable-auto-tool-choice", "--tool-call-parser", "hermes"]
+vram_gb = 24
+gpus = ["NVIDIA RTX A5000", "NVIDIA GeForce RTX 4090", "NVIDIA L4"]
+disk_gb = 40
+```
+
+```sh
+mkdir -p ~/.config/gpunit && $EDITOR ~/.config/gpunit/models.toml
+uv run gpunit serve granite-4.0-micro --ceiling 1h
+uv run gpunit serve granite-4.0-micro --ceiling 1h --models ./models.toml
+GPUNIT_MODELS=~/agents/box/models.toml uv run gpunit serve granite-4.0-micro --ceiling 1h --api
+uv run gpunit down --serve granite-4.0-micro --models ./models.toml
+```
+
+- **One file is read, never merged.** `--models` and `GPUNIT_MODELS` name a file that must read; an absent default
+  file means no rows of your own.
+- **A row of a bundled name replaces it,** said in one line: `<file> replaces the bundled qwen3-4b`.
+- **A row passes the bundled rows' checks:** every field, a 40-hex revision, no space inside an argument.
+- **No `image` key.** A file holds `[models.<name>]` rows alone, each served on the bundled image.
+- **Request logging and telemetry are off whatever a row says:** the image's launcher turns them off after the row's
+  arguments, and a row holding `--enable-log-requests` is refused.
+- **`down --serve` and `volume … --serve` need the same file as `serve`,** or they cannot find its row.
 
 ### From a container
 
@@ -322,7 +363,8 @@ Keep private data off stdout and off the volume: both outlive the command.
 ## The verbs
 
 Each verb reads `gpunit.toml` from the working directory, or the file `--spec <path>` names; `serve` and each
-`--serve` read the bundled model table instead, and `spend` reads only the billing and the ledger.
+`--serve` read the bundled model table and [your own rows](#your-own-rows) instead, and `spend` reads only the
+billing and the ledger.
 
 | verb | does |
 |---|---|
@@ -331,19 +373,19 @@ Each verb reads `gpunit.toml` from the working directory, or the file `--spec <p
 | `gpunit ssh` | opens a shell on the recorded pod |
 | `gpunit down` | deletes the recorded pod, then every other live pod of the project |
 | `gpunit run -- <cmd>` | the Python session around `<cmd>`: `up`, the tunnel, `<cmd>`, then `down`, however `<cmd>` ends |
-| `gpunit serve <model> --ceiling <d>` | the price and `[y/N]`, then the session around a chat; `--api` for the endpoint ([how](#serve-a-model)) |
-| `gpunit down --serve <model>` | `down` for the session `serve` left for `<model>` |
+| `gpunit serve <model> --ceiling <d> [--models PATH]` | the price and `[y/N]`, then the session around a chat; `--api` for the endpoint ([how](#serve-a-model)) |
+| `gpunit down --serve <model> [--models PATH]` | `down` for the session `serve` left for `<model>` |
 | `gpunit spend [--days N] [--json]` | the provider's billing over the last N UTC days, by project ([how](#what-it-cost)) |
 | `gpunit volume up [--yes]` | the price and `[y/N]`, then creates the window volume, or extends a live one ([how](#working-window)) |
 | `gpunit volume down` | deletes the window volume, then, after a lost create, each other `gpunit-<project>` volume you agree to |
-| `gpunit volume up --serve <model> --ceiling <d>` | `volume up` for the row's volume, which `serve` mounts |
-| `gpunit volume down --serve <model>` | `volume down` for the row's volume |
+| `gpunit volume up --serve <model> --ceiling <d> [--models PATH]` | `volume up` for the row's volume, which `serve` mounts |
+| `gpunit volume down --serve <model> [--models PATH]` | `volume down` for the row's volume |
 
 | exit | means |
 |---|---|
 | `0` | done; for `run`, the command's own code passes through |
 | `1` | refused or failed; the teardown failed |
-| `2` | usage: an unknown verb, a missing command, an unreadable spec path, `serve` or `volume up --serve` without `--ceiling`, an unknown model, `spend --days` under 1 or over 3660, `volume` without `up` or `down` |
+| `2` | usage: an unknown verb, a missing command, an unreadable spec path, `serve` or `volume up --serve` without `--ceiling`, `--models` without a model, an unknown model, `spend --days` under 1 or over 3660, `volume` without `up` or `down` |
 | `3` | a create's answer was lost; a pod may exist and bill — run `gpunit down`; for a volume's create, `gpunit volume down` |
 | `128+n` | signal `n` stopped `run` or `serve`, or killed `run`'s command, and the teardown succeeded; a failed teardown is still `1`; Ctrl-C at `volume down`'s sweep question is `130` |
 
@@ -375,6 +417,7 @@ time to the volume, a new pod reads it back, and the target fails unless the lin
 1200s wait for SSH a session, inside the row's working window: `gpunit serve <row> --api` downloads the weights into
 the volume for one chat request and one tool call through [live/tool_call.py](live/tool_call.py), then a chat of one prompt
 loads them from it. `MODEL` defaults to `qwen3-4b`.
+A user file's row: `GPUNIT_MODELS=live/models.toml make live-serve MODEL=granite-4.0-micro`.
 
 `make live-dead` boots an image whose container exits at once, and passes when `up` exits `1` and prints its refusal
 as `reason: <line>`, then deletes what `up` left; a failed `gpunit down` fails it.

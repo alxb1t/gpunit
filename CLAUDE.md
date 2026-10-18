@@ -26,16 +26,19 @@ CLI is recorded, not pinned: `@fission-ai/openspec@1.11.0`, resolved on `PATH`.
   sink), `ledger.py` (each pod's and window volume's project, under the home directory), `spend.py` (`spend`: the
   billing by project).
 - **`gpunit/serve/`** — `gpunit serve`: `models.toml` (the model table and the image's digest), `table.py` (a row's
-  `Spec`), `session.py` (the price, the wait, the `--api` hold), `chat.py` (the streamed chat).
+  `Spec`; the user file's lookup and merge), `session.py` (the price, the wait, the `--api` hold), `chat.py` (the
+  streamed chat).
 - **`boot/boot.py`** — the pod's entrypoint, one stdlib file for Python 3.10: the ceiling, sshd, the fingerprint,
   the command.
 - **`serve/Dockerfile`** — the serve image, vLLM by digest; built on request by
-  `.github/workflows/build-serve-image.yml`. **`serve/launch.py`** — its command: `HF_HOME` on a volume, then vLLM.
+  `.github/workflows/build-serve-image.yml`. **`serve/launch.py`** — its command: `HF_HOME` on a volume,
+  logging and telemetry off, then vLLM.
 - **`tests/`** — `fakes.py` (`FakeProvider`, `FakeOpener`), `fixtures/` (v2 bodies), one `test_*.py` per module;
   `boot.py` has `tests/test_boot_steps.py` (each step alone) and `tests/test_boot.py` (the whole run); every test
   carries `@pytest.mark.spec("<scenario key>")`.
 - **`live/`** — the metered proof on a real pod, run by hand: `live/*.py`, one script a `make live-*` target, and
-  `live/window.py`, their shared steps and the window volume's teardown.
+  `live/window.py`, their shared steps and the window volume's teardown; `live/models.toml`, the user file
+  `make live-serve` proves.
 - **`docs/threat-model.md`** — what gpunit protects, from whom, and what holds: the assets, the flows, each threat's
   status and the probe's results.
 - **`openspec/`** — the living specs in `specs/`; the changes in `changes/`, the shipped ones in `changes/archive/`.
