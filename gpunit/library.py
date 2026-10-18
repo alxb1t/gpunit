@@ -23,6 +23,7 @@ TUNNEL_POLL_S = 1.0
 # A tunnel that cannot bind dies at once; each reopening waits longer (0002 design D8).
 REOPEN_FIRST_S = 1.0
 REOPEN_CAP_S = 30.0
+TUNNEL_CONNECT_S = 10
 
 Refused = log.Refusal
 
@@ -223,20 +224,19 @@ class _Tunnel:
         while not self._stopped.wait(TUNNEL_POLL_S):
             if self._child.poll() is None:
                 continue
-            now = time.monotonic()
-            wait = backoff.exited(now)
-            due = backoff.due(now)
-            # A reopen would hand the traffic to whoever holds the port now.
-            if (wait is not None or due) and (taken := _taken(self._spec)) is not None:
+            # Every poll while the child is dead: nothing of ours holds the port, so
+            # whoever does gets the traffic now, and a reopen's.
+            if (taken := _taken(self._spec)) is not None:
                 self._refuse(
                     f"local port {taken} is taken by another process; "
                     "the tunnel cannot hold it"
                 )
                 return
-            if wait is not None:
+            now = time.monotonic()
+            if (wait := backoff.exited(now)) is not None:
                 returncode = self._child.returncode
                 log.say(f"the tunnel exited ({returncode}); reopening it in {wait:g}s")
-            if due:
+            if backoff.due(now):
                 self._child = self._open()
                 backoff.opened(now)
 
@@ -293,7 +293,17 @@ def _tunnel_argv(spec: Spec, ssh: Sequence[str]) -> list[str]:
         for port in spec.ports
         for bind in binds
     ]
-    options = ["-N", "-o", "ExitOnForwardFailure=yes", "-o", "BatchMode=yes"]
+    # Until `ssh` binds, after its connect and authentication, the port is unheld; the
+    # timeout bounds that span's connect and key exchange (0013 design D5).
+    options = [
+        "-N",
+        "-o",
+        "ExitOnForwardFailure=yes",
+        "-o",
+        "BatchMode=yes",
+        "-o",
+        f"ConnectTimeout={TUNNEL_CONNECT_S}",
+    ]
     return [ssh[0], *options, *forwards, *ssh[1:]]
 
 

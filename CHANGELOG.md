@@ -37,6 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   whole session (`0013`).
 - A taken-port `Refused` that the block swallows leaves Ctrl-C, `SIGTERM` and `SIGHUP` live: they still end the
   block and tear the pod down (`0013`).
+- A dead tunnel's port is probed on every poll until the reopen, so a squatter that takes it during the backoff wait
+  refuses within a second, not at the reopen up to 30 s later; the tunnel's `ssh` takes `ConnectTimeout=10`, which
+  bounds how long a port is unheld while it connects, as `docs/threat-model.md` T9 now states (`0013`).
 - `docs/threat-model.md` sets T21 `partly`, and README step 3 says `run`'s laptop command can still read the key
   from gpunit's own environment (`0013`).
 - The `0012` cards: the CA-store tests bind `boot:refuse:no-ca-store` and `live/dead.py`'s guard binds

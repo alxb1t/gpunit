@@ -277,6 +277,34 @@ def test_a_taken_port_ends_the_block(
     assert provider.named("delete") == [("pod-1",)]
 
 
+@pytest.mark.spec("library:tunnel:taken-during-wait-refuses")
+def test_a_port_taken_while_the_tunnel_waits_refuses(
+    cwd: Path,
+    free_port: int,
+    gated_tunnel: Path,
+    saved_handlers: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with_port(cwd, free_port)
+    # No reopen falls due in the test: only a probe during the wait can refuse.
+    monkeypatch.setattr(library, "REOPEN_FIRST_S", 60.0)
+    provider = FakeProvider()
+    lines: list[str] = []
+
+    def waiting() -> bool:
+        return any("reopening it in 60s" in line for line in lines)
+
+    with pytest.raises(Refused, match=f"local port {free_port} is taken"):
+        with opened(cwd, provider, lines.append):
+            gated_tunnel.touch()
+            assert until(waiting)
+            with socket.create_server(("127.0.0.1", free_port)):
+                time.sleep(10)
+
+    assert len((cwd / "tunnels.log").read_text().splitlines()) == 1
+    assert provider.named("delete") == [("pod-1",)]
+
+
 class TakingProvider(FakeProvider):
     """Listen on `port` from inside the create, as a process that took it would."""
 
@@ -366,6 +394,15 @@ def test_a_host_without_v6_loopback_forwards_v4_alone(
 
     forwards = [arg for arg in argv if arg.startswith("-L")]
     assert forwards == [f"-L127.0.0.1:{free_port}:localhost:8188"]
+
+
+@pytest.mark.spec("library:tunnel:connect-bounded")
+def test_the_tunnels_connect_is_bounded(cwd: Path, free_port: int) -> None:
+    with_port(cwd, free_port)
+
+    argv = library._tunnel_argv(load_spec(cwd / "gpunit.toml"), ("ssh", "root@h"))
+
+    assert argv[argv.index("ConnectTimeout=10") - 1] == "-o"
 
 
 @pytest.mark.spec("library:say:sink")

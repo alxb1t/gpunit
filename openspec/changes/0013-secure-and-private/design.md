@@ -75,7 +75,7 @@ behaviour.
 | [D2](#d2) | `[env]` refuses `RUNPOD_*` names; values pass as written | a consumer's `RUNPOD_API_KEY` would land the account key in pod env (T26) | parsing secret references |
 | [D3](#d3) | every `.gpunit/` write first sets the directory to `0700` | a found directory kept a loose mode (T17) | a check that refuses |
 | [D4](#d4) | `log.clean` removes C0, DEL and C1 from each printed pod-log line; `pod.log` stays as read | a command's output steers the terminal (T39) | escaping as `\x1b` |
-| [D5](#d5) | a **taken port** — one answering on `127.0.0.1` or `::1` while the tunnel does not hold it — refuses: before the tunnel opens, after it exits, before a reopen | a reopen sends the traffic to the squatter (T9) | refusing every tunnel exit |
+| [D5](#d5) | a **taken port** — one answering on `127.0.0.1` or `::1` while the tunnel does not hold it — refuses: before the tunnel opens, and on every poll while it is dead | a reopen sends the traffic to the squatter (T9) | refusing every tunnel exit |
 | [D6](#d6) | the watcher ends the block through the session's signal handler, which raises `Refused` | a thread cannot raise in the main one; a signal wakes a blocked `wait` | `_thread.interrupt_main` |
 | [D7](#d7) | `datacenters`: an optional non-empty list of strings; a `volume_datacenter` outside it is refused at load | one allow-list for pods and volumes (Q7) | a check at `volume up` alone |
 | [D8](#d8) | the create sends `datacenters`; a mounted volume outside it refuses; the wait reads the pod's `dataCenterId` and tears down one outside | RunPod calls the list *preferred* | trusting the list |
@@ -131,9 +131,9 @@ does not hold it. One helper, `_taken(spec) -> int | None` in `gpunit/library.py
 
 ```
 _open:  _taken → refuse (busy, as now)  ── up (minutes) ──  _taken → refuse  ── _Tunnel opens
-_watch: child exits ─▶ _taken? ── yes ─▶ refuse, stop watching
-                            └── no ──▶ backoff wait ─▶ _taken? ── yes ─▶ refuse
-                                                         └── no ──▶ reopen
+_watch: child dead, each poll ─▶ _taken? ── yes ─▶ refuse, stop watching
+                                       └── no ──▶ wait still running? ── yes ─▶ next poll
+                                                                └── no ──▶ reopen
 ```
 
 - **Before `up`:** `_refuse_busy_ports` (`gpunit/library.py:265-274`) uses `_taken`; its message is unchanged:
@@ -141,9 +141,16 @@ _watch: child exits ─▶ _taken? ── yes ─▶ refuse, stop watching
 - **After `up`, before the tunnel** (`:113-114`): `_taken` again; a taken port refuses
   `local port N was taken while the pod came up; the session ends`. The refusal is inside the `try`, so the
   teardown runs.
-- **In `_watch`** (`:193-205`): on the child's exit, and again when a reopen is due, `_taken`; a taken port calls the
-  refusal of [D6](#d6) with `local port N is taken by another process; the tunnel cannot hold it`, and the watcher
-  returns. A free port keeps today's backoff, its log line and its waits.
+- **In `_watch`** (`:193-205`): on every poll that finds the child dead, through the backoff wait and before the
+  reopen, `_taken`; a taken port calls the refusal of [D6](#d6) with
+  `local port N is taken by another process; the tunnel cannot hold it`, and the watcher returns. A free port keeps
+  today's backoff, its log line and its waits. *Corrected at the converge (security S6):* the probe ran only on the
+  exit's poll and the due one, so a squatter held the port through the wait, up to 30 s.
+- **The span `ssh` connects** (converge, security S6): `ssh` binds its forwards only once it has connected and
+  authenticated, so a reopened (or first) `ssh` leaves the port unheld meanwhile, and a probe cannot tell its bind
+  from a squatter's. The watcher does not probe a live child; `_tunnel_argv` passes `-o ConnectTimeout=10`, which
+  bounds the connect and key exchange, so a squatter in that span holds the port until `ssh` exits, its bind failed
+  or its connect timed out, and the next poll refuses: 10 s, plus authentication, plus a poll. T9 states it.
 - **One forward per loopback family** (converge, security S1): `_tunnel_argv` passes
   `-L127.0.0.1:<local>:localhost:<remote>`, and `-L[::1]:<local>:localhost:<remote>` when `::1` binds on the host.
   A family another process holds then fails its own forward, `ExitOnForwardFailure` ends `ssh`, and the watcher's
@@ -265,7 +272,7 @@ README:
 
 - **`docs/threat-model.md`:** the draft at [the draft](threat-model-draft.md) in this change's directory, its
   vault frontmatter dropped, its title `# gpunit — threat model`, its code citations re-read at this change's head,
-  and each row brought to `v0.9`: T17, T21, T26, T30, T34, T39 `mitigated`; T9 `partly`, the seconds between `ssh`'s
+  and each row brought to `v0.9`: T17, T21, T26, T30, T34, T39 `mitigated`; T9 `partly`, the span between `ssh`'s
   start and its bind; T36, T37 `accepted`; T22, T24, T54 stay `gap` until [D15](#d15). Each G row names its outcome.
   Its *Counts* line is recounted from the table. It ends with `## 7. The probe`, which [D15](#d15) fills.
 - **`CLAUDE.md`:** the layout names `docs/threat-model.md`; a new invariant: **A change that touches a trust boundary
@@ -325,9 +332,10 @@ None.
 
 ## Risks / Trade-offs
 
-- **A squatter can bind in the seconds between `ssh`'s start and its bind** → [D5](#d5) narrows the window from
-  minutes to seconds: the squatter's family fails its forward, and the watcher refuses within a poll of `ssh`'s
-  exit; `serve`'s first poll may reach it in that window. T9 stays `partly` in the threat model.
+- **A squatter can bind in the span between `ssh`'s start and its bind** → [D5](#d5) narrows the window from
+  minutes to `ssh`'s 10 s `ConnectTimeout`, its authentication and a poll: the squatter's family fails its forward,
+  or the connect times out, and the watcher refuses within a poll of `ssh`'s exit; `serve`'s first poll, or a chat
+  turn after a reopen, may reach it in that window. T9 stays `partly` in the threat model.
 - **`pthread_kill` with `SIGINT` from the watcher** → the handler is gpunit's while the session is open, and the
   teardown ignores signals; a library consumer sees `Refused`, as for any refusal.
 - **`dataCenterIds` may only order RunPod's choice** → [D8](#d8)'s wait check tears down a pod outside the list; it
