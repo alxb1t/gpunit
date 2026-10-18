@@ -208,6 +208,78 @@ def test_a_user_row_replaces_the_bundled_row_of_its_name(
         assert replaced == []
 
 
+@pytest.mark.spec("cli:verbs:models-without-serve-exits-2")
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["down", "--models", "rows.toml"],
+        ["volume", "up", "--models", "rows.toml"],
+        ["volume", "down", "--models", "rows.toml"],
+    ],
+    ids=["down", "volume-up", "volume-down"],
+)
+def test_models_without_a_model_exits_2_naming_serve(
+    argv: list[str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    write_spec(tmp_path)
+
+    assert gpunit(argv, provider=NO_REQUESTS) == 2
+    assert "--models goes with --serve" in capsys.readouterr().err
+
+
+# The row only `rows.toml` holds: its card and disk name it in each request.
+GRANITE = OWN_QWEN.replace("Qwen/Qwen3-4B", "ibm-granite/granite-4.0-micro").replace(
+    "disk_gb = 40", "disk_gb = 33"
+)
+
+
+@pytest.mark.spec("cli:verbs:models-on-each-serve-verb")
+@pytest.mark.parametrize("given", [True, False], ids=["given", "twin-not-given"])
+def test_each_verb_naming_a_model_reads_the_given_file(
+    given: bool,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "rows.toml").write_text(
+        GRANITE.format(name='"granite-4.0-micro"'), encoding="utf-8"
+    )
+    flag = ["--models", "rows.toml"] if given else []
+    name = "granite-4.0-micro"
+    provider = FakeProvider(volume_creates=["v3"])
+
+    codes = [
+        gpunit(
+            ["serve", name, "--ceiling", "1h", "--max-hourly", "0.0001", *flag],
+            provider=provider,
+        ),
+        gpunit(["down", "--serve", name, *flag], provider=provider),
+        gpunit(
+            ["volume", "up", "--serve", name, "--ceiling", "1h", "--yes", *flag],
+            provider=provider,
+        ),
+        gpunit(["volume", "down", "--serve", name, *flag], provider=provider),
+    ]
+
+    if not given:
+        # The twin: without the file, each verb refuses the name before a request.
+        assert codes == [2, 2, 2, 2]
+        assert provider.calls == []
+        return
+    # `serve` refuses at the price: no card is that cheap.
+    assert codes == [1, 0, 0, 0]
+    assert set(provider.named("gpu")) == {("NVIDIA L4",)}
+    assert [project for project, _ in provider.named("list")] == [f"serve-{name}"]
+    assert [size for _, size, _ in provider.named("create_volume")] == [33]
+    assert provider.named("delete_volume") == [("v3",)]
+    assert "no model" not in capsys.readouterr().err
+
+
 @pytest.fixture
 def dead_pipe() -> Iterator[TextIO]:
     read, write = os.pipe()

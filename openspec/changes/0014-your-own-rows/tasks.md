@@ -8,7 +8,7 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 - [x] 1 — The lookup
 - [x] 2 — The rows
 - [x] 3 — The launcher
-- [ ] 4 — The CLI
+- [x] 4 — The CLI
 - [ ] 5 — The handover
 - [ ] 6 — The cards
 - [ ] 7 — ⚠️ **HUMAN** — the serve image
@@ -43,9 +43,9 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 
 ## 4 — The CLI
 
-- [ ] 4.1 Give `serve`, `down`, `volume_up`, `volume_down` and `_window_spec` in `gpunit/serve/session.py` the parameter `models: Path | None = None`, read through `table.rows(models)`, per [D7](design.md#d7).
+- [x] 4.1 Give `serve`, `down`, `volume_up`, `volume_down` and `_window_spec` in `gpunit/serve/session.py` the parameter `models: Path | None = None`, read through `table.rows(models)`, per [D7](design.md#d7).
   Verify: `grep -c 'table.rows(models)' gpunit/serve/session.py` prints `3`, and `uv run pytest -q tests/test_serve_session.py` exits 0.
-- [ ] 4.2 Add `--models` to `serve`, `down`, `volume up` and `volume down` in `gpunit/cli.py`, refuse it without a model, pass it to `_known` and the session, and update `USAGE`, per [D7](design.md#d7); bind `cli:verbs:models-without-serve-exits-2` and `cli:verbs:models-on-each-serve-verb` in `tests/test_cli.py`.
+- [x] 4.2 Add `--models` to `serve`, `down`, `volume up` and `volume down` in `gpunit/cli.py`, refuse it without a model, pass it to `_known` and the session, and update `USAGE`, per [D7](design.md#d7); bind `cli:verbs:models-without-serve-exits-2` and `cli:verbs:models-on-each-serve-verb` in `tests/test_cli.py`.
   Verify: `grep -c -e '--models goes with --serve' gpunit/cli.py` prints `1`, `grep -o -e '\[--models PATH\]' gpunit/cli.py | wc -l | tr -d ' '` prints `4`, `grep -c -E '"cli:verbs:(models-without-serve-exits-2|models-on-each-serve-verb)"' tests/test_cli.py` prints a number of at least `2`, and `uv run pytest -q` exits 0.
 
 ## 5 — The handover

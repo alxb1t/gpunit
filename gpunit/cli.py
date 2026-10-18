@@ -16,10 +16,12 @@ from gpunit.state import State
 
 USAGE = (
     "gpunit {up,status,down,ssh} [--spec PATH] | gpunit run [--spec PATH] -- <command>"
-    " | gpunit serve <model> --ceiling 2h [--api] | gpunit down --serve <model>"
+    " | gpunit serve <model> --ceiling 2h [--api] [--models PATH]"
+    " | gpunit down --serve <model> [--models PATH]"
     " | gpunit spend [--days N] [--json]"
-    " | gpunit volume up [--spec PATH | --serve <model> --ceiling 4h] [--yes]"
-    " | gpunit volume down [--spec PATH | --serve <model>]"
+    " | gpunit volume up [--spec PATH | --serve <model> [--models PATH] --ceiling 4h]"
+    " [--yes]"
+    " | gpunit volume down [--spec PATH | --serve <model> [--models PATH]]"
 )
 
 FAILED, USAGE_FAULT = 1, 2
@@ -46,6 +48,7 @@ def _parser() -> _Parser:
             sub.add_argument("--json", action="store_true")
         if verb == "down":
             sub.add_argument("--serve", dest="model", metavar="MODEL")
+            sub.add_argument("--models", type=Path)
     serve = verbs.add_parser("serve")
     serve.add_argument("model")
     serve.add_argument("--ceiling", type=_ceiling, required=True)
@@ -54,12 +57,14 @@ def _parser() -> _Parser:
     serve.add_argument("--max-hourly", type=float)
     serve.add_argument("--yes", action="store_true")
     serve.add_argument("--think", action="store_true")
+    serve.add_argument("--models", type=Path)
     volume = verbs.add_parser("volume")
     actions = volume.add_subparsers(dest="action", required=True, parser_class=_Parser)
     for action in ("up", "down"):
         sub = actions.add_parser(action)
         sub.add_argument("--spec", type=Path, default=Path("gpunit.toml"))
         sub.add_argument("--serve", dest="model", metavar="MODEL")
+        sub.add_argument("--models", type=Path)
         if action == "up":
             sub.add_argument("--ceiling", type=_ceiling)
             sub.add_argument("--yes", action="store_true")
@@ -114,6 +119,9 @@ def parse(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
     # `serve` and `--serve` name a model, whose spec is its table row;
     # `spend` has no `--spec`: it reads only the billing and the ledger.
     args.model = getattr(args, "model", None)
+    args.models = getattr(args, "models", None)
+    if args.models is not None and args.model is None:
+        raise Usage("--models goes with --serve")
     if args.model is not None or not hasattr(args, "spec"):
         return args, []
     if not args.spec.is_file() or not os.access(args.spec, os.R_OK):
@@ -132,7 +140,7 @@ def _run(argv: list[str], provider: Provider | None) -> int:
     try:
         args, command = parse(argv)
         if args.model is not None:
-            _known(args.model)
+            _known(args.model, args.models)
     except Usage as fault:
         log.say(f"usage: {fault}")
         log.say(f"usage: {USAGE}")
@@ -181,13 +189,17 @@ def _serve(args: argparse.Namespace, provider: Callable[[], Provider]) -> int:
     from gpunit.serve import session
 
     if args.verb == "down":
-        return session.down(args.model, provider())
+        return session.down(args.model, provider(), args.models)
     if args.verb == "volume":
         if args.action == "up":
             return session.volume_up(
-                args.model, args.ceiling, yes=args.yes, provider=provider()
+                args.model,
+                args.ceiling,
+                yes=args.yes,
+                provider=provider(),
+                models=args.models,
             )
-        return session.volume_down(args.model, provider())
+        return session.volume_down(args.model, provider(), args.models)
     return session.serve(
         args.model,
         args.ceiling,
@@ -197,6 +209,7 @@ def _serve(args: argparse.Namespace, provider: Callable[[], Provider]) -> int:
         yes=args.yes,
         think=args.think,
         provider=provider(),
+        models=args.models,
     )
 
 
@@ -211,8 +224,8 @@ def _volume(
     return volume.down(spec, provider, state)
 
 
-def _known(model: str) -> None:
-    found = table.rows(None)
+def _known(model: str, models: Path | None) -> None:
+    found = table.rows(models)
     if found.replaced:
         log.say(f"{found.user} replaces the bundled {', '.join(found.replaced)}")
     if model not in found.models:
