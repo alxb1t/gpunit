@@ -8,7 +8,7 @@ The laptop's fixes, the tunnel, placement, serve's logging, the `0012` cards and
 - [x] 1 — The laptop
 - [x] 2 — The tunnel
 - [x] 3 — Placement
-- [ ] 4 — Serve
+- [x] 4 — Serve
 - [ ] 5 — The cards
 - [ ] 6 — The docs
 - [ ] 7 — ⚠️ **HUMAN · METERED** — the probe
@@ -46,7 +46,7 @@ The laptop's fixes, the tunnel, placement, serve's logging, the `0012` cards and
 
 ## 4 — Serve
 
-- [ ] 4.1 Add `"--no-enable-log-requests"` to each row's `args` in `gpunit/serve/models.toml`, per [D10](design.md#d10); add it to `qwen3-4b`'s `SERVE_ARGS` in `tests/test_serve_table.py`, and bind `serve:table:request-logging-off` there.
+- [x] 4.1 Add `"--no-enable-log-requests"` to each row's `args` in `gpunit/serve/models.toml`, per [D10](design.md#d10); add it to `qwen3-4b`'s `SERVE_ARGS` in `tests/test_serve_table.py`, and bind `serve:table:request-logging-off` there.
   Verify: `grep -c '"--no-enable-log-requests"' gpunit/serve/models.toml` prints `2`, `grep -c '"serve:table:request-logging-off"' tests/test_serve_table.py` prints `1`, and `uv run pytest -q tests/test_serve_table.py tests/test_serve_session.py` exits 0.
 
 ## 5 — The cards

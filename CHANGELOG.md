@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BREAKING:** `run`'s command gets no `RUNPOD_API_KEY`: it never needs the account key (`0013`).
 - `[env]` refuses `RUNPOD_*` names, as it refuses `GPUNIT_*`; a `{{ RUNPOD_SECRET_name }}` value passes as written.
   `.gpunit/` is set to `0700` on every write, a found one too (`0013`).
+- Each `serve` row passes vLLM `--no-enable-log-requests`, so the off stays explicit whatever a later vLLM
+  defaults to; the image is unchanged (`0013`).
 
 ### Fixed
 
