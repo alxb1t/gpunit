@@ -26,6 +26,7 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    ceiling = "45m"                             # required: the pod stops itself after this
    disk_gb = 50
    # optional
+   datacenters = ["EU-RO-1"]                   # pods and window volumes go nowhere else
    volume_gb = 60                              # a window volume, made by gpunit volume up
    volume_ceiling = "4h"                       # required with volume_gb: the volume is deleted after it
    volume_datacenter = "EU-RO-1"               # else where the first card of gpus is in stock
@@ -37,7 +38,7 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    max_hourly = 0.80
    timeout = 420                               # seconds to wait for SSH
    [env]
-   MODE = "render"                             # GPUNIT_* names are gpunit's, and refused here
+   MODE = "render"                             # GPUNIT_* and RUNPOD_* names are refused here
    ```
 
 2. **Make `boot.py` the image's entrypoint.** It needs `python3` 3.10 or newer with its standard library,
@@ -45,7 +46,7 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    the file in. `python3-minimal` is not enough: it lacks the modules the stop's request needs.
 
    ```dockerfile
-   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.8.0/boot/boot.py /opt/gpunit/boot.py
+   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.9.0/boot/boot.py /opt/gpunit/boot.py
    ENTRYPOINT ["python3", "/opt/gpunit/boot.py", "--"]
    CMD ["python3", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
    ```
@@ -54,13 +55,16 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    still works: gpunit reads its lines. A `boot.sh` older than `v0.6.0` is refused: its host-key line carries
    no session nonce, so `up` tears the pod down and names `v0.6.0`.
 
-3. **Install and run.** The key comes from the environment alone; gpunit reads no `.env`. The command's
-   environment on the pod does not carry `RUNPOD_API_KEY`: boot keeps it to stop the pod. The command runs as
-   root beside boot, though, so it can still read the key from boot's own environment in `/proc`; run nothing
-   on the pod you would not trust with the key.
+3. **Install and run.** The key comes from the environment alone; gpunit reads no `.env`. `run`'s command on the
+   laptop gets no `RUNPOD_API_KEY`: it never needs the account key. It runs as you beside gpunit, though, so it can
+   still read the key from gpunit's own environment (`/proc/<pid>/environ` on Linux, `ps -E` on macOS); run nothing
+   on the laptop you would not trust with the key. The command's environment on the pod does not carry
+   `RUNPOD_API_KEY` either: boot keeps it to stop the pod. The command runs as root beside boot, though, so it can
+   still read the key from boot's own environment in `/proc`; run nothing on the pod you would not trust with the
+   key.
 
    ```sh
-   uv add --dev git+https://github.com/alxb1t/gpunit@v0.8.0
+   uv add --dev git+https://github.com/alxb1t/gpunit@v0.9.0
    echo .gpunit/ >> .gitignore
    export RUNPOD_API_KEY=...
    uv run gpunit run -- python3 render.py
@@ -107,7 +111,8 @@ with gpunit.session("gpunit.toml", environ={"RUNPOD_API_KEY": key}, say=my_log) 
 - **Signals:** while the block runs, `SIGINT`, `SIGTERM` and `SIGHUP` raise `Interrupted`; during the teardown
   they are ignored. Your own handlers are replaced for the block's life and set back when it closes.
 - **The main thread:** open the session there; another thread gets `Refused`.
-- **The tunnel** is reopened when it dies, as in `gpunit run`.
+- **The tunnel** is reopened when it dies, as in `gpunit run`. A local port another process took raises `Refused`,
+  and the session is torn down.
 
 ## Serve a model
 
@@ -212,7 +217,7 @@ uv run gpunit volume down --serve qwen3-4b
 ```
 
 - **The data centre comes from stock:** `volume_datacenter`, else the first card of `gpus` in stock in a data centre
-  offering standard volumes, the highest stock winning. Every pod of the window goes there; when stock moves, run
+  offering standard volumes, and within `datacenters` when set, the highest stock winning. Every pod of the window goes there; when stock moves, run
   `volume down` and `volume up` to choose afresh.
 - **The price comes first:** $0.07 per GB a month, over the whole hours of `volume_ceiling`, and nothing is created
   without `y`. `--yes` skips the question.
@@ -262,6 +267,57 @@ total                                  $1.79
   stderr, with `gpunit volume down`.
 - **The current UTC day is still being billed**: its figures can change, and stderr says so.
 - **An unreadable billing exits `1`**, with no table: a table of zeros would read as a free week.
+
+## Security and privacy
+
+**What gpunit puts on RunPod, where it can land, and what gpunit cannot protect.** The full model, its threats and
+its gaps: [docs/threat-model.md](docs/threat-model.md).
+
+### Where your data lands
+
+- **The pod's environment:** `[env]`, the session's public key, the ceiling, the nonce and, for `serve`, the vLLM
+  key. RunPod returns it to any read of the pod through the API or the console, until `down` deletes the pod.
+- **The pod's log:** boot's lines, and the command's or vLLM's stdout and stderr. Any account key reads it while the
+  pod exists; RunPod documents no retention. `serve` turns vLLM's request logging off.
+- **The window volume:** unencrypted, since RunPod offers no encryption for network volumes, and reachable through
+  RunPod's S3 API without a pod, until `volume down` or the first command past its ceiling deletes it.
+- **Placement:** `datacenters` names where pods and window volumes may go. A pod RunPod places elsewhere is torn
+  down, and bills until its delete.
+- **The laptop:** `.gpunit/`, at `0700`, holds the session key, the record and the host key; `serve`'s `pod.log` is
+  at `0600`; the ledger, ids and times alone, is at `0600`.
+
+Keep private data off stdout and off the volume: both outlive the command.
+
+### Secrets
+
+- **`[env]` is plain pod env**, readable as above. Put a token in a RunPod secret and name it:
+  `HF_TOKEN = "{{ RUNPOD_SECRET_hf_token }}"`. gpunit passes the value as written; that RunPod substitutes it
+  through REST v2's create is not yet proven.
+- **`[env]` refuses `GPUNIT_*` and `RUNPOD_*` names:** an `[env]` `RUNPOD_API_KEY` would put the account key on
+  the pod.
+
+### The account key
+
+- **The calls gpunit makes with it:** the catalogue (GPU types, their stock, the data centres); pods (create, read,
+  list, logs, delete); network volumes (create, read, list, delete); billing (read).
+- **Where it goes:** a request header to `https://api.runpod.io/v2`, never argv, never a redirect; `run`'s command
+  does not get it in its environment, though it can read gpunit's (step 3).
+- **Measured minimum:** a restricted key, made in the console at its narrowest settings, covers every call above
+  (2026-10-18, [the probe](docs/threat-model.md#7-the-probe)). RunPod offers no scope finer than the account's pods,
+  volumes and billing, so a leaked key still reaches all of them.
+
+### Accepted risks
+
+- **RunPod's hosts can read a pod's memory and disk.** gpunit creates on Secure Cloud alone, whose terms forbid
+  the inspection; no confidential computing is offered.
+- **Every local user reaches `GPUNIT_PORT_*`.** A forwarded port listens on loopback with no authentication of its
+  own: on a shared machine, the app behind it needs its own.
+- **Every SSH key registered in your RunPod account opens a root shell on every gpunit pod**, through RunPod's SSH
+  proxy, whatever the pod's `authorized_keys` holds. Register only keys you would trust with that, or none.
+- **The pod's own key reads the account's billing:** every pod's id and cost. It lists no pod and reads no other
+  pod; a command on the pod can read it from boot's environment.
+- **The session key sits unencrypted in `.gpunit/`**, for one session: it is deleted with the pod. Keep `.gpunit/`
+  out of git, backups and sync folders.
 
 ## The verbs
 
@@ -321,7 +377,9 @@ the volume for one chat request and one tool call through [live/tool_call.py](li
 loads them from it. `MODEL` defaults to `qwen3-4b`.
 
 `make live-dead` boots an image whose container exits at once, and passes when `up` exits `1` and prints its refusal
-as `reason: <line>`. RunPod may restart such a container, so the reason can be the 120s wait's end.
+as `reason: <line>`, then deletes what `up` left; a failed `gpunit down` fails it.
+In a checkout that records a pod it exits `1` and rents nothing. RunPod may restart such a container, so the reason
+can be the 120s wait's end.
 
 `make live-serve-dead` serves `qwen3-4b` with an argument vLLM refuses, inside its working window, through
 [live/serve_dead.py](live/serve_dead.py): it passes when the dead-pod refusal, the crash's lines from `pod.log` and

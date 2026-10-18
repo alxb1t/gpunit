@@ -226,7 +226,7 @@ def _wait(
             lines = provider.log(pod_id, tail=LOG_TAIL, since=created)
             kept.take(lines)
             if lines:
-                log.say(f"loading: {lines[-1]}")
+                log.say(f"loading: {log.clean(lines[-1])}")
             progress = now + PROGRESS_S
         if dead.seen(provider.get(pod_id)):
             _stopped(kept, "the pod stopped while the model loaded")
@@ -264,7 +264,7 @@ def _hold(
 def _stopped(kept: _Kept, reason: str) -> NoReturn:
     # The pod's own log is gone once it stops; the kept copy says why it did.
     for line in kept.tail(KEEP_TAIL):
-        log.say(f"pod: {line}")
+        log.say(f"pod: {log.clean(line)}")
     log.say(f"the pod's log is kept at {kept.path}")
     log.refuse(reason)
 

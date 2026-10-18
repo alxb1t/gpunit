@@ -231,6 +231,24 @@ def test_a_dead_pod_ends_the_wait_and_closes_the_session(
     assert f"the pod's log is kept at {kept_path()}" in err
 
 
+@pytest.mark.spec("serve:wait:log-lines-cleaned")
+def test_printed_log_lines_are_cleaned(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    raw = "\x1b]0;owned\x07loading\x1b[2J 50%\x9b"
+    # `up`'s poll, the wait's to the log's read at 30s, then EXITED on every poll.
+    provider = FakeProvider(gets=[RUNNING] * 8 + [EXITED], since_logs=[[raw]])
+
+    assert served(provider, FakeOpener(*[NOT_YET] * 9)) == 1
+
+    err = capsys.readouterr().err
+    printed = [line for line in err.splitlines() if "ownedloading" in line]
+    assert [line.split(": ", 1)[0][21:] for line in printed] == ["loading", "pod"]
+    for line in printed:
+        assert line.endswith(": ]0;ownedloading[2J 50%")
+    assert kept_path().read_text(encoding="utf-8") == f"{raw}\n"
+
+
 @pytest.mark.spec("serve:wait:running-pod-waits")
 @pytest.mark.parametrize(
     "gets",

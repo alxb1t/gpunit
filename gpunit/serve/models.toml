@@ -6,7 +6,7 @@ repo = "Qwen/Qwen3-4B"
 revision = "1cfa9a7208912126459214e8b04321603b3df60c"
 served = "qwen3-4b"
 args = ["--max-model-len", "16384", "--enable-auto-tool-choice", "--tool-call-parser", "hermes",
-        "--reasoning-parser", "qwen3"]
+        "--reasoning-parser", "qwen3", "--no-enable-log-requests"]
 vram_gb = 24
 gpus = ["NVIDIA RTX A5000", "NVIDIA GeForce RTX 4090", "NVIDIA L4"]
 disk_gb = 40
@@ -16,7 +16,8 @@ repo = "Qwen/Qwen3.8-27B-FP8"
 revision = "017b9c7af6b5689d5dd426a76e0bc077eb5ca20a"
 served = "qwen3.8-27b"
 args = ["--max-model-len", "32768", "--reasoning-parser", "qwen3", "--enable-auto-tool-choice",
-        "--tool-call-parser", "qwen3_coder", "--language-model-only", "--max-num-seqs", "64"]
+        "--tool-call-parser", "qwen3_coder", "--language-model-only", "--max-num-seqs", "64",
+        "--no-enable-log-requests"]
 vram_gb = 48
 gpus = ["NVIDIA A40", "NVIDIA RTX A6000", "NVIDIA L40", "NVIDIA RTX 6000 Ada Generation", "NVIDIA L40S"]
 disk_gb = 80

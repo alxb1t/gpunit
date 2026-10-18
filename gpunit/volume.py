@@ -191,6 +191,7 @@ def _datacenter(spec: Spec, provider: Provider) -> str:
         standard = provider.volume_datacenters()
     except Lost as fault:
         log.refuse(f"the data centres could not be read: {fault}")
+    standard = {dc for dc in standard if spec.allows(dc)}
     cards = lifecycle.placeable(spec, provider)
     for card in cards:
         try:
@@ -203,8 +204,11 @@ def _datacenter(spec: Spec, provider: Provider) -> str:
         if placed:
             # `min` keeps the provider's order among equal levels.
             return min(placed, key=lambda pair: STOCK.index(pair[1]))[0]
+    within = (
+        f" within datacenters {', '.join(spec.datacenters)}" if spec.datacenters else ""
+    )
     log.refuse(
-        "no card of gpus is in stock in a data centre with standard volumes: "
+        f"no card of gpus is in stock in a data centre with standard volumes{within}: "
         + ", ".join(cards)
     )
 

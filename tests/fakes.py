@@ -18,7 +18,9 @@ from tests.helpers import IMAGE
 T = TypeVar("T")
 
 FIXTURES = Path(__file__).parent / "fixtures"
-RUNNING = PodInfo(status="RUNNING", host="203.0.113.7", port=40022)
+RUNNING = PodInfo(
+    status="RUNNING", host="203.0.113.7", port=40022, datacenter="EU-RO-1"
+)
 RECORD = Record("pod-1", IMAGE, RUNNING.host, RUNNING.port, "2026-10-07T00:00:00Z")
 CARD = GpuInfo(vram_gb=24, hourly=0.69)
 # What the stub `ssh-keygen -lf` answers for the scanned key (tests/conftest.py).
@@ -280,3 +282,17 @@ class FakeOpener(urllib.request.OpenerDirector):
         data = self.requests[index].data
         assert isinstance(data, bytes)
         return json.loads(data)
+
+
+def session_opener() -> FakeOpener:
+    """Return an opener scripted for one whole session on RunPod: up, then down."""
+    return FakeOpener(
+        (200, page([], None)),
+        (200, fixture("gpu.json")),
+        (200, fixture("gpu.json")),
+        (201, fixture("pod_created.json")),
+        (200, fixture("pod_running.json")),
+        quiet(log_stream(*BOOT_LOG)),
+        (204, b""),
+        (200, page([], None)),
+    )

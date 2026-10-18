@@ -38,10 +38,14 @@ echo "[$1]:$port ssh-ed25519 AAAAhostkey"
 """
 
 # The tunnel: logs its argv to $GPUNIT_TEST_SSH_LOG, then holds, or exits at once
-# when $GPUNIT_TEST_SSH_EXIT is set.
+# when $GPUNIT_TEST_SSH_EXIT is set, or once the file $GPUNIT_TEST_SSH_GATE exists.
 SSH = """#!/bin/bash
 echo "$@" >> "${GPUNIT_TEST_SSH_LOG:-/dev/null}"
 [ -z "${GPUNIT_TEST_SSH_EXIT:-}" ] || exit 1
+if [ -n "${GPUNIT_TEST_SSH_GATE:-}" ]; then
+  until [ -e "$GPUNIT_TEST_SSH_GATE" ]; do sleep 0.05; done
+  exit 1
+fi
 exec sleep 30
 """
 
@@ -100,12 +104,27 @@ def free_port() -> int:
         return probe.getsockname()[1]
 
 
-@pytest.fixture
-def dying_tunnel(cwd: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    # Every tunnel logs its argv and exits at once; reopening waits 0.1s.
+def _fast_tunnel(cwd: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    # Every tunnel logs its argv to the returned file; reopening waits 0.1s.
     tunnels = cwd / "tunnels.log"
     monkeypatch.setenv("GPUNIT_TEST_SSH_LOG", str(tunnels))
-    monkeypatch.setenv("GPUNIT_TEST_SSH_EXIT", "1")
     monkeypatch.setattr(library, "TUNNEL_POLL_S", 0.1)
     monkeypatch.setattr(library, "REOPEN_FIRST_S", 0.1)
     return tunnels
+
+
+@pytest.fixture
+def dying_tunnel(cwd: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    # Every tunnel exits at once.
+    monkeypatch.setenv("GPUNIT_TEST_SSH_EXIT", "1")
+    return _fast_tunnel(cwd, monkeypatch)
+
+
+@pytest.fixture
+def gated_tunnel(cwd: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    # Every tunnel exits once the returned file exists, so a test can take its port
+    # first; `tunnels.log` holds each argv.
+    gate = cwd / "gate"
+    monkeypatch.setenv("GPUNIT_TEST_SSH_GATE", str(gate))
+    _fast_tunnel(cwd, monkeypatch)
+    return gate

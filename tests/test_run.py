@@ -3,6 +3,7 @@ import shutil
 import signal
 import socket
 import subprocess
+import sys
 from collections.abc import Iterator
 from pathlib import Path
 from types import SimpleNamespace
@@ -11,15 +12,31 @@ import pytest
 
 from gpunit import library, run
 from gpunit.provider import GpuInfo, Lost
+from gpunit.runpod import RunPod
 from gpunit.state import State
-from tests.fakes import RECORD, FakeProvider
+from tests.fakes import (
+    RECORD,
+    FakeProvider,
+    session_opener,
+)
 from tests.helpers import NO_REQUESTS, gpunit, with_port
+
+KEY = "rpa_account_key"
 
 
 @pytest.fixture
 def listening() -> Iterator[int]:
     with socket.socket() as server:
         server.bind(("127.0.0.1", 0))
+        server.listen()
+        yield server.getsockname()[1]
+
+
+@pytest.fixture
+def listening_v6() -> Iterator[int]:
+    with socket.socket(socket.AF_INET6) as server:
+        server.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+        server.bind(("::1", 0))
         server.listen()
         yield server.getsockname()[1]
 
@@ -48,6 +65,22 @@ def test_the_environment_names_the_session(
     assert env["GPUNIT_PORT_8188"] == str(free_port)
     assert env["GPUNIT_SSH"].startswith("ssh -F none -o IdentitiesOnly=yes -i ")
     assert env["GPUNIT_SSH"].endswith(" root@203.0.113.7 -p 40022")
+
+
+@pytest.mark.spec("run:handover:no-account-key")
+def test_the_command_gets_no_account_key(
+    cwd: Path, monkeypatch: pytest.MonkeyPatch, capfd: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setenv("RUNPOD_API_KEY", KEY)
+    opener = session_opener()
+
+    assert gpunit(["run", "--", "env"], provider=RunPod(opener=opener)) == 0
+    env = dict(line.split("=", 1) for line in capfd.readouterr().out.splitlines())
+    assert "RUNPOD_API_KEY" not in env
+    assert env["GPUNIT_HOST"] == "203.0.113.7"
+    assert opener.answers == []
+    headers = {request.get_header("Authorization") for request in opener.requests}
+    assert headers == {f"Bearer {KEY}"}
 
 
 @pytest.mark.spec("cli:exits:stdout-is-the-commands")
@@ -252,7 +285,7 @@ def test_a_dead_tunnel_is_reopened(
     assert gpunit(["run", "--", *command], provider=FakeProvider()) == 0
     opened = tunnels.read_text(encoding="utf-8").splitlines()
     assert len(opened) >= 2
-    assert f"-L{free_port}:localhost:8188" in opened[0]
+    assert f"-L127.0.0.1:{free_port}:localhost:8188" in opened[0]
     assert "ExitOnForwardFailure=yes" in opened[0]
     assert "-F none" in opened[0]
     assert "IdentitiesOnly=yes" in opened[0]
@@ -284,6 +317,40 @@ def test_a_busy_port_refuses_before_any_request(
 
     assert gpunit(["run", "--", "true"], provider=NO_REQUESTS) == 1
     assert f"local port {listening} already answers" in capfd.readouterr().err
+
+
+@pytest.mark.spec("run:ports:busy-on-v6-refuses")
+def test_a_port_busy_on_v6_loopback_refuses(
+    cwd: Path, listening_v6: int, capfd: pytest.CaptureFixture[str]
+) -> None:
+    with_port(cwd, listening_v6)
+
+    assert gpunit(["run", "--", "true"], provider=NO_REQUESTS) == 1
+    assert f"local port {listening_v6} already answers" in capfd.readouterr().err
+
+
+@pytest.mark.spec("run:tunnel:taken-port-refuses")
+def test_a_taken_port_ends_the_run(
+    cwd: Path, free_port: int, gated_tunnel: Path, capfd: pytest.CaptureFixture[str]
+) -> None:
+    with_port(cwd, free_port)
+    provider = FakeProvider()
+    # The command takes the port, then lets the tunnel die, then holds.
+    takes = (
+        "import pathlib, socket, sys, time; "
+        "s = socket.create_server(('127.0.0.1', int(sys.argv[1]))); "
+        "pathlib.Path(sys.argv[2]).touch(); "
+        "time.sleep(30); "
+        "print('outlived')"
+    )
+    command = [sys.executable, "-c", takes, str(free_port), str(gated_tunnel)]
+
+    assert gpunit(["run", "--", *command], provider=provider) == 1
+    out, err = capfd.readouterr()
+    assert "outlived" not in out
+    assert f"refused: local port {free_port} is taken by another process" in err
+    assert len((cwd / "tunnels.log").read_text().splitlines()) == 1
+    assert provider.named("delete") == [("pod-1",)]
 
 
 @pytest.mark.spec("session:key:fresh-per-session")

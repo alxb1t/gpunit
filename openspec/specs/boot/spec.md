@@ -125,6 +125,11 @@ command follows `--`; and SHALL stop the pod before exiting when the gap is foun
 - **WHEN** `GPUNIT_NONCE` is unset
 - **THEN** boot exits `1` naming `GPUNIT_NONCE`, prints no host-key line, and starts no command
 
+#### Scenario: no CA store
+- **Key:** `boot:refuse:no-ca-store`
+- **WHEN** OpenSSL finds no CA file and no CA directory holding a file
+- **THEN** boot exits `1` naming `ca-certificates`, arms no ceiling, and starts no command
+
 ### Requirement: Boot is one file a consumer adds alone
 
 Boot SHALL be one file, `boot/boot.py`, that imports nothing but Python's standard library and nothing of gpunit, so

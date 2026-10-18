@@ -30,6 +30,7 @@ _OPTIONAL: dict[str, tuple[type, ...]] = {
     "volume_gb": (int,),
     "volume_ceiling": (str,),
     "volume_datacenter": (str,),
+    "datacenters": (list,),
     "ports": (list,),
     "ram_gb": (int,),
     "cuda": (str,),
@@ -62,12 +63,17 @@ class Spec:
     volume_gb: int | None = None
     volume_ceiling_s: int | None = None
     volume_datacenter: str | None = None
+    datacenters: tuple[str, ...] = ()
     ports: tuple[Port, ...] = ()
     ram_gb: int | None = None
     cuda: str | None = None
     max_hourly: float | None = None
     timeout_s: int = DEFAULT_TIMEOUT_S
     env: Mapping[str, str] = field(default_factory=dict)
+
+    def allows(self, datacenter: str | None) -> bool:
+        """Return whether `datacenters` lets `datacenter` in; unset, it lets any in."""
+        return not self.datacenters or datacenter in self.datacenters
 
 
 def parse_ceiling(text: str) -> int:
@@ -101,17 +107,25 @@ def load_spec(path: Path) -> Spec:
     if not DIGEST.search(raw["image"]):
         log.refuse(f"{path}: 'image' must end in @sha256:<64 hex>, not a tag")
     ceiling_s = _duration(path, "ceiling", raw["ceiling"])
+    volume_ceiling_s = _volume_ceiling(path, raw)
+    datacenters = (
+        strings(path, "datacenters", raw["datacenters"]) if "datacenters" in raw else ()
+    )
+    dc = raw.get("volume_datacenter")
+    if datacenters and dc is not None and dc not in datacenters:
+        log.refuse(f"{path}: 'volume_datacenter' {dc!r} is not in 'datacenters'")
     return Spec(
         project=raw["project"],
         image=raw["image"],
-        gpus=_gpus(path, raw["gpus"]),
+        gpus=strings(path, "gpus", raw["gpus"]),
         vram_gb=raw["vram_gb"],
         ceiling_s=ceiling_s,
         disk_gb=raw["disk_gb"],
         volume=raw.get("volume"),
         volume_gb=raw.get("volume_gb"),
-        volume_ceiling_s=_volume_ceiling(path, raw),
-        volume_datacenter=raw.get("volume_datacenter"),
+        volume_ceiling_s=volume_ceiling_s,
+        volume_datacenter=dc,
+        datacenters=datacenters,
         ports=tuple(_port(path, item) for item in raw.get("ports", [])),
         ram_gb=raw.get("ram_gb"),
         cuda=raw.get("cuda"),
@@ -154,10 +168,11 @@ def _duration(path: Path, key: str, text: str) -> int:
         )
 
 
-def _gpus(path: Path, items: list[object]) -> tuple[str, ...]:
+def strings(where: str | Path, key: str, items: list[object]) -> tuple[str, ...]:
+    """Return the list's strings; refuse an empty list, or one holding another type."""
     names = tuple(item for item in items if isinstance(item, str))
     if not names or len(names) != len(items):
-        log.refuse(f"{path}: 'gpus' must be a non-empty list of strings")
+        log.refuse(f"{where}: {key!r} must be a non-empty list of strings")
     return names
 
 
@@ -185,6 +200,8 @@ def _env(path: Path, table: dict[str, object]) -> dict[str, str]:
     for key, value in table.items():
         if key.startswith("GPUNIT_"):
             log.refuse(f"{path}: env {key!r} is gpunit's; [env] may name no GPUNIT_*")
+        if key.startswith("RUNPOD_"):
+            log.refuse(f"{path}: env {key!r} is RunPod's; [env] may name no RUNPOD_*")
         if not isinstance(value, str):
             log.refuse(f"{path}: env {key!r} must be str, not {type(value).__name__}")
     return {key: value for key, value in table.items() if isinstance(value, str)}

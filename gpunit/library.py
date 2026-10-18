@@ -23,6 +23,7 @@ TUNNEL_POLL_S = 1.0
 # A tunnel that cannot bind dies at once; each reopening waits longer (0002 design D8).
 REOPEN_FIRST_S = 1.0
 REOPEN_CAP_S = 30.0
+TUNNEL_CONNECT_S = 10
 
 Refused = log.Refusal
 
@@ -111,7 +112,13 @@ def _open(
                 raise
             opened = _session(spec, state, record)
             if spec.ports:
-                tunnel = _Tunnel(_tunnel_argv(spec, opened.ssh))
+                if (taken := _taken(spec)) is not None:
+                    log.refuse(
+                        f"local port {taken} was taken while the pod came up; "
+                        "the session ends"
+                    )
+                argv = _tunnel_argv(spec, opened.ssh)
+                tunnel = _Tunnel(argv, spec, signals.refuse)
             yield opened
         except BaseException as fault:
             ended = fault
@@ -153,11 +160,16 @@ def _saying(say: Callable[[str], None] | None) -> Generator[None, None, None]:
 
 
 class _Signals:
-    """SIGINT, SIGTERM and SIGHUP raise `Interrupted` once, until the teardown."""
+    """SIGINT, SIGTERM and SIGHUP raise `Interrupted` once, until the teardown.
+
+    A refusal sent through `refuse` raises `Refused` in their place.
+    """
 
     def __init__(self) -> None:
         """Save the caller's handlers and set ours."""
         self._fired = False
+        self._refusal: str | None = None
+        self._main = threading.get_ident()
         self._saved = {
             number: signal.signal(number, self._handle) for number in SIGNALS
         }
@@ -165,8 +177,18 @@ class _Signals:
     def _handle(self, number: int, frame: FrameType | None) -> None:
         if self._fired:
             return
+        if (refusal := self._refusal) is not None:
+            # Not latched: a block that swallows the `Refused` still ends on a signal.
+            self._refusal = None
+            log.refuse(refusal)
         self._fired = True
         raise Interrupted(number)
+
+    def refuse(self, text: str) -> None:
+        """Raise `Refused` with `text` in the main thread, from any thread."""
+        self._refusal = text
+        # A signal wakes a main thread blocked in a wait; why: 0013 design D6.
+        signal.pthread_kill(self._main, signal.SIGINT)
 
     def shield(self) -> None:
         """Ignore all three, so no signal cuts the teardown short."""
@@ -180,11 +202,18 @@ class _Signals:
 
 
 class _Tunnel:
-    """The `ssh -N -L` child, watched by a thread that reopens it when it exits."""
+    """The `ssh -N -L` child, watched by a thread that reopens it when it exits.
 
-    def __init__(self, argv: list[str]) -> None:
+    A local port another process took refuses through `refuse` instead.
+    """
+
+    def __init__(
+        self, argv: list[str], spec: Spec, refuse: Callable[[str], None]
+    ) -> None:
         """Open the tunnel and start watching it."""
         self._argv = argv
+        self._spec = spec
+        self._refuse = refuse
         self._child = self._open()
         self._stopped = threading.Event()
         self._thread = threading.Thread(target=self._watch, daemon=True)
@@ -195,9 +224,16 @@ class _Tunnel:
         while not self._stopped.wait(TUNNEL_POLL_S):
             if self._child.poll() is None:
                 continue
+            # Every poll while the child is dead: nothing of ours holds the port, so
+            # whoever does gets the traffic now, and a reopen's.
+            if (taken := _taken(self._spec)) is not None:
+                self._refuse(
+                    f"local port {taken} is taken by another process; "
+                    "the tunnel cannot hold it"
+                )
+                return
             now = time.monotonic()
-            wait = backoff.exited(now)
-            if wait is not None:
+            if (wait := backoff.exited(now)) is not None:
                 returncode = self._child.returncode
                 log.say(f"the tunnel exited ({returncode}); reopening it in {wait:g}s")
             if backoff.due(now):
@@ -248,9 +284,37 @@ class _Backoff:
 
 
 def _tunnel_argv(spec: Spec, ssh: Sequence[str]) -> list[str]:
-    forwards = [f"-L{port.local}:localhost:{port.remote}" for port in spec.ports]
-    options = ["-N", "-o", "ExitOnForwardFailure=yes", "-o", "BatchMode=yes"]
+    # One forward per loopback family: `-L<local>:localhost:` binds both and counts
+    # one bound as set up, so a family another process holds would not trip
+    # `ExitOnForwardFailure`; a bind address makes each family fail on its own.
+    binds = ["127.0.0.1", "[::1]"] if _binds_v6_loopback() else ["127.0.0.1"]
+    forwards = [
+        f"-L{bind}:{port.local}:localhost:{port.remote}"
+        for port in spec.ports
+        for bind in binds
+    ]
+    # Until `ssh` binds, after its connect and authentication, the port is unheld; the
+    # timeout bounds that span's connect and key exchange (0013 design D5).
+    options = [
+        "-N",
+        "-o",
+        "ExitOnForwardFailure=yes",
+        "-o",
+        "BatchMode=yes",
+        "-o",
+        f"ConnectTimeout={TUNNEL_CONNECT_S}",
+    ]
     return [ssh[0], *options, *forwards, *ssh[1:]]
+
+
+def _binds_v6_loopback() -> bool:
+    """Return whether `::1` binds here; on a host without it, nobody can hold it."""
+    try:
+        with socket.socket(socket.AF_INET6) as probe:
+            probe.bind(("::1", 0))
+            return True
+    except OSError:
+        return False
 
 
 def _kill(child: subprocess.Popen[bytes]) -> None:
@@ -263,12 +327,22 @@ def _kill(child: subprocess.Popen[bytes]) -> None:
 
 
 def _refuse_busy_ports(spec: Spec) -> None:
-    for port in spec.ports:
-        try:
-            with socket.create_connection(("127.0.0.1", port.local), timeout=0.5):
-                pass
-        except OSError:
-            continue
+    if (taken := _taken(spec)) is not None:
         log.refuse(
-            f"local port {port.local} already answers; free it, or set its local side"
+            f"local port {taken} already answers; free it, or set its local side"
         )
+
+
+def _taken(spec: Spec) -> int | None:
+    """Return the first spec'd local port that answers on loopback, else None.
+
+    A host with no IPv6 fails the `::1` connect, which reads as free.
+    """
+    for port in spec.ports:
+        for host in ("127.0.0.1", "::1"):
+            try:
+                with socket.create_connection((host, port.local), timeout=0.5):
+                    return port.local
+            except OSError:
+                continue
+    return None

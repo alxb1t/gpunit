@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-18
+
+### Added
+
+- `datacenters = [...]` in `gpunit.toml`, an optional allow-list: the create names it, a mounted volume or a pod
+  reported outside it refuses or tears down, and `volume up`'s stock choice stays within it (`0013`).
+- `docs/threat-model.md`: what gpunit protects, from whom, and each threat's status at `v0.9`; README's
+  *Security and privacy* says where data lands, how to pass a secret, the key's calls and the accepted risks.
+  `CLAUDE.md` holds that a change touching a trust boundary updates the model (`0013`).
+- The probe, by hand: a restricted key covers every call gpunit makes; the pod's own key reads its pod and the
+  account's billing, and nothing else read; an account SSH key opens a root shell on a gpunit pod through RunPod's
+  SSH proxy. README's *Accepted risks* names the last two; `docs/threat-model.md` holds no gap (`0013`).
+
+### Changed
+
+- **BREAKING:** `run`'s command gets no `RUNPOD_API_KEY`: it never needs the account key (`0013`).
+- `[env]` refuses `RUNPOD_*` names, as it refuses `GPUNIT_*`; a `{{ RUNPOD_SECRET_name }}` value passes as written.
+  `.gpunit/` is set to `0700` on every write, a found one too (`0013`).
+- Each `serve` row passes vLLM `--no-enable-log-requests`, so the off stays explicit whatever a later vLLM
+  defaults to; the image is unchanged (`0013`).
+
+### Fixed
+
+- `serve`'s printed pod-log lines drop C0, DEL and C1 characters, so a pod's output cannot steer the terminal;
+  `pod.log` keeps them as read (`0013`).
+- A tunnel's local port that another process took refuses and tears down, before the tunnel opens and in place of a
+  reopen, so no traffic reaches a squatter; the busy-port probe reads `::1` as well as `127.0.0.1` (`0013`).
+- The tunnel forwards `127.0.0.1` and `::1` as separate `-L`s: a squatter holding one loopback family ends `ssh` and
+  refuses, where one `-L<local>:localhost:` forward stayed up on the other family and handed it the traffic for the
+  whole session (`0013`).
+- A taken-port `Refused` that the block swallows leaves Ctrl-C, `SIGTERM` and `SIGHUP` live: they still end the
+  block and tear the pod down (`0013`).
+- A dead tunnel's port is probed on every poll until the reopen, so a squatter that takes it during the backoff wait
+  refuses within a second, not at the reopen up to 30 s later; the tunnel's `ssh` takes `ConnectTimeout=10`, which
+  bounds how long a port is unheld while it connects, as `docs/threat-model.md` T9 now states (`0013`).
+- `docs/threat-model.md` sets T21 `partly`, and README step 3 says `run`'s laptop command can still read the key
+  from gpunit's own environment (`0013`).
+- The `0012` cards: the CA-store tests bind `boot:refuse:no-ca-store` and `live/dead.py`'s guard binds
+  `session:wait:dead-proof-spares-a-record`; `boot.py`'s stop comment names an untrusted certificate; README says
+  `make live-dead` deletes what `up` left and rents nothing over a recorded pod (`0013`).
+
 ## [0.8.0] - 2026-10-17
 
 ### Added

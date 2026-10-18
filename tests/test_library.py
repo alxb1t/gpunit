@@ -15,17 +15,12 @@ from gpunit import library
 from gpunit.library import Interrupted, Refused, Session, TeardownFailed
 from gpunit.provider import Lost, Provider
 from gpunit.runpod import RunPod
-from gpunit.spec import load_spec
+from gpunit.spec import Spec, load_spec
 from gpunit.state import State
 from tests.fakes import (
-    BOOT_LOG,
     RECORD,
-    FakeOpener,
     FakeProvider,
-    fixture,
-    log_stream,
-    page,
-    quiet,
+    session_opener,
 )
 from tests.helpers import IMAGE, NO_REQUESTS, install_stubs, with_port
 
@@ -33,8 +28,9 @@ KEY = "rpa_mapping_key"
 
 # A tunnel that listens on the local side of its `-L`, so a connection can be made.
 LISTENING_SSH = f"""#!{sys.executable}
-import re, socket, sys, time
-local = next(int(m[1]) for arg in sys.argv if (m := re.match(r"-L(\\d+):", arg)))
+import socket, sys, time
+forward = next(arg for arg in sys.argv if arg.startswith("-L127.0.0.1:"))
+local = int(forward.split(":")[1])
 server = socket.create_server(("127.0.0.1", local))
 time.sleep(30)
 """
@@ -259,8 +255,154 @@ def test_a_dead_tunnel_is_reopened(
     with opened(cwd, FakeProvider(), lines.append):
         assert until(opened_twice)
 
-    assert f"-L{free_port}:localhost:8188" in tunnels.read_text().splitlines()[1]
+    assert (
+        f"-L127.0.0.1:{free_port}:localhost:8188" in tunnels.read_text().splitlines()[1]
+    )
     assert any("reopening it in 0.1s" in line for line in lines)
+
+
+@pytest.mark.spec("library:tunnel:taken-port-refuses")
+def test_a_taken_port_ends_the_block(
+    cwd: Path, free_port: int, gated_tunnel: Path, saved_handlers: None
+) -> None:
+    with_port(cwd, free_port)
+    provider = FakeProvider()
+
+    with pytest.raises(Refused, match=f"local port {free_port} is taken"):
+        with opened(cwd, provider), socket.create_server(("127.0.0.1", free_port)):
+            gated_tunnel.touch()
+            time.sleep(10)
+
+    assert len((cwd / "tunnels.log").read_text().splitlines()) == 1
+    assert provider.named("delete") == [("pod-1",)]
+
+
+@pytest.mark.spec("library:tunnel:taken-during-wait-refuses")
+def test_a_port_taken_while_the_tunnel_waits_refuses(
+    cwd: Path,
+    free_port: int,
+    gated_tunnel: Path,
+    saved_handlers: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with_port(cwd, free_port)
+    # No reopen falls due in the test: only a probe during the wait can refuse.
+    monkeypatch.setattr(library, "REOPEN_FIRST_S", 60.0)
+    provider = FakeProvider()
+    lines: list[str] = []
+
+    def waiting() -> bool:
+        return any("reopening it in 60s" in line for line in lines)
+
+    with pytest.raises(Refused, match=f"local port {free_port} is taken"):
+        with opened(cwd, provider, lines.append):
+            gated_tunnel.touch()
+            assert until(waiting)
+            with socket.create_server(("127.0.0.1", free_port)):
+                time.sleep(10)
+
+    assert len((cwd / "tunnels.log").read_text().splitlines()) == 1
+    assert provider.named("delete") == [("pod-1",)]
+
+
+class TakingProvider(FakeProvider):
+    """Listen on `port` from inside the create, as a process that took it would."""
+
+    def __init__(self, port: int) -> None:
+        super().__init__()
+        self.port = port
+        self.server: socket.socket | None = None
+
+    def create(
+        self, spec: Spec, gpu: str, pubkey: str, ceiling_s: int, *, nonce: str
+    ) -> str:
+        self.server = socket.create_server(("127.0.0.1", self.port))
+        return super().create(spec, gpu, pubkey, ceiling_s, nonce=nonce)
+
+
+@pytest.mark.spec("library:tunnel:taken-before-open-refuses")
+def test_a_port_taken_while_the_pod_came_up_refuses(
+    cwd: Path, free_port: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with_port(cwd, free_port)
+    monkeypatch.setenv("GPUNIT_TEST_SSH_LOG", str(cwd / "tunnels.log"))
+    provider = TakingProvider(free_port)
+
+    with pytest.raises(Refused, match=f"local port {free_port} was taken"):
+        with opened(cwd, provider):
+            pass
+
+    assert provider.server is not None
+    provider.server.close()
+    assert not (cwd / "tunnels.log").exists()
+    assert provider.named("delete") == [("pod-1",)]
+
+
+@pytest.mark.spec("library:tunnel:swallowed-refusal-keeps-signals")
+def test_a_swallowed_refusal_leaves_the_signals_live(
+    cwd: Path, free_port: int, gated_tunnel: Path, saved_handlers: None
+) -> None:
+    with_port(cwd, free_port)
+    provider = FakeProvider()
+    swallowed: list[Refused] = []
+
+    with pytest.raises(Interrupted) as interrupted:
+        with opened(cwd, provider), socket.create_server(("127.0.0.1", free_port)):
+            gated_tunnel.touch()
+            try:
+                time.sleep(10)
+            except Refused as refused:  # a consumer's broad `except Exception`
+                swallowed.append(refused)
+            os.kill(os.getpid(), signal.SIGINT)
+            time.sleep(5)
+
+    assert len(swallowed) == 1
+    assert interrupted.value.signal == signal.SIGINT
+    assert provider.named("delete") == [("pod-1",)]
+
+
+def binds_v6_loopback() -> bool:
+    try:
+        with socket.socket(socket.AF_INET6) as probe:
+            probe.bind(("::1", 0))
+            return True
+    except OSError:
+        return False
+
+
+@pytest.mark.spec("library:tunnel:each-family-forwarded")
+def test_each_loopback_family_is_its_own_forward(cwd: Path, free_port: int) -> None:
+    with_port(cwd, free_port)
+
+    argv = library._tunnel_argv(load_spec(cwd / "gpunit.toml"), ("ssh", "root@h"))
+
+    forwards = [arg for arg in argv if arg.startswith("-L")]
+    v4 = f"-L127.0.0.1:{free_port}:localhost:8188"
+    v6 = f"-L[::1]:{free_port}:localhost:8188"
+    assert forwards == ([v4, v6] if binds_v6_loopback() else [v4])
+    assert "ExitOnForwardFailure=yes" in argv
+
+
+@pytest.mark.spec("library:tunnel:each-family-forwarded")
+def test_a_host_without_v6_loopback_forwards_v4_alone(
+    cwd: Path, free_port: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with_port(cwd, free_port)
+    monkeypatch.setattr(library, "_binds_v6_loopback", lambda: False)
+
+    argv = library._tunnel_argv(load_spec(cwd / "gpunit.toml"), ("ssh", "root@h"))
+
+    forwards = [arg for arg in argv if arg.startswith("-L")]
+    assert forwards == [f"-L127.0.0.1:{free_port}:localhost:8188"]
+
+
+@pytest.mark.spec("library:tunnel:connect-bounded")
+def test_the_tunnels_connect_is_bounded(cwd: Path, free_port: int) -> None:
+    with_port(cwd, free_port)
+
+    argv = library._tunnel_argv(load_spec(cwd / "gpunit.toml"), ("ssh", "root@h"))
+
+    assert argv[argv.index("ConnectTimeout=10") - 1] == "-o"
 
 
 @pytest.mark.spec("library:say:sink")
@@ -280,16 +422,7 @@ def test_the_key_comes_from_the_mapping(
     cwd: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("RUNPOD_API_KEY", raising=False)
-    opener = FakeOpener(
-        (200, page([], None)),
-        (200, fixture("gpu.json")),
-        (200, fixture("gpu.json")),
-        (201, fixture("pod_created.json")),
-        (200, fixture("pod_running.json")),
-        quiet(log_stream(*BOOT_LOG)),
-        (204, b""),
-        (200, page([], None)),
-    )
+    opener = session_opener()
     monkeypatch.setattr(
         library, "RunPod", lambda environ: RunPod(environ, opener=opener)
     )

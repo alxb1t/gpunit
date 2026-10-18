@@ -128,6 +128,8 @@ class RunPod:
             "GPUNIT_NONCE": nonce,
         }
         placement: dict[str, object] = {}
+        if spec.datacenters:
+            placement = {"dataCenterIds": list(spec.datacenters)}
         if spec.volume is not None:
             # The protocol's create names no data centre: the volume read sets it.
             datacenter = (
@@ -172,6 +174,7 @@ class RunPod:
                 status=str(body["status"]),
                 host=direct.get("host") or None,
                 port=int(port) if port else None,
+                datacenter=body.get("dataCenterId") or None,
             )
         except (AttributeError, TypeError, KeyError, ValueError):
             return None

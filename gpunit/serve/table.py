@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from gpunit import log
-from gpunit.spec import DIGEST, Port, Spec
+from gpunit.spec import DIGEST, Port, Spec, strings
 
 TABLE = Path(__file__).with_name("models.toml")
 PORT = 8000
@@ -118,20 +118,13 @@ def _row(path: Path, name: str, image: str, raw: object) -> Row:
         served=raw["served"],
         args=_args(where, raw["args"]),
         vram_gb=raw["vram_gb"],
-        gpus=_strings(where, "gpus", raw["gpus"]),
+        gpus=strings(where, "gpus", raw["gpus"]),
         disk_gb=raw["disk_gb"],
     )
 
 
-def _strings(where: str, key: str, items: list[object]) -> tuple[str, ...]:
-    names = tuple(item for item in items if isinstance(item, str))
-    if not names or len(names) != len(items):
-        log.refuse(f"{where}: {key!r} must be a non-empty list of strings")
-    return names
-
-
 def _args(where: str, items: list[object]) -> tuple[str, ...]:
-    args = _strings(where, "args", items)
+    args = strings(where, "args", items)
     if any(" " in arg for arg in args):
         log.refuse(f"{where}: 'args' holds an argument with a space, which sh splits")
     return args

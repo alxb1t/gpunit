@@ -51,6 +51,15 @@ def test_the_larger_row_asks_for_a_48_gb_card_and_its_familys_parser() -> None:
     assert int(flags["--max-num-seqs"]) <= 192
 
 
+@pytest.mark.spec("serve:table:request-logging-off")
+def test_no_row_logs_requests() -> None:
+    rows = table.load().models.values()
+
+    assert all("--no-enable-log-requests" in row.args for row in rows)
+    on = {"--enable-log-requests", "--enable-log-outputs"}
+    assert not any(on & set(row.args) for row in rows)
+
+
 @pytest.mark.spec("serve:table:revision-pinned")
 @pytest.mark.parametrize("revision", ["main", PINNED], ids=["moving", "twin-pinned"])
 def test_a_moving_revision_is_refused_naming_the_row(
@@ -108,7 +117,7 @@ def test_a_row_becomes_the_sessions_spec() -> None:
         "SERVE_REVISION": PINNED,
         "SERVE_NAME": "qwen3-4b",
         "SERVE_ARGS": "--max-model-len 16384 --enable-auto-tool-choice "
-        "--tool-call-parser hermes --reasoning-parser qwen3",
+        "--tool-call-parser hermes --reasoning-parser qwen3 --no-enable-log-requests",
         "VLLM_API_KEY": "k" * 43,
     }
     assert not any(name.startswith("GPUNIT_") for name in spec.env)

@@ -91,9 +91,14 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
     _refuse_listed(spec, provider)
     if spec.volume is not None:
         try:
-            provider.volume(spec.volume)
+            volume = provider.volume(spec.volume)
         except (Unknown, Lost) as fault:
             log.refuse(f"volume {spec.volume} could not be read: {fault}")
+        if not spec.allows(volume.datacenter):
+            log.refuse(
+                f"volume {spec.volume} is in {volume.datacenter}, "
+                f"outside datacenters {', '.join(spec.datacenters)}"
+            )
     cards = placeable(spec, provider)
 
     pubkey = state.keygen(pod_name(spec.project))
@@ -366,7 +371,20 @@ def _wait(spec: Spec, provider: Provider, state: State, record: Record) -> Recor
                 state,
                 f"pod {record.id} is {info.status}: the container is not running",
             )
-        return info if info and info.host and info.port else None
+        if info is None:
+            return None
+        # RunPod calls the create's data centres preferred: 0013 design D8.
+        if not spec.allows(info.datacenter):
+            if info.datacenter is not None:
+                _tear_down(
+                    spec,
+                    provider,
+                    state,
+                    f"pod {record.id} was placed in {info.datacenter}, "
+                    f"outside datacenters {', '.join(spec.datacenters)}",
+                )
+            return None
+        return info if info.host and info.port else None
 
     info = _poll(spec.timeout_s, mapped)
     if info is None:

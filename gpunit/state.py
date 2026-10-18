@@ -142,6 +142,8 @@ class State:
 
     def _mkdir(self) -> None:
         self.dir.mkdir(mode=0o700, exist_ok=True)
+        # A found directory keeps its mode through `mkdir`.
+        self.dir.chmod(0o700)
 
     def _replace(self, path: Path, fields: dict[str, object]) -> None:
         self._mkdir()

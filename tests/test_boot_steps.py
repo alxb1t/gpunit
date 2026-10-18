@@ -195,7 +195,7 @@ def no_ca_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *roots: str) -> 
     monkeypatch.setenv("SSL_CERT_DIR", str(certs))
 
 
-@pytest.mark.spec("boot:refuse:no-sshd")
+@pytest.mark.spec("boot:refuse:no-ca-store")
 @pytest.mark.parametrize("directory", ["missing", "empty"])
 def test_no_ca_store_refuses_before_the_arm(
     pod: Pod,
@@ -218,7 +218,7 @@ def test_no_ca_store_refuses_before_the_arm(
     assert pod.started == []
 
 
-@pytest.mark.spec("boot:refuse:no-sshd")
+@pytest.mark.spec("boot:refuse:no-ca-store")
 def test_a_ca_directory_alone_is_a_store(
     pod: Pod, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -569,10 +569,10 @@ def test_no_answer_is_000_and_retried(
 
 
 @pytest.mark.spec("boot:stop:retries")
-def test_no_ca_store_names_the_cause(
+def test_an_untrusted_certificate_names_the_cause(
     pod: Pod, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    # What urllib raises on an image without ca-certificates: no root to trust RunPod's.
+    # What urllib raises when the store lacks the root RunPod's certificate needs.
     unverified = ssl.SSLCertVerificationError(
         1,
         "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: "

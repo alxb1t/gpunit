@@ -10,7 +10,8 @@ session ends.
 
 The system SHALL bundle a model table whose rows each name a model's Hugging Face repository at a pinned revision, its
 served name, its vLLM arguments, the card memory it needs, the cards to try in order, and its disk; and SHALL bundle
-the digest of the image every row serves on. A row SHALL be refused, naming the row and the field, when a field is
+the digest of the image every row serves on. Every row's vLLM arguments SHALL turn request logging off explicitly, so
+no prompt reaches the pod's log. A row SHALL be refused, naming the row and the field, when a field is
 missing, the revision is not a commit hash, or the image is not a digest.
 
 #### Scenario: the table loads
@@ -38,6 +39,12 @@ missing, the revision is not a commit hash, or the image is not a digest.
   serves the language model alone, caps its concurrent sequences under the 192 its Mamba cache holds, and lists
   `NVIDIA A40`, `NVIDIA RTX A6000`, `NVIDIA L40`,
   `NVIDIA RTX 6000 Ada Generation` and `NVIDIA L40S`, in that order
+
+#### Scenario: no row logs requests
+- **Key:** `serve:table:request-logging-off`
+- **WHEN** the bundled table is read
+- **THEN** every row's arguments hold `--no-enable-log-requests`, and none holds `--enable-log-requests` or
+  `--enable-log-outputs`
 
 ### Requirement: Nothing is rented before the operator agrees to the price
 
@@ -76,6 +83,8 @@ tear down at that bound. Each poll SHALL read the pod's status from the provider
 SHALL close. Every 30 seconds the system SHALL read the pod's log since the create and keep it in `pod.log` under the
 model's directory, at mode `0600`, replaced only by a read at least as long; each session SHALL start without the last
 session's file. Before the dead-pod refusal the system SHALL print the kept log's last 30 lines and name the file.
+Every line of the pod's log the system prints SHALL first lose its control characters, U+0000 to U+001F and U+007F to
+U+009F; `pod.log` SHALL keep each line as read.
 
 #### Scenario: the server is awaited
 - **Key:** `serve:wait:awaited`
@@ -111,6 +120,13 @@ session's file. Before the dead-pod refusal the system SHALL print the kept log'
 - **Key:** `serve:wait:log-kept`
 - **WHEN** the wait reads the pod's log since the create
 - **THEN** `~/.local/state/gpunit/serve/<model>/pod.log` holds those lines at mode `0600`, a shorter later read leaves it as it was, and the next session starts without it
+
+#### Scenario: printed log lines are cleaned
+- **Key:** `serve:wait:log-lines-cleaned`
+- **WHEN** the pod's log holds the line `\x1b]0;owned\x07loading\x1b[2J 50%`, and the wait prints a progress line and
+  then the dead-pod refusal's kept lines
+- **THEN** each printed line holds `]0;ownedloading[2J 50%` and no control character, and `pod.log` holds the line as
+  read
 
 ### Requirement: The chat streams the model's answer in the terminal
 

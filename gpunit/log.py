@@ -51,6 +51,17 @@ def redirect(sink: Callable[[str], None]) -> Generator[None, None, None]:
         _sink = previous
 
 
+_CONTROL = dict.fromkeys([*range(0x20), *range(0x7F, 0xA0)])
+
+
+def clean(text: str) -> str:
+    r"""Return `text` without C0, DEL or C1, so a pod's line cannot steer the terminal.
+
+    e.g. "\x1b]0;owned\x07loading\x1b[2J 50%" → "]0;ownedloading[2J 50%"
+    """
+    return text.translate(_CONTROL)
+
+
 def say(text: str) -> None:
     """Write one line, `<UTC> <text>`, to the sink."""
     _sink(f"{utc()} {text}")
