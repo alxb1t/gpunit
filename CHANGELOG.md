@@ -36,6 +36,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `api.runpod.io/graphql` Read / Write, `api.runpod.ai` None (`0013·R5`).
 - `make live-serve-dead` reads the bundled table alone, so an operator's own `qwen3-4b` row cannot replace the
   broken one and serve a healthy model to the ceiling (`0014·R1`).
+- A row's `args` holding a flag the launcher sets — `--revision`, `--code-revision`, `--tokenizer-revision`,
+  `--served-model-name`, `--host`, `--port` or `--api-key`, `_` read as `-`, alone or as `--flag=value` — is
+  refused, so a user row cannot repin its weights or code; T13, T55 and README *Your own rows* say so (`0014·S2`).
+- The threat model's T30 cites the live run on `v0.10-rc1` for the quiet flag and its *Gaps* intro names `v0.10`;
+  the bundled table's header names the user file's rows beside its own (`0014·R2`, `R3`, `R4`).
 
 ## [0.9.0] - 2026-10-18
 

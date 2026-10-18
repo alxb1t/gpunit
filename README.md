@@ -215,7 +215,9 @@ uv run gpunit down --serve granite-4.0-micro --models ./models.toml
 - **One file is read, never merged.** `--models` and `GPUNIT_MODELS` name a file that must read; an absent default
   file means no rows of your own.
 - **A row of a bundled name replaces it,** said in one line: `<file> replaces the bundled qwen3-4b`.
-- **A row passes the bundled rows' checks:** every field, a 40-hex revision, no space inside an argument.
+- **A row passes the bundled rows' checks:** every field, a 40-hex revision, no space inside an argument, and none
+  of the launcher's own flags (`--revision`, `--code-revision`, `--tokenizer-revision`, `--served-model-name`,
+  `--host`, `--port`, `--api-key`), so the pin holds.
 - **No `image` key.** A file holds `[models.<name>]` rows alone, each served on the bundled image.
 - **Request logging and telemetry are off whatever a row says:** the image's launcher turns them off after the row's
   arguments, and a row holding `--enable-log-requests` is refused.

@@ -176,6 +176,21 @@ def _row(path: Path, name: str, image: str, raw: object) -> Row:
     )
 
 
+# The flags `serve/launch.py` and the pod's environment set: the pin, the name, the
+# loopback bind and the key. 0014·S2.
+_LAUNCHERS = frozenset(
+    {
+        "--revision",
+        "--code-revision",
+        "--tokenizer-revision",
+        "--served-model-name",
+        "--host",
+        "--port",
+        "--api-key",
+    }
+)
+
+
 def _args(where: str, items: list[object]) -> tuple[str, ...]:
     args = strings(where, "args", items)
     if any(" " in arg for arg in args):
@@ -185,4 +200,9 @@ def _args(where: str, items: list[object]) -> tuple[str, ...]:
         log.refuse(
             f"{where}: 'args' holds --enable-log-requests; request logging stays off"
         )
+    # vLLM reads `_` as `-` and keeps a flag's last value, so a row's own would win.
+    for arg in args:
+        flag = arg.split("=", 1)[0].replace("_", "-")
+        if flag in _LAUNCHERS:
+            log.refuse(f"{where}: 'args' holds {flag}; the launcher sets it")
     return args

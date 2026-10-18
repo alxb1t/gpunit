@@ -1,4 +1,4 @@
-# The models `gpunit serve` knows, and the image every row serves on (0005 design D1).
+# The bundled rows `gpunit serve` knows, beside the user file's (0014 design D1), and the image every row serves on.
 image = "ghcr.io/alxb1t/gpunit-vllm@sha256:078df3abebbb081604e6f647091a7a04761ed44ac631148c2db47215782e08f6"
 
 [models.qwen3-4b]

@@ -308,6 +308,48 @@ def test_a_user_row_is_checked_as_a_bundled_row_is(
     assert ("models.granite-4.0-micro" in err) is row
 
 
+@pytest.mark.spec("serve:rows:checked-as-bundled")
+@pytest.mark.parametrize(
+    ("args", "named"),
+    [
+        ('"--revision", "main"', "--revision"),
+        ('"--revision=main"', "--revision"),
+        ('"--code_revision", "main"', "--code-revision"),
+        ('"--tokenizer-revision=main"', "--tokenizer-revision"),
+        ('"--served-model-name", "x"', "--served-model-name"),
+        ('"--host", "0.0.0.0"', "--host"),
+        ('"--port=8001"', "--port"),
+        ('"--api-key", "k"', "--api-key"),
+        ('"--max-num-seqs", "8"', None),
+    ],
+    ids=[
+        "revision",
+        "revision-joined",
+        "code-revision-underscored",
+        "tokenizer-revision",
+        "served-name",
+        "host",
+        "port",
+        "api-key",
+        "twin-own-flag",
+    ],
+)
+def test_a_row_resetting_the_launchers_flags_is_refused(
+    args: str, named: str | None, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    path = _user_file(tmp_path / "rows.toml")
+    text = path.read_text(encoding="utf-8")
+    path.write_text(text.replace('"hermes"]', f'"hermes", {args}]'), encoding="utf-8")
+
+    if named is None:
+        assert "--max-num-seqs" in table.rows(path).models["granite-4.0-micro"].args
+        return
+    with pytest.raises(log.Refusal):
+        table.rows(path)
+    err = capsys.readouterr().err
+    assert f"{path}: models.granite-4.0-micro: 'args' holds {named}" in err
+
+
 @pytest.mark.spec("serve:rows:logging-on-refused")
 @pytest.mark.parametrize(
     ("flag", "refused"),
