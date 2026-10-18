@@ -15,7 +15,7 @@ from gpunit import library
 from gpunit.library import Interrupted, Refused, Session, TeardownFailed
 from gpunit.provider import Lost, Provider
 from gpunit.runpod import RunPod
-from gpunit.spec import load_spec
+from gpunit.spec import Spec, load_spec
 from gpunit.state import State
 from tests.fakes import (
     BOOT_LOG,
@@ -261,6 +261,55 @@ def test_a_dead_tunnel_is_reopened(
 
     assert f"-L{free_port}:localhost:8188" in tunnels.read_text().splitlines()[1]
     assert any("reopening it in 0.1s" in line for line in lines)
+
+
+@pytest.mark.spec("library:tunnel:taken-port-refuses")
+def test_a_taken_port_ends_the_block(
+    cwd: Path, free_port: int, gated_tunnel: Path, saved_handlers: None
+) -> None:
+    with_port(cwd, free_port)
+    provider = FakeProvider()
+
+    with pytest.raises(Refused, match=f"local port {free_port} is taken"):
+        with opened(cwd, provider), socket.create_server(("127.0.0.1", free_port)):
+            gated_tunnel.touch()
+            time.sleep(10)
+
+    assert len((cwd / "tunnels.log").read_text().splitlines()) == 1
+    assert provider.named("delete") == [("pod-1",)]
+
+
+class TakingProvider(FakeProvider):
+    """Listen on `port` from inside the create, as a process that took it would."""
+
+    def __init__(self, port: int) -> None:
+        super().__init__()
+        self.port = port
+        self.server: socket.socket | None = None
+
+    def create(
+        self, spec: Spec, gpu: str, pubkey: str, ceiling_s: int, *, nonce: str
+    ) -> str:
+        self.server = socket.create_server(("127.0.0.1", self.port))
+        return super().create(spec, gpu, pubkey, ceiling_s, nonce=nonce)
+
+
+@pytest.mark.spec("library:tunnel:taken-before-open-refuses")
+def test_a_port_taken_while_the_pod_came_up_refuses(
+    cwd: Path, free_port: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with_port(cwd, free_port)
+    monkeypatch.setenv("GPUNIT_TEST_SSH_LOG", str(cwd / "tunnels.log"))
+    provider = TakingProvider(free_port)
+
+    with pytest.raises(Refused, match=f"local port {free_port} was taken"):
+        with opened(cwd, provider):
+            pass
+
+    assert provider.server is not None
+    provider.server.close()
+    assert not (cwd / "tunnels.log").exists()
+    assert provider.named("delete") == [("pod-1",)]
 
 
 @pytest.mark.spec("library:say:sink")

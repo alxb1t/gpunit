@@ -66,7 +66,7 @@ def _command(spec: Spec, opened: library.Session, command: list[str]) -> int:
                 log.say(f"the command could not start: {fault}")
                 return 127
         code = child.wait()
-    except library.Interrupted:
+    except (library.Interrupted, log.Refusal):
         if child is not None:
             child.terminate()
             child.wait()

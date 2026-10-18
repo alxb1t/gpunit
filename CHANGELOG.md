@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `serve`'s printed pod-log lines drop C0, DEL and C1 characters, so a pod's output cannot steer the terminal;
   `pod.log` keeps them as read (`0013`).
+- A tunnel's local port that another process took refuses and tears down, before the tunnel opens and in place of a
+  reopen, so no traffic reaches a squatter; the busy-port probe reads `::1` as well as `127.0.0.1` (`0013`).
 
 ## [0.8.0] - 2026-10-17
 

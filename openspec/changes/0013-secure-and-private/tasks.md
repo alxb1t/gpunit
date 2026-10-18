@@ -6,7 +6,7 @@ The laptop's fixes, the tunnel, placement, serve's logging, the `0012` cards and
 ## Progress
 
 - [x] 1 — The laptop
-- [ ] 2 — The tunnel
+- [x] 2 — The tunnel
 - [ ] 3 — Placement
 - [ ] 4 — Serve
 - [ ] 5 — The cards
@@ -28,9 +28,9 @@ The laptop's fixes, the tunnel, placement, serve's logging, the `0012` cards and
 
 ## 2 — The tunnel
 
-- [ ] 2.1 Add `_taken` to `gpunit/library.py`, use it in `_refuse_busy_ports` and again before the tunnel opens, per [D5](design.md#d5); bind `run:ports:busy-on-v6-refuses` in `tests/test_run.py` and `library:tunnel:taken-before-open-refuses` in `tests/test_library.py`.
+- [x] 2.1 Add `_taken` to `gpunit/library.py`, use it in `_refuse_busy_ports` and again before the tunnel opens, per [D5](design.md#d5); bind `run:ports:busy-on-v6-refuses` in `tests/test_run.py` and `library:tunnel:taken-before-open-refuses` in `tests/test_library.py`.
   Verify: `grep -c '"::1"' gpunit/library.py` prints a number of at least `1`, `grep -c '"run:ports:busy-on-v6-refuses"' tests/test_run.py` prints `1`, `grep -c '"library:tunnel:taken-before-open-refuses"' tests/test_library.py` prints `1`, and `uv run pytest -q tests/test_run.py tests/test_library.py` exits 0.
-- [ ] 2.2 Make `_Tunnel._watch` refuse a taken port through `_Signals.refuse`, and `run._command` end its child on `log.Refusal`, per [D5](design.md#d5) and [D6](design.md#d6); bind `library:tunnel:taken-port-refuses` in `tests/test_library.py` and `run:tunnel:taken-port-refuses` in `tests/test_run.py`.
+- [x] 2.2 Make `_Tunnel._watch` refuse a taken port through `_Signals.refuse`, and `run._command` end its child on `log.Refusal`, per [D5](design.md#d5) and [D6](design.md#d6); bind `library:tunnel:taken-port-refuses` in `tests/test_library.py` and `run:tunnel:taken-port-refuses` in `tests/test_run.py`.
   Verify: `grep -c 'pthread_kill' gpunit/library.py` prints `1`, `grep -c '"library:tunnel:taken-port-refuses"' tests/test_library.py` prints `1`, `grep -c '"run:tunnel:taken-port-refuses"' tests/test_run.py` prints `1`, and `uv run pytest -q tests/test_run.py tests/test_library.py tests/test_serve_session.py` exits 0.
 
 ## 3 — Placement
