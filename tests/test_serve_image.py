@@ -110,7 +110,12 @@ def command() -> list[str]:
     return json.loads(cmd[len("CMD ") :])
 
 
-def started(bin_dir: Path, volume: str | None) -> subprocess.CompletedProcess[str]:
+def started(
+    bin_dir: Path,
+    volume: str | None,
+    extra: dict[str, str] | None = None,
+    launch: Path = LAUNCH,
+) -> subprocess.CompletedProcess[str]:
     """Run the CMD's script from this tree under the test's Python, vLLM stubbed."""
     env = {
         "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
@@ -121,8 +126,9 @@ def started(bin_dir: Path, volume: str | None) -> subprocess.CompletedProcess[st
     }
     if volume is not None:
         env["GPUNIT_VOLUME_PATH"] = volume
+    env.update(extra or {})
     return subprocess.run(
-        [sys.executable, str(LAUNCH)],
+        [sys.executable, str(launch)],
         env=env,
         capture_output=True,
         text=True,
@@ -132,7 +138,7 @@ def started(bin_dir: Path, volume: str | None) -> subprocess.CompletedProcess[st
 
 ARGS = (
     "args: serve Qwen/Qwen3-4B --revision abc123 --served-model-name qwen3-4b"
-    " --host 127.0.0.1 --port 8000 --max-model-len 16384"
+    " --host 127.0.0.1 --port 8000 --max-model-len 16384 --no-enable-log-requests"
 )
 
 
@@ -164,3 +170,48 @@ def test_vllm_starts_with_the_weights_on_the_volume(
 
     assert done.returncode == 0, done.stderr
     assert done.stdout.splitlines() == [f"HF_HOME={home}", ARGS]
+
+
+# Prints the telemetry variables and the last argument vLLM would start with.
+QUIET_VLLM = """#!/bin/sh
+echo "DO_NOT_TRACK=$DO_NOT_TRACK"
+echo "HF_HUB_DISABLE_TELEMETRY=$HF_HUB_DISABLE_TELEMETRY"
+echo "VLLM_NO_USAGE_STATS=$VLLM_NO_USAGE_STATS"
+for arg; do last=$arg; done
+echo "last: $last"
+"""
+
+QUIET = [
+    "DO_NOT_TRACK=1",
+    "HF_HUB_DISABLE_TELEMETRY=1",
+    "VLLM_NO_USAGE_STATS=1",
+    "last: --no-enable-log-requests",
+]
+
+
+@pytest.mark.spec("serve:image:launcher-forces-quiet")
+@pytest.mark.parametrize("guarded", [True, False], ids=["launcher", "twin-unguarded"])
+def test_the_launcher_keeps_logging_and_telemetry_off(
+    guarded: bool, tmp_path: Path
+) -> None:
+    bin_dir = install_stubs(tmp_path / "bin", {"vllm": QUIET_VLLM})
+    launch = LAUNCH
+    if not guarded:
+        # The twin: the launcher without its quiet lets the pod's environment through.
+        text = LAUNCH.read_text(encoding="utf-8")
+        assert text.count("os.environ.update(") == 1
+        text = text.replace("os.environ.update(", "dict(")
+        text = text.replace('"--no-enable-log-requests",', "")
+        launch = tmp_path / "launch.py"
+        launch.write_text(text, encoding="utf-8")
+    loud = {
+        "DO_NOT_TRACK": "0",
+        "HF_HUB_DISABLE_TELEMETRY": "0",
+        "VLLM_NO_USAGE_STATS": "0",
+        "SERVE_ARGS": "--max-model-len 16384 --enable-log-requests",
+    }
+
+    done = started(bin_dir, None, loud, launch)
+
+    assert done.returncode == 0, done.stderr
+    assert (done.stdout.splitlines() == QUIET) is guarded

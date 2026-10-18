@@ -7,7 +7,7 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 
 - [x] 1 — The lookup
 - [x] 2 — The rows
-- [ ] 3 — The launcher
+- [x] 3 — The launcher
 - [ ] 4 — The CLI
 - [ ] 5 — The handover
 - [ ] 6 — The cards
@@ -36,9 +36,9 @@ proof, per [design](design.md). Every new test carries `@pytest.mark.spec` with 
 
 ## 3 — The launcher
 
-- [ ] 3.1 In `serve/launch.py`, set `DO_NOT_TRACK`, `HF_HUB_DISABLE_TELEMETRY` and `VLLM_NO_USAGE_STATS` to `1` and pass `--no-enable-log-requests` last, per [D6](design.md#d6); in `tests/test_serve_image.py`, `ARGS` gains ` --no-enable-log-requests`, and a new test binds `serve:image:launcher-forces-quiet`.
+- [x] 3.1 In `serve/launch.py`, set `DO_NOT_TRACK`, `HF_HUB_DISABLE_TELEMETRY` and `VLLM_NO_USAGE_STATS` to `1` and pass `--no-enable-log-requests` last, per [D6](design.md#d6); in `tests/test_serve_image.py`, `ARGS` gains ` --no-enable-log-requests`, and a new test binds `serve:image:launcher-forces-quiet`.
   Verify: `grep -o -E 'DO_NOT_TRACK|HF_HUB_DISABLE_TELEMETRY|VLLM_NO_USAGE_STATS' serve/launch.py | sort -u | wc -l | tr -d ' '` prints `3`, `grep -c '"--no-enable-log-requests"' serve/launch.py` prints `1`, `grep -c '"serve:image:launcher-forces-quiet"' tests/test_serve_image.py` prints `1`, and `uv run pytest -q tests/test_serve_image.py` exits 0.
-- [ ] 3.2 Drop `"--no-enable-log-requests"` from the `qwen3-4b` and `qwen3.8-27b` rows' `args` in `gpunit/serve/models.toml`; in `tests/test_serve_table.py`, drop it from `SERVE_ARGS`'s expected string, and make `test_no_row_logs_requests` assert only that no row holds `--enable-log-requests` or `--enable-log-outputs`, per [D6](design.md#d6).
+- [x] 3.2 Drop `"--no-enable-log-requests"` from the `qwen3-4b` and `qwen3.8-27b` rows' `args` in `gpunit/serve/models.toml`; in `tests/test_serve_table.py`, drop it from `SERVE_ARGS`'s expected string, and make `test_no_row_logs_requests` assert only that no row holds `--enable-log-requests` or `--enable-log-outputs`, per [D6](design.md#d6).
   Verify: `grep -c 'enable-log-requests' gpunit/serve/models.toml` prints `0`, and `uv run pytest -q tests/test_serve_table.py tests/test_serve_image.py` exits 0.
 
 ## 4 — The CLI

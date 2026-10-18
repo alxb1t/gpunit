@@ -57,7 +57,6 @@ def test_the_larger_row_asks_for_a_48_gb_card_and_its_familys_parser() -> None:
 def test_no_row_logs_requests() -> None:
     rows = table.load().models.values()
 
-    assert all("--no-enable-log-requests" in row.args for row in rows)
     on = {"--enable-log-requests", "--enable-log-outputs"}
     assert not any(on & set(row.args) for row in rows)
 
@@ -119,7 +118,7 @@ def test_a_row_becomes_the_sessions_spec() -> None:
         "SERVE_REVISION": PINNED,
         "SERVE_NAME": "qwen3-4b",
         "SERVE_ARGS": "--max-model-len 16384 --enable-auto-tool-choice "
-        "--tool-call-parser hermes --reasoning-parser qwen3 --no-enable-log-requests",
+        "--tool-call-parser hermes --reasoning-parser qwen3",
         "VLLM_API_KEY": "k" * 43,
     }
     assert not any(name.startswith("GPUNIT_") for name in spec.env)

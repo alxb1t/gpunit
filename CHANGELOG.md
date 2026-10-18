@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A user row passes the bundled rows' checks, and a user file holds rows alone; any row holding
   `--enable-log-requests` is refused. The unknown-model usage error names each row's source (`0014`).
 
+### Changed
+
+- `serve/launch.py` sets `DO_NOT_TRACK`, `HF_HUB_DISABLE_TELEMETRY` and `VLLM_NO_USAGE_STATS` and passes
+  `--no-enable-log-requests` last, for every row; the bundled rows drop the flag (`0014`).
+
 ## [0.9.0] - 2026-10-18
 
 ### Added
