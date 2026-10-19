@@ -1,5 +1,5 @@
 # Build and push the serve image on a manual request only; its digest goes to the run's summary,
-# to be pinned in gpunit/serve/models.toml. Why: 0005 design D7.
+# to be pinned in gpunit/serve/models.toml. Why: decision D40.
 name: build-serve-image
 
 on:

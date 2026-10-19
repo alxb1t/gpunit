@@ -58,7 +58,7 @@ def serve(
     key = secrets.token_urlsafe(32)
     spec = row.spec(ceiling_s, volume, max_hourly, key, _free_port())
     if volume is None and State(home(name)).window() is not None:
-        # `up` mounts the recorded window volume: 0010 design D6, D8.
+        # `up` mounts the recorded window volume: decision D43.
         spec = replace(spec, volume_gb=row.disk_gb)
     # No proxy: the endpoint is the tunnel's loopback side.
     opener = opener or urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -66,7 +66,7 @@ def serve(
     def body() -> int:
         place = home(name)
         state = State(place)
-        # Before the price, as every command sweeps first: 0011 design D3.
+        # Before the price, as every command sweeps first: decision D43.
         lifecycle.sweep_window(state, lambda: provider)
         if spec.volume_gb is not None:
             lifecycle.live_window(state)
@@ -199,7 +199,7 @@ class _Kept:
 
     def take(self, lines: list[str]) -> None:
         """Write `lines` when they are at least as many as held; else keep the file."""
-        # A read cut by its time bound is shorter, and holds less: 0009 design D2.
+        # A read cut by its time bound is shorter, and holds less: decision D39.
         if not lines or len(lines) < self._count:
             return
         fd = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)

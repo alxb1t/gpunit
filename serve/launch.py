@@ -1,8 +1,8 @@
 """Start vLLM on the serve image's row, quiet, the weights on the window volume, if set.
 
 e.g. GPUNIT_VOLUME_PATH=/runpod-volume → HF_HOME=/runpod-volume/huggingface, then
-`vllm serve <SERVE_REPO> … --no-enable-log-requests`. Why Python, not `sh -c`: 0012
-design D9.
+`vllm serve <SERVE_REPO> … --no-enable-log-requests`. Why Python, not `sh -c`:
+decision D40.
 
     CMD ["python3", "/opt/gpunit/launch.py"]
 """
@@ -15,7 +15,7 @@ def main() -> None:
     volume = os.environ.get("GPUNIT_VOLUME_PATH")
     if volume:
         os.environ["HF_HOME"] = f"{volume}/huggingface"
-    # Whatever the pod's environment holds: every row passes here (0014 design D6).
+    # Whatever the pod's environment holds: every row passes here (decision D40).
     os.environ.update(
         DO_NOT_TRACK="1", HF_HUB_DISABLE_TELEMETRY="1", VLLM_NO_USAGE_STATS="1"
     )

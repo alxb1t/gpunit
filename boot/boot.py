@@ -1,7 +1,7 @@
 """Run the pod's half of a gpunit session, and stop the pod however it ends.
 
 Arm the ceiling, serve sshd on a fresh host key, print its fingerprint, run the
-command. Why each step: openspec 0001-core design D11; why Python: 0012 design D1.
+command. Why each step: decision D25; why Python: decision D45.
 
     ENTRYPOINT ["python3", "/opt/gpunit/boot.py", "--"]
 """
@@ -32,7 +32,7 @@ MAX_RETRY_S = 300
 GRACE_S = 60
 # stdout and stderr reach RunPod's log on separate pipes, and lines written together
 # can merge swapped: the pause keeps the key line before `step: the command`, which
-# gpunit needs after it (0012 design D1). Remove when gpunit reads them in any order.
+# gpunit needs after it (decision D45). Remove when gpunit reads them in any order.
 KEY_GAP_S = 1
 NEEDED = ("RUNPOD_API_KEY", "RUNPOD_POD_ID", "PUBLIC_KEY", "GPUNIT_CEILING")
 # The stop key and the nonce are boot's: the command does not inherit them, though a
@@ -154,7 +154,7 @@ def check(environ: Mapping[str, str], command: list[str]) -> None:
 
 def arm(ceiling: str, environ: Mapping[str, str]) -> None:
     """Fork the watchdog that stops the pod at `ceiling` seconds; return at once."""
-    # A process, not a thread: it outlives a crash of boot's main flow (0012 design D3).
+    # A process, not a thread: it outlives a crash of boot's main flow (decision D46).
     sys.stdout.flush()
     sys.stderr.flush()
     if os.fork() == 0:

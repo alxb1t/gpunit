@@ -11,7 +11,7 @@ from gpunit.provider import Lost, Provider, Unknown, Unplaceable, pod_name
 from gpunit.spec import Spec
 from gpunit.state import State, Window
 
-# RunPod's standard storage under 1 TB, billed by the hour: 0010 design D5.
+# RunPod's standard storage under 1 TB, billed by the hour: decision D41.
 VOLUME_GB_MONTH = Decimal("0.07")
 HOURS_A_MONTH = 730
 # The stock levels a volume may be placed on, best first.
@@ -118,7 +118,7 @@ def _sweep(name: str, provider: Provider, state: State) -> int:
     for volume_id in listed:
         if volume_id in known:
             continue
-        # No script or agent answers for an unrecorded volume: 0011 design D5.
+        # No script or agent answers for an unrecorded volume: decision D41.
         tty = sys.stdin.isatty()
         try:
             answer = (
@@ -174,7 +174,7 @@ def _extend(
         )
     question = f"extend volume {window.id}"
     _agree(window.size_gb, ceiling_s, question, "not extended", yes)
-    # Never earlier: a session may be running to the recorded end. 0011 design D1.
+    # Never earlier: a session may be running to the recorded end. decision D41.
     extended = replace(window, ends=max(window.ends, log.utc(ceiling_s)))
     state.write_window(extended)
     ledger.record_volume(project, window.id, extended.ends)

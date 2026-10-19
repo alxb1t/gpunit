@@ -5,11 +5,11 @@ import re
 from gpunit.spec import Spec
 
 # Only a whole line counts, so nothing logged later can echo a key line in. The nonce
-# is the session's, so a command's echo cannot match it: 0009 design D3.
+# is the session's, so a command's echo cannot match it: decision D22.
 _HOST_KEY = re.compile(r"^gpunit host key ([0-9a-f]{32}): (SHA256:[A-Za-z0-9+/]+)\s*$")
 # What a boot.sh older than v0.6.0 prints: the key line with no nonce.
 _OLD_KEY = re.compile(r"^gpunit host key: SHA256:[A-Za-z0-9+/]+\s*$")
-# Boot says this after its key line, before the command starts; see 0006 design D1.
+# Boot says this after its key line, before the command starts; see decision D22.
 _BOOT_STEP = re.compile(r"^\S+ step: the command\s*$")
 # Boot's first line: a read that opens with it holds the log from its start.
 _BOOT_START = re.compile(r"^\S+ step: the ceiling, \d+s\s*$")
@@ -30,7 +30,7 @@ def pod_env(
         "GPUNIT_NONCE": nonce,
     }
     if spec.volume is not None:
-        # The pod reads its volume in gpunit's words, not the provider's (0004 D7).
+        # The pod reads its volume in gpunit's words, not the provider's (decision D12).
         env |= {"GPUNIT_VOLUME_ID": spec.volume, "GPUNIT_VOLUME_PATH": volume_path}
     return env
 
@@ -57,7 +57,7 @@ def old_boot(lines: list[str]) -> bool:
     e.g. ["<UTC> step: the ceiling, 3600s", "gpunit host key: SHA256:abc",
     "<UTC> step: the command"] → True
     """
-    # A read cut before boot's lines judges nothing: 0011 design D8.
+    # A read cut before boot's lines judges nothing: decision D22.
     if not lines or not _BOOT_START.match(lines[0]):
         return False
     keyed = False

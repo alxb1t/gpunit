@@ -68,7 +68,7 @@ def spend(provider: Provider, days: int, *, as_json: bool) -> int:
         pods = provider.pod_billing(start, end)
         volumes = provider.volume_billing(start, end)
     except Lost as fault:
-        # A table of zeros would read as a free week (0007 design D3).
+        # A table of zeros would read as a free week (decision D44).
         log.refuse(f"the billing could not be read: {fault}")
     owners = {pod_id: entry.project for pod_id, entry in ledger.read().items()}
     windows = ledger.volumes()
@@ -78,7 +78,7 @@ def spend(provider: Provider, days: int, *, as_json: bool) -> int:
     log.say(STILL_BILLING)
     today = _midnight(last)
     billed_today = {cost.volume_id for cost in volumes if cost.start >= today}
-    # A volume the ledger records as deleted is not named: 0011 design D7.
+    # A volume the ledger records as deleted is not named: decision D17.
     for volume_id in sorted((billed_today & set(windows)) - ledger.deleted()):
         # Before today's midnight: a volume deleted at its end today still bills today.
         if windows[volume_id].ends < today:

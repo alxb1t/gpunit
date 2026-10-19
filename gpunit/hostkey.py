@@ -37,8 +37,8 @@ def verify(
     # The fingerprint comes over the authenticated API, never over the connection
     # it vouches for; nothing connects until the two agree.
     def read() -> str | None:
-        # The last LOG_TAIL lines alone: RunPod's `since` reads the same tail (0010
-        # design D14), so a key line a heavy boot pushes out of it is not read.
+        # The last LOG_TAIL lines alone: RunPod's `since` reads the same tail
+        # (decision D22), so a key line a heavy boot pushes out of it is not read.
         lines = provider.log(record.id, tail=LOG_TAIL)
         if printed := fingerprint(lines, nonce):
             return printed

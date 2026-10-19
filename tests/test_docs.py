@@ -1,0 +1,210 @@
+"""Hold the guide's citations true: links, anchors and decision ids (decision D50)."""
+
+import re
+from collections.abc import Mapping
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parent.parent
+
+# The roots scanned for citations: every tracked root but the specs and the archive.
+SCANNED_DIRS = ("gpunit", "boot", "serve", "live", "tests", ".github", "docs")
+SCANNED_FILES = ("Makefile", "pyproject.toml", "README.md", "CLAUDE.md")
+DECISIONS = "docs/decisions.md"
+ARCHIVED = re.compile(r"[0-9]{4} (design )?D[0-9]+")
+CITED = re.compile(r"\b[Dd]ecision (D[0-9]+)\b")
+LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
+LINKED_DECISION = re.compile(r"decisions\.md#(d[0-9]+)\b")
+HEADING = re.compile(r"^#{1,6}\s+(.+?)\s*#*\s*$")
+FENCE = re.compile(r"^```.*?^```", re.MULTILINE | re.DOTALL)
+CODE = re.compile(r"`[^`\n]*`")
+
+
+def guide(root: Path) -> list[Path]:
+    """Return the pages whose links are held: `docs/`, `README.md` and `CLAUDE.md`."""
+    pages = sorted((root / "docs").glob("*.md"))
+    return pages + [root / name for name in ("README.md", "CLAUDE.md")]
+
+
+def scanned(root: Path) -> list[Path]:
+    """Return the text files scanned for citations; the live runs' tails are records."""
+    found = [root / name for name in SCANNED_FILES]
+    for top in SCANNED_DIRS:
+        found += sorted(p for p in (root / top).rglob("*") if p.is_file())
+    return [
+        path
+        for path in found
+        if path.exists()
+        and "__pycache__" not in path.parts
+        and not path.name.endswith("last_run.txt")
+        and _text(path) is not None
+    ]
+
+
+def _text(path: Path) -> str | None:
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return None
+
+
+def _prose(text: str) -> str:
+    """Return `text` without its code blocks and spans, where a link is an example."""
+    return CODE.sub("", FENCE.sub("", text))
+
+
+def slug(heading: str) -> str:
+    """Return a heading's GitHub anchor.
+
+    e.g. "D22 · The host key" → "d22--the-host-key"
+    """
+    plain = re.sub(r"[`*]", "", heading).strip().lower()
+    return re.sub(r"[^\w\- ]", "", plain).replace(" ", "-")
+
+
+def anchors(path: Path) -> set[str]:
+    """Return every anchor the page's headings make, a repeat suffixed `-1`, `-2`."""
+    seen: dict[str, int] = {}
+    found = set()
+    for line in FENCE.sub("", path.read_text(encoding="utf-8")).splitlines():
+        if match := HEADING.match(line):
+            base = slug(match[1])
+            count = seen.get(base, 0)
+            seen[base] = count + 1
+            found.add(f"{base}-{count}" if count else base)
+    return found
+
+
+def broken_links(root: Path) -> list[str]:
+    """Return each relative link in the guide naming a missing file or anchor."""
+    faults = []
+    for page in guide(root):
+        if not page.exists():
+            continue
+        where = page.relative_to(root).as_posix()
+        for target in LINK.findall(_prose(page.read_text(encoding="utf-8"))):
+            if re.match(r"[a-z]+:", target):
+                continue
+            name, _, anchor = target.partition("#")
+            path = (page.parent / name).resolve() if name else page
+            if not path.exists():
+                faults.append(f"{where}: {target}")
+            elif anchor and (path.suffix != ".md" or anchor not in anchors(path)):
+                faults.append(f"{where}: {target}")
+    return sorted(faults)
+
+
+def decision_ids(root: Path) -> set[str]:
+    """Return the ids `docs/decisions.md` holds, from its `### Dn · ` headings."""
+    text = (root / DECISIONS).read_text(encoding="utf-8")
+    return set(re.findall(r"^### (D[0-9]+) · ", text, re.MULTILINE))
+
+
+def unknown_decisions(root: Path) -> list[str]:
+    """Return each `decision Dn` and decision link that names no decision in force."""
+    known = decision_ids(root)
+    faults = []
+    for path in scanned(root):
+        text = path.read_text(encoding="utf-8")
+        cited = CITED.findall(text) + [d.upper() for d in LINKED_DECISION.findall(text)]
+        where = path.relative_to(root).as_posix()
+        faults += [f"{where}: {d}" for d in set(cited) - known]
+    return sorted(faults)
+
+
+def archived(root: Path) -> list[str]:
+    """Return each archived design's decision id cited outside `docs/decisions.md`."""
+    faults = []
+    for path in scanned(root):
+        where = path.relative_to(root).as_posix()
+        if where == DECISIONS:
+            continue
+        faults += [
+            f"{where}: {m[0]}"
+            for m in ARCHIVED.finditer(path.read_text(encoding="utf-8"))
+        ]
+    return sorted(faults)
+
+
+def tree(root: Path, files: Mapping[str, str]) -> Path:
+    """Write each file under `root`, by its relative path, and return `root`."""
+    for name, text in files.items():
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+    return root
+
+
+@pytest.mark.spec("architecture:docs:links-resolve")
+def test_the_guides_links_resolve() -> None:
+    assert broken_links(ROOT) == []
+
+
+@pytest.mark.spec("architecture:docs:link-caught")
+def test_a_broken_link_is_caught(tmp_path: Path) -> None:
+    root = tree(
+        tmp_path,
+        {
+            "docs/a.md": (
+                "[ok](b.md#d22--the-host-key) [ok](b.md#the-rules)"
+                " [ok](b.md#the-rules-1) [ok](#a) [ok](../README.md) [web](https://example.com/x.md)\n"
+                "[gone](missing.md) [none](b.md#nope) `[code](missing.md)`\n"
+                "```\n[fenced](missing.md)\n```\n# A\n"
+            ),
+            "docs/b.md": "### D22 · The host key\n## The rules\n## The rules\n",
+            "README.md": "[here](docs/a.md#a) [there](docs/a.md#b)\n",
+        },
+    )
+
+    assert broken_links(root) == [
+        "README.md: docs/a.md#b",
+        "docs/a.md: b.md#nope",
+        "docs/a.md: missing.md",
+    ]
+
+
+@pytest.mark.spec("architecture:docs:decisions-resolve")
+def test_every_decision_cited_is_in_force() -> None:
+    assert unknown_decisions(ROOT) == []
+
+
+@pytest.mark.spec("architecture:docs:decisions-resolve")
+def test_an_unknown_decision_is_caught(tmp_path: Path) -> None:
+    # Joined, so this file cites no decision of its own.
+    cite, link = "decision", "decisions.md#"
+    root = tree(
+        tmp_path,
+        {
+            DECISIONS: "### D1 · One\n\n### D2 · Two\n",
+            "gpunit/x.py": f"# why: {cite} D1, {cite} D9\n",
+            "docs/a.md": f"[one]({link}d2--two) [gone]({link}d7--gone)\n",
+        },
+    )
+
+    assert unknown_decisions(root) == ["docs/a.md: D7", "gpunit/x.py: D9"]
+
+
+@pytest.mark.spec("architecture:docs:archive-caught")
+def test_no_archived_citation_is_left() -> None:
+    assert archived(ROOT) == []
+
+
+@pytest.mark.spec("architecture:docs:archive-caught")
+def test_an_archived_citation_is_caught(tmp_path: Path) -> None:
+    # Joined, so this file holds no citation of its own.
+    cited = " ".join(["0010", "design", "D10"])
+    root = tree(
+        tmp_path,
+        {
+            DECISIONS: f"- **Made by:** {cited}\n",
+            "gpunit/x.py": f"# why: {cited}\n",
+            "Makefile": f"# ({cited.replace('design ', '')})\n",
+            "live/last_run.txt": f"{cited}\n",
+        },
+    )
+
+    assert archived(root) == [
+        f"Makefile: {cited.replace('design ', '')}",
+        f"gpunit/x.py: {cited}",
+    ]

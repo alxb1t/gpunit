@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `tests/test_layers.py` holds the package's layers, lazy imports included, plus the stdlib-only, `sys.exit` and
   `RunPod`-construction rules, each with a twin that breaks it (`0015`).
+- `docs/decisions.md`: the decisions in force, `D1`–`D51`, grouped by area. `tests/test_docs.py` holds the guide's
+  links and anchors, every `decision Dn` cited, and no archived design's id outside that page (`0015`).
 
 ### Changed
 
@@ -22,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `gpunit/contract.py` holds the laptop's half of the boot contract: the pod's env (`pod_env`), the boot-log
   patterns, `fingerprint` and `old_boot`. `gpunit/hostkey.py` proves the host key; `lifecycle.up` tears down on its
   reason (`0015`).
+- Code, configuration and the threat model cite `decision Dn` in place of an archived design's id; a live proof's
+  own design id is dropped, its reason kept (`0015`).
 - `make live` proved the moved pod env and host-key proof against RunPod on an A40 (`live/last_run.txt`,
   `0015`).
 

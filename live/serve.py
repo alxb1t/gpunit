@@ -1,8 +1,8 @@
-"""Prove a served model answers over its endpoint, then in a chat (0005 design D9).
+"""Prove a served model answers over its endpoint, then in a chat.
 
 e.g. `RUNPOD_API_KEY=<key> python live/serve.py qwen3-4b` serves the row with `--api`
-for one chat request and one tool call (0008 design D4), then chats one prompt, inside
-the row's window volume (0010 design D10): the endpoint downloads the weights into it,
+for one chat request and one tool call, then chats one prompt, inside
+the row's window volume (decision D6): the endpoint downloads the weights into it,
 the chat's new pod loads them from it.
 """
 

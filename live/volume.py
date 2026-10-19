@@ -1,4 +1,4 @@
-"""Prove a window volume carries a file from one pod to the next (0010 design D10).
+"""Prove a window volume carries a file from one pod to the next (decision D6).
 
 e.g. `RUNPOD_API_KEY=<key> python live/volume.py` prints the price, rents a 10 GB
 volume, writes the UTC time to it from one pod, reads it back from a second, and

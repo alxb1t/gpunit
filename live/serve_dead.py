@@ -1,7 +1,7 @@
-"""Prove a pod that dies while the model loads ends `serve`'s wait (0009 design D7).
+"""Prove a pod that dies while the model loads ends `serve`'s wait (decision D6).
 
 e.g. `RUNPOD_API_KEY=<key> python live/serve_dead.py` serves `qwen3-4b` with an argument
-vLLM refuses, inside its window volume (0010 design D10), prints gpunit's lines, and
+vLLM refuses, inside its window volume (decision D6), prints gpunit's lines, and
 exits 0 only when `check` finds no failure.
 """
 

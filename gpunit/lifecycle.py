@@ -98,7 +98,7 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
     pubkey = state.keygen(pod_name(spec.project))
     nonce = NONCE()
     # Before the create, so a log read `since` it misses none of the pod's lines
-    # within the provider's tail (0003 design D2, 0010 design D14).
+    # within the provider's tail (decision D22).
     created = log.utc()
     state.mark_pending()
     pod_id = _create(spec, provider, cards, pubkey, nonce)
@@ -119,7 +119,7 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
 
 def ssh_command(state: State, record: Record) -> list[str]:
     """Return the `ssh` argv that opens a shell on the recorded pod."""
-    # Every ssh line is gpunit's own: no ssh_config, no agent key (0002 design D1).
+    # Every ssh line is gpunit's own: no ssh_config, no agent key (decision D24).
     return [
         "ssh",
         "-F",
@@ -244,7 +244,7 @@ def sweep_window(state: State, provider: Callable[[], Provider]) -> None:
     code = delete_volume(provider(), window.id)
     if code == 204:
         state.clear_window()
-        # A record beside the mark: the create came back. 0011 design D2.
+        # A record beside the mark: the create came back. decision D43.
         state.clear_volume_pending()
         log.say(f"volume {window.id} passed its ceiling at {window.ends}; deleted")
     else:
@@ -375,7 +375,7 @@ def _wait(spec: Spec, provider: Provider, state: State, record: Record) -> Recor
             )
         if info is None:
             return None
-        # RunPod calls the create's data centres preferred: 0013 design D8.
+        # RunPod calls the create's data centres preferred: decision D26.
         if not spec.allows(info.datacenter):
             if info.datacenter is not None:
                 _tear_down(

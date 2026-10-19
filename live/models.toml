@@ -1,5 +1,5 @@
 # The user file `make live-serve` proves: GPUNIT_MODELS=live/models.toml make live-serve MODEL=granite-4.0-micro.
-# Rows alone; every row runs the bundled gpunit-vllm image (0014 design D12).
+# Rows alone; every row runs the bundled gpunit-vllm image (decision D6).
 [models."granite-4.0-micro"]
 repo = "ibm-granite/granite-4.0-micro"
 revision = "56111ae135df9c53a78c99028e7bc24035a9e979"

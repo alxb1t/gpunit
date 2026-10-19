@@ -1,4 +1,4 @@
-"""Prove a served model answers a tool request with a tool call (0008 design D3).
+"""Prove a served model answers a tool request with a tool call.
 
 e.g. `OPENAI_API_KEY=<key> python live/tool_call.py http://127.0.0.1:8000/v1 qwen3-4b`
 prints `tool call: get_weather {"city": "Paris"}` and exits 0; anything else exits 1.

@@ -9,7 +9,7 @@ The layer test and the moves, one metered run, then the links test, the citation
 - [x] 2 — The renames
 - [x] 3 — The boot contract
 - [x] 4 — ⚠️ **HUMAN · METERED** — make live after the moves
-- [ ] 5 — The citations
+- [x] 5 — The citations
 - [ ] 6 — Decisions and principles
 - [ ] 7 — The pages
 - [ ] 8 — The map and the handover
@@ -50,11 +50,11 @@ The layer test and the moves, one metered run, then the links test, the citation
 
 ## 5 — The citations
 
-- [ ] 5.1 Write `docs/decisions.md`'s opening and a `### Dn · <title>` heading for each decision of [Seed: decisions](design.md#seed-decisions), each with its bold choice line, per [D12](design.md#d12).
+- [x] 5.1 Write `docs/decisions.md`'s opening and a `### Dn · <title>` heading for each decision of [Seed: decisions](design.md#seed-decisions), each with its bold choice line, per [D12](design.md#d12).
   Verify: `grep -c -E '^### D[0-9]+ · ' docs/decisions.md` prints `51`.
-- [ ] 5.2 Write `tests/test_docs.py` per [D10](design.md#d10), the link, decision and archive rules, each with a `_caught` twin; bind `architecture:docs:` `links-resolve`, `link-caught`, `decisions-resolve` and `archive-caught`.
+- [x] 5.2 Write `tests/test_docs.py` per [D10](design.md#d10), the link, decision and archive rules, each with a `_caught` twin; bind `architecture:docs:` `links-resolve`, `link-caught`, `decisions-resolve` and `archive-caught`.
   Verify: `grep -o -E '"architecture:docs:(links-resolve|link-caught|decisions-resolve|archive-caught)"' tests/test_docs.py | sort -u | wc -l | tr -d ' '` prints `4`, and `uv run pytest -q tests/test_docs.py -k caught` exits 0.
-- [ ] 5.3 Rewrite each archived citation in the scanned files of [D10](design.md#d10) as `decision Dn`, per [D11](design.md#d11).
+- [x] 5.3 Rewrite each archived citation in the scanned files of [D10](design.md#d10) as `decision Dn`, per [D11](design.md#d11).
   Verify: `grep -rnE "[0-9]{4} (design )?D[0-9]+" gpunit boot serve live tests Makefile pyproject.toml .github docs README.md CLAUDE.md | grep -v -e last_run.txt -e '^docs/decisions.md:' | wc -l | tr -d ' '` prints `0`, and `uv run pytest -q` exits 0.
 
 ## 6 — Decisions and principles

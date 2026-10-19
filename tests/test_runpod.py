@@ -257,7 +257,7 @@ def stamped(*events: tuple[str | None, str]) -> bytes:
 
 @pytest.mark.spec("serve:wait:log-kept")
 def test_a_since_read_takes_the_tail_from_that_second_on() -> None:
-    # RunPod's own `since` sends no past line (0010 design D14): the read is the tail's.
+    # RunPod's own `since` sends no past line (decision D22): the read is the tail's.
     provider, opener = runpod(
         (
             200,
