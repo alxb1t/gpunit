@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-19
+
 ### Added
 
 - `tests/test_layers.py` holds the package's layers, lazy imports included, plus the stdlib-only, `sys.exit` and
