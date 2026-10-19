@@ -68,20 +68,27 @@ def _parsed(path: Path) -> ast.Module:
     return ast.parse(path.read_text(encoding="utf-8"))
 
 
-def imports(path: Path, names: Collection[str]) -> list[tuple[int, str]]:
+def imports(path: Path, module: str, names: Collection[str]) -> list[tuple[int, str]]:
     """Return each line and module the file imports, those inside functions included.
 
+    A relative import resolves against `module`, the file's dotted name: in gpunit.spec,
+    `from . import lifecycle` and `from .lifecycle import up` → gpunit.lifecycle.
     A `from` import of a module in `names` names that module: `from gpunit import log`
     → gpunit.log, and `from gpunit import __version__` → gpunit.
     """
+    package = module if path.name == "__init__.py" else module.rpartition(".")[0]
     found = []
     for node in ast.walk(_parsed(path)):
         if isinstance(node, ast.Import):
             found += [(node.lineno, alias.name) for alias in node.names]
-        elif isinstance(node, ast.ImportFrom) and node.module:
+        elif isinstance(node, ast.ImportFrom):
+            base = node.module or ""
+            if node.level:
+                parent = package.rsplit(".", node.level - 1)[0]
+                base = f"{parent}.{base}" if base else parent
             for alias in node.names:
-                child = f"{node.module}.{alias.name}"
-                found.append((node.lineno, child if child in names else node.module))
+                child = f"{base}.{alias.name}"
+                found.append((node.lineno, child if child in names else base))
     return sorted(found)
 
 
@@ -95,7 +102,7 @@ def upward(root: Path) -> list[str]:
     for name, path in found.items():
         if name not in LAYERS:
             continue
-        for line, target in imports(path, found):
+        for line, target in imports(path, name, found):
             if target == "gpunit":
                 faults.append(f"{name}:{line} imports gpunit itself")
             elif target in LAYERS and RANK[LAYERS[target]] > RANK[LAYERS[name]]:
@@ -107,7 +114,9 @@ def cycles(root: Path) -> list[str]:
     """Return each import cycle among the package's modules, e.g. a → b → a."""
     found = modules(root)
     graph = {
-        name: sorted({t for _, t in imports(path, found) if t in found and t != name})
+        name: sorted(
+            {t for _, t in imports(path, name, found) if t in found and t != name}
+        )
         for name, path in found.items()
     }
     faults: list[str] = []
@@ -132,7 +141,7 @@ def importers(root: Path, module: str) -> set[str]:
     return {
         name
         for name, path in found.items()
-        if any(target == module for _, target in imports(path, found))
+        if any(target == module for _, target in imports(path, name, found))
     }
 
 
@@ -140,10 +149,13 @@ def foreign(root: Path) -> list[str]:
     """Return each import in the package or the launcher not of the stdlib or gpunit."""
     found = modules(root)
     faults = []
-    for path in [*found.values(), *(root / name for name in ALSO_STDLIB)]:
+    launchers = {
+        name.removesuffix(".py").replace("/", "."): root / name for name in ALSO_STDLIB
+    }
+    for name, path in {**found, **launchers}.items():
         if not path.exists():
             continue
-        for line, target in imports(path, found):
+        for line, target in imports(path, name, found):
             top = target.partition(".")[0]
             if top != "gpunit" and top not in sys.stdlib_module_names:
                 faults.append(
@@ -225,6 +237,14 @@ def test_the_package_holds_its_layers() -> None:
             {"gpunit/spec.py": "from gpunit import __version__\n"},
             ["gpunit.spec:1 imports gpunit itself"],
         ),
+        (
+            {"gpunit/spec.py": "from . import lifecycle\n"},
+            ["gpunit.spec:1 imports gpunit.lifecycle"],
+        ),
+        (
+            {"gpunit/spec.py": "def load():\n    from .lifecycle import up\n"},
+            ["gpunit.spec:2 imports gpunit.lifecycle"],
+        ),
     ],
 )
 def test_an_upward_import_is_caught(
@@ -236,12 +256,13 @@ def test_an_upward_import_is_caught(
 
 
 @pytest.mark.spec("architecture:layers:cycle-caught")
-def test_a_cycle_is_caught(tmp_path: Path) -> None:
+@pytest.mark.parametrize("back", ["from gpunit import spec", "from . import spec"])
+def test_a_cycle_is_caught(tmp_path: Path, back: str) -> None:
     root = package(
         tmp_path,
         {
             "gpunit/spec.py": "from gpunit import state\n",
-            "gpunit/state.py": "def load():\n    from gpunit import spec\n",
+            "gpunit/state.py": f"def load():\n    {back}\n",
         },
     )
 
@@ -263,10 +284,16 @@ def test_a_third_runpod_importer_is_caught(tmp_path: Path) -> None:
             "gpunit/library.py": "from gpunit.runpod import RunPod\n",
             "gpunit/cli.py": "from gpunit.runpod import RunPod\n",
             "gpunit/run.py": "def go():\n    from gpunit import runpod\n",
+            "gpunit/spend.py": "from . import runpod\n",
+            "gpunit/volume.py": "from .runpod import RunPod\n",
         },
     )
 
-    assert importers(root, "gpunit.runpod") - BUILDERS == {"gpunit.run"}
+    assert importers(root, "gpunit.runpod") - BUILDERS == {
+        "gpunit.run",
+        "gpunit.spend",
+        "gpunit.volume",
+    }
 
 
 @pytest.mark.spec("architecture:layers:stdlib-only")
