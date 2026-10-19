@@ -16,7 +16,7 @@ decision names the file.
 `pyproject.toml` holds the floor and the empty list.
 
 - **Why:** A consumer adds gpunit as a dev tool and inherits nothing; `tomllib` needs 3.11.
-- **Made by:** `0001·D1`.
+- **Made by:** `0001·D1`, `0016·D1`.
 
 ### D2 · A `Provider` protocol, its nouns not RunPod's
 

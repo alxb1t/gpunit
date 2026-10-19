@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `LICENSE`, Apache-2.0, named in `pyproject.toml` by `license` and `license-files`; the hatchling floor is 1.27,
+  which reads them (`0016`).
+
+### Changed
+
+- `pyproject.toml`'s `description` and `keywords` are the text GitHub's description and topics mirror (`0016`).
+
 ## [0.11.0] - 2026-10-19
 
 ### Added

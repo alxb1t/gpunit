@@ -5,7 +5,7 @@ The license and the metadata, the gate workflow, the move into `docs/`, the fron
 
 ## Progress
 
-- [ ] 1 — The license and the metadata
+- [x] 1 — The license and the metadata
 - [ ] 2 — The gate workflow
 - [ ] 3 — The move
 - [ ] 4 — The front page
@@ -13,11 +13,11 @@ The license and the metadata, the gate workflow, the move into `docs/`, the fron
 
 ## 1 — The license and the metadata
 
-- [ ] 1.1 **HALT CHECK** — none of this change exists yet, and README is the guide [design](design.md#context) read.
+- [x] 1.1 **HALT CHECK** — none of this change exists yet, and README is the guide [design](design.md#context) read.
   Verify: `test -e LICENSE; echo $?` prints `1`, `grep -c '^keywords' pyproject.toml` prints `0`, `test -e .github/workflows/gate.yml; echo $?` prints `1`, `test -e docs/usage.md; echo $?` prints `1`, `grep -c '' README.md` prints `432`, and `grep -c '^- \*\*0015·R7 ' .minions/backlog.md` prints `1`.
-- [ ] 1.2 Add `LICENSE`, and `license`, `license-files` and the hatchling floor to `pyproject.toml`, per [D1](design.md#d1).
+- [x] 1.2 Add `LICENSE`, and `license`, `license-files` and the hatchling floor to `pyproject.toml`, per [D1](design.md#d1).
   Verify: `grep -c 'Apache License' LICENSE` prints a number of at least `1`, `grep -c -x 'license = "Apache-2.0"' pyproject.toml` prints `1`, `grep -c -x 'license-files = \["LICENSE"\]' pyproject.toml` prints `1`, `grep -c '"hatchling>=1.27"' pyproject.toml` prints `1`, and `uv build -q -o .minions/dist` exits 0.
-- [ ] 1.3 Set `description` and add `keywords` in `pyproject.toml`, per [D2](design.md#d2); add `0016·D1` to D1's *Made by* in `docs/decisions.md`, per [D8](design.md#d8).
+- [x] 1.3 Set `description` and add `keywords` in `pyproject.toml`, per [D2](design.md#d2); add `0016·D1` to D1's *Made by* in `docs/decisions.md`, per [D8](design.md#d8).
   Verify: `grep -c -x 'description = "Rent a cloud GPU, use it, and tear it down on every way out."' pyproject.toml` prints `1`, `grep -c '^keywords = \["gpu", "cloud-gpu", "runpod"' pyproject.toml` prints `1`, `grep -c '0016·D1' docs/decisions.md` prints `1`, and `uv run pytest -q` exits 0.
 
 ## 2 — The gate workflow

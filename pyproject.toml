@@ -1,9 +1,12 @@
 [project]
 name = "gpunit"
 dynamic = ["version"]
-description = "Open, use and close a RunPod GPU session from any project."
+description = "Rent a cloud GPU, use it, and tear it down on every way out."
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
+keywords = ["gpu", "cloud-gpu", "runpod", "vllm", "llm-inference", "openai-compatible", "python", "cli", "ssh", "mlops", "self-hosted", "cost-control"]
 # Stdlib only: a consumer installs gpunit as a dev tool and inherits nothing (decision D1).
 dependencies = []
 
@@ -11,7 +14,7 @@ dependencies = []
 gpunit = "gpunit.cli:main"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
