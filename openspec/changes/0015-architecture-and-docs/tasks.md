@@ -6,7 +6,7 @@ The layer test and the moves, one metered run, then the links test, the citation
 ## Progress
 
 - [x] 1 — The layers
-- [ ] 2 — The renames
+- [x] 2 — The renames
 - [ ] 3 — The boot contract
 - [ ] 4 — ⚠️ **HUMAN · METERED** — make live after the moves
 - [ ] 5 — The citations
@@ -28,11 +28,11 @@ The layer test and the moves, one metered run, then the links test, the citation
 
 ## 2 — The renames
 
-- [ ] 2.1 Rename `library._open` to `library.open_session` in `gpunit/library.py`, `gpunit/run.py`, `gpunit/serve/session.py` and `tests/test_library.py`, per [D4](design.md#d4).
+- [x] 2.1 Rename `library._open` to `library.open_session` in `gpunit/library.py`, `gpunit/run.py`, `gpunit/serve/session.py` and `tests/test_library.py`, per [D4](design.md#d4).
   Verify: `cat gpunit/library.py gpunit/run.py gpunit/serve/session.py tests/test_library.py | grep -c -E 'library\._open|^def _open\('` prints `0`, `grep -c '^def open_session(' gpunit/library.py` prints `1`, and `uv run pytest -q tests/test_library.py tests/test_run.py tests/test_serve_session.py` exits 0.
-- [ ] 2.2 Rename `provider.Refused` to `provider.Unplaceable` in `gpunit/provider.py`, `gpunit/runpod.py`, `gpunit/lifecycle.py`, `gpunit/volume.py`, `tests/test_up.py`, `tests/test_volume.py` and `tests/test_runpod.py`, per [D5](design.md#d5).
+- [x] 2.2 Rename `provider.Refused` to `provider.Unplaceable` in `gpunit/provider.py`, `gpunit/runpod.py`, `gpunit/lifecycle.py`, `gpunit/volume.py`, `tests/test_up.py`, `tests/test_volume.py` and `tests/test_runpod.py`, per [D5](design.md#d5).
   Verify: `cat gpunit/provider.py gpunit/runpod.py gpunit/lifecycle.py gpunit/volume.py tests/test_up.py tests/test_volume.py tests/test_runpod.py | grep -c -w 'Refused'` prints `0`, `grep -c '^class Unplaceable' gpunit/provider.py` prints `1`, and `uv run pytest -q` exits 0.
-- [ ] 2.3 Add `lifecycle.delete_volume` and call it from `lifecycle.sweep_window`, `volume.down` and `volume._sweep`, per [D6](design.md#d6).
+- [x] 2.3 Add `lifecycle.delete_volume` and call it from `lifecycle.sweep_window`, `volume.down` and `volume._sweep`, per [D6](design.md#d6).
   Verify: `cat gpunit/lifecycle.py gpunit/volume.py | grep -c 'ledger.record_deleted('` prints `1`, `grep -c '^def delete_volume(' gpunit/lifecycle.py` prints `1`, and `uv run pytest -q` exits 0.
 
 ## 3 — The boot contract

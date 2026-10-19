@@ -6,7 +6,7 @@ from typing import NoReturn
 import pytest
 
 from gpunit import ledger, log
-from gpunit.provider import GpuInfo, Lost, Refused
+from gpunit.provider import GpuInfo, Lost, Unplaceable
 from gpunit.state import State
 from gpunit.volume import most_cost
 from tests.fakes import FakeProvider, TtyInput
@@ -208,7 +208,9 @@ def test_a_refused_create_clears_the_pending_mark(
     cwd: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     write_spec(cwd, WINDOW)
-    provider = FakeProvider(volume_creates=[Refused("volume create returned HTTP 400")])
+    provider = FakeProvider(
+        volume_creates=[Unplaceable("volume create returned HTTP 400")]
+    )
 
     assert gpunit(["volume", "up", "--yes"], provider=provider) == 1
     assert not State(cwd).volume_pending.exists()

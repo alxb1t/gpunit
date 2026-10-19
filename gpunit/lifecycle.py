@@ -18,8 +18,8 @@ from gpunit.provider import (
     NoImage,
     PodInfo,
     Provider,
-    Refused,
     Unknown,
+    Unplaceable,
     fingerprint,
     old_boot,
     pod_name,
@@ -230,6 +230,14 @@ def _delete_pods(spec: Spec, provider: Provider, state: State) -> int:
     return 0
 
 
+def delete_volume(provider: Provider, volume_id: str) -> int:
+    """Return the delete's status; on a 204, record `deleted` in the ledger."""
+    code = provider.delete_volume(volume_id)
+    if code == 204:
+        ledger.record_deleted(volume_id)
+    return code
+
+
 def sweep_window(state: State, provider: Callable[[], Provider]) -> None:
     """Delete the window volume once its end has passed; build `provider` only then.
 
@@ -238,12 +246,11 @@ def sweep_window(state: State, provider: Callable[[], Provider]) -> None:
     window = state.window()
     if window is None or not window.ends_within(0):
         return
-    code = provider().delete_volume(window.id)
+    code = delete_volume(provider(), window.id)
     if code == 204:
         state.clear_window()
         # A record beside the mark: the create came back. 0011 design D2.
         state.clear_volume_pending()
-        ledger.record_deleted(window.id)
         log.say(f"volume {window.id} passed its ceiling at {window.ends}; deleted")
     else:
         log.say(
@@ -343,8 +350,8 @@ def _create(
         log.say(f"creating on {card}")
         try:
             pod_id = provider.create(spec, card, pubkey, spec.ceiling_s, nonce=nonce)
-        except Refused as refusal:
-            log.say(str(refusal))
+        except Unplaceable as unplaceable:
+            log.say(str(unplaceable))
             continue
         except Lost as lost:
             log.say(str(lost))

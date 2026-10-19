@@ -111,7 +111,7 @@ class Lost(Exception):
     """The provider's answer did not arrive; a create may have made a pod."""
 
 
-class Refused(Exception):
+class Unplaceable(Exception):
     """The provider refused the request (a 400): capacity, or a rule broken."""
 
 
@@ -137,7 +137,7 @@ class Provider(Protocol):
     def create(
         self, spec: Spec, gpu: str, pubkey: str, ceiling_s: int, *, nonce: str
     ) -> str:
-        """Return the new pod's id; raise `Refused` on a 400, else `Lost`."""
+        """Return the new pod's id; raise `Unplaceable` on a 400, else `Lost`."""
         ...
 
     def get(self, pod_id: str) -> PodInfo | None:
@@ -180,7 +180,7 @@ class Provider(Protocol):
         ...
 
     def create_volume(self, name: str, size_gb: int, datacenter: str) -> str:
-        """Return the new volume's id; raise `Refused` on a 400 or 422, else `Lost`."""
+        """Return the volume's id; raise `Unplaceable` on a 400 or 422, else `Lost`."""
         ...
 
     def volumes(self, name: str) -> list[str]:

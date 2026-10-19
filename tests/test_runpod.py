@@ -17,8 +17,8 @@ from gpunit.provider import (
     NoImage,
     PodCost,
     PodInfo,
-    Refused,
     Unknown,
+    Unplaceable,
     VolumeCost,
     VolumeInfo,
     fingerprint,
@@ -154,7 +154,7 @@ def test_a_secret_reference_reaches_the_create_as_written() -> None:
 def test_a_400_create_is_refused_with_the_problem() -> None:
     provider, _ = runpod((400, fixture("problem.json")))
 
-    with pytest.raises(Refused, match="Bad Request: There are no instances"):
+    with pytest.raises(Unplaceable, match="Bad Request: There are no instances"):
         provider.create(SPEC, "RTX 4090", "key", 2700, nonce=NONCE)
 
 
@@ -572,7 +572,7 @@ def test_the_volume_create_names_the_standard_tier() -> None:
 def test_a_refused_volume_create_is_refused(status: int) -> None:
     provider, _ = runpod((status, fixture("problem.json")))
 
-    with pytest.raises(Refused, match="no instances"):
+    with pytest.raises(Unplaceable, match="no instances"):
         provider.create_volume("gpunit-isekai", 60, "EU-RO-1")
 
 

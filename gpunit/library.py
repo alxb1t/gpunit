@@ -73,17 +73,21 @@ def session(
     with _saying(say):
         loaded = spec if isinstance(spec, Spec) else load_spec(Path(spec))
         provider = RunPod(environ if environ is not None else os.environ)
-    with _open(loaded, provider, State(cwd or Path.cwd()), say) as opened:
+    with open_session(loaded, provider, State(cwd or Path.cwd()), say) as opened:
         yield opened
 
 
 @contextmanager
-def _open(
+def open_session(
     spec: Spec,
     provider: Provider,
     state: State,
     say: Callable[[str], None] | None,
 ) -> Generator[Session, None, None]:
+    """Open a session on a loaded spec and a built provider; tear it down when it ends.
+
+    `session` is this for a consumer; `run`, `serve` and the tests call it directly.
+    """
     with _saying(say):
         # `signal.signal` raises off the main thread.
         if threading.current_thread() is not threading.main_thread():

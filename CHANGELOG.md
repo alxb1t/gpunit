@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `__version__` lives in `gpunit/version.py`, which hatch reads; it breaks the cycle `gpunit.runpod` → `gpunit` →
   `gpunit.library` → `gpunit.runpod`. `cli` imports `serve.table` inside `_known` (`0015`).
+- `library._open` is `library.open_session`, the seam `run` and `serve` open through; the provider's 400 is
+  `provider.Unplaceable`, so *refusal* names gpunit's own. `lifecycle.delete_volume` is the one volume delete and
+  its ledger line (`0015`).
 
 ## [0.10.0] - 2026-10-18
 

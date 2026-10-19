@@ -19,8 +19,8 @@ from gpunit.provider import (
     NoImage,
     PodCost,
     PodInfo,
-    Refused,
     Unknown,
+    Unplaceable,
     VolumeCost,
     VolumeInfo,
     pod_name,
@@ -116,7 +116,7 @@ class RunPod:
     def create(
         self, spec: Spec, gpu: str, pubkey: str, ceiling_s: int, *, nonce: str
     ) -> str:
-        """Return the new pod's id; raise `Refused` on a 400, else `Lost`."""
+        """Return the new pod's id; raise `Unplaceable` on a 400, else `Lost`."""
         card: dict[str, object] = {"id": gpu, "count": 1}
         if spec.ram_gb is not None:
             card["minRamPerGpu"] = spec.ram_gb
@@ -155,7 +155,7 @@ class RunPod:
         }
         answer = self._call("POST", "/pods", body)
         if answer.status == 400:
-            raise Refused(_report(f"create on {gpu!r}", answer))
+            raise Unplaceable(_report(f"create on {gpu!r}", answer))
         try:
             pod_id = answer.json(201)["id"]
         except (TypeError, KeyError, ValueError):
@@ -312,7 +312,7 @@ class RunPod:
             raise Lost(_report("data centre read", answer)) from None
 
     def create_volume(self, name: str, size_gb: int, datacenter: str) -> str:
-        """Return the new volume's id; raise `Refused` on a 400 or 422, else `Lost`."""
+        """Return the volume's id; raise `Unplaceable` on a 400 or 422, else `Lost`."""
         body = {
             "name": name,
             "size": size_gb,
@@ -322,7 +322,7 @@ class RunPod:
         answer = self._call("POST", "/network-volumes", body)
         call = f"volume create in {datacenter!r}"
         if answer.status in (400, 422):
-            raise Refused(_report(call, answer))
+            raise Unplaceable(_report(call, answer))
         try:
             volume_id = answer.json(201)["id"]
         except (TypeError, KeyError, ValueError):

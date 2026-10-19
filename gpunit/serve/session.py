@@ -74,7 +74,7 @@ def serve(
         place.mkdir(mode=0o700, parents=True, exist_ok=True)
         kept: _Kept | None = None
         try:
-            with library._open(spec, provider, state, None) as opened:
+            with library.open_session(spec, provider, state, None) as opened:
                 # After `up`'s guards: a run refused before its create keeps the
                 # last session's file.
                 kept = _Kept(place / "pod.log")
