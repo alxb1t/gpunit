@@ -11,7 +11,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from typing import NoReturn, TypeVar
 
-from gpunit import ledger, log
+from gpunit import hostkey, ledger, log
 from gpunit.provider import (
     DELETED,
     Lost,
@@ -20,8 +20,6 @@ from gpunit.provider import (
     Provider,
     Unknown,
     Unplaceable,
-    fingerprint,
-    old_boot,
     pod_name,
 )
 from gpunit.spec import Spec
@@ -30,10 +28,6 @@ from gpunit.state import Record, State, Window
 POLL_S = 5
 # The statuses of a container that is not running; two polls in a row end the wait.
 DEAD = ("EXITED", "ERROR", "TERMINATED")
-LOG_WAIT_S = 60
-# sshd can answer after the port is mapped, so the scan waits longer than the log.
-SCAN_WAIT_S = 180
-LOG_TAIL = 5000
 # Checked before the create: a tool missing after it leaves a pod rented.
 SSH_TOOLS = ("ssh", "ssh-keygen", "ssh-keyscan")
 
@@ -117,7 +111,8 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
     log.say(f"pod {pod_id} created; waiting for SSH")
 
     record = _wait(spec, provider, state, record)
-    _verify_host_key(spec, provider, state, record, nonce)
+    if reason := hostkey.verify(provider, state, record, nonce, _poll):
+        _tear_down(spec, provider, state, reason)
     log.say(f"session up: pod {record.id}, root@{record.host} -p {record.port}")
     return record
 
@@ -406,50 +401,6 @@ def _wait(spec: Spec, provider: Provider, state: State, record: Record) -> Recor
     return ready
 
 
-def _verify_host_key(
-    spec: Spec, provider: Provider, state: State, record: Record, nonce: str
-) -> None:
-    # The fingerprint comes over the authenticated API, never over the connection
-    # it vouches for; nothing connects until the two agree.
-    def read() -> str | None:
-        # The last LOG_TAIL lines alone: RunPod's `since` reads the same tail (0010
-        # design D14), so a key line a heavy boot pushes out of it is not read.
-        lines = provider.log(record.id, tail=LOG_TAIL)
-        if printed := fingerprint(lines, nonce):
-            return printed
-        # Judged on a read that holds the whole log, its first line boot's
-        # `step: the ceiling`, whose key line is boot's own: a full tail can hold
-        # only a command's echo of an older one.
-        if len(lines) < LOG_TAIL and old_boot(lines):
-            _tear_down(
-                spec,
-                provider,
-                state,
-                "the image's boot.sh prints no session nonce; "
-                "ADD boot.sh from gpunit v0.6.0",
-            )
-        return None
-
-    printed = _poll(LOG_WAIT_S, read)
-    if printed is None:
-        _tear_down(spec, provider, state, f"no host-key line within {LOG_WAIT_S}s")
-    scanned = _poll(SCAN_WAIT_S, lambda: _scan(str(record.host), int(record.port or 0)))
-    if scanned is None:
-        _tear_down(
-            spec, provider, state, f"no host-key scan answered within {SCAN_WAIT_S}s"
-        )
-    served = _fingerprint_of(scanned)
-    if served != printed:
-        _tear_down(
-            spec,
-            provider,
-            state,
-            f"the pod's host key {served} does not match the printed {printed}",
-        )
-    state.write_known_hosts(scanned)
-    log.say(f"host key verified: {printed}")
-
-
 def _poll(seconds: int, attempt: Callable[[], T | None]) -> T | None:
     deadline = CLOCK.monotonic() + seconds
     while True:
@@ -457,32 +408,6 @@ def _poll(seconds: int, attempt: Callable[[], T | None]) -> T | None:
         if found is not None or CLOCK.monotonic() >= deadline:
             return found
         CLOCK.sleep(POLL_S)
-
-
-def _scan(host: str, port: int) -> str | None:
-    """Return the pod's Ed25519 host key as a known-hosts line, or None."""
-    done = subprocess.run(
-        ["ssh-keyscan", "-T", "10", "-t", "ed25519", "-p", str(port), host],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    lines = [
-        line for line in done.stdout.splitlines() if line and not line.startswith("#")
-    ]
-    return lines[0] if lines else None
-
-
-def _fingerprint_of(known_hosts_line: str) -> str | None:
-    done = subprocess.run(
-        ["ssh-keygen", "-lf", "-"],
-        input=known_hosts_line + "\n",
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    fields = done.stdout.split()
-    return fields[1] if done.returncode == 0 and len(fields) > 1 else None
 
 
 def _tear_down(spec: Spec, provider: Provider, state: State, reason: str) -> NoReturn:

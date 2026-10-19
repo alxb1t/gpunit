@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from boot.boot import KEY_GAP_S
-from gpunit.provider import fingerprint
+from gpunit.contract import fingerprint
 from tests.helpers import install_stubs
 
 BOOT = Path(__file__).parent.parent / "boot" / "boot.py"

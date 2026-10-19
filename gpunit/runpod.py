@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from email.message import Message
 from typing import IO, Any, TypeVar
 
-from gpunit import log
+from gpunit import contract, log
 from gpunit.provider import (
     DELETED,
     GpuInfo,
@@ -122,12 +122,7 @@ class RunPod:
             card["minRamPerGpu"] = spec.ram_gb
         if spec.cuda is not None:
             card["minCudaVersion"] = spec.cuda
-        env = {
-            **spec.env,
-            "PUBLIC_KEY": pubkey,
-            "GPUNIT_CEILING": str(ceiling_s),
-            "GPUNIT_NONCE": nonce,
-        }
+        env = contract.pod_env(spec, pubkey, ceiling_s, nonce, volume_path=VOLUME_PATH)
         placement: dict[str, object] = {}
         if spec.datacenters:
             placement = {"dataCenterIds": list(spec.datacenters)}
@@ -141,8 +136,6 @@ class RunPod:
                 "mounts": {"network": [{"volumeId": spec.volume, "path": VOLUME_PATH}]},
                 "dataCenterIds": [datacenter],
             }
-            # The pod reads its volume in gpunit's words, not the provider's (0004 D7).
-            env |= {"GPUNIT_VOLUME_ID": spec.volume, "GPUNIT_VOLUME_PATH": VOLUME_PATH}
         body: dict[str, object] = {
             "name": pod_name(spec.project),
             "image": spec.image,

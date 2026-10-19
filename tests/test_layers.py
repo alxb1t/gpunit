@@ -23,11 +23,13 @@ LAYERS = {
     "gpunit.lifecycle": "lifecycle",
     "gpunit.volume": "lifecycle",
     "gpunit.spend": "lifecycle",
+    "gpunit.hostkey": "lifecycle",
     "gpunit.runpod": "cloud",
     "gpunit.spec": "model",
     "gpunit.state": "model",
     "gpunit.provider": "model",
     "gpunit.ledger": "model",
+    "gpunit.contract": "model",
     "gpunit.log": "foundation",
     "gpunit.version": "foundation",
 }

@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from gpunit.contract import fingerprint
 from gpunit.log import Refusal
 from gpunit.provider import (
     GpuInfo,
@@ -21,7 +22,6 @@ from gpunit.provider import (
     Unplaceable,
     VolumeCost,
     VolumeInfo,
-    fingerprint,
 )
 from gpunit.runpod import API, LOG_IDLE_S, RunPod, _NoRedirect
 from gpunit.spec import Spec

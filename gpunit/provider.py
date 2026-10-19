@@ -1,20 +1,9 @@
 """The seam between the session and a GPU cloud: what is asked, and what answers."""
 
-import re
 from dataclasses import dataclass
 from typing import Protocol
 
 from gpunit.spec import Spec
-
-# Only a whole line counts, so nothing logged later can echo a key line in. The nonce
-# is the session's, so a command's echo cannot match it: 0009 design D3.
-_HOST_KEY = re.compile(r"^gpunit host key ([0-9a-f]{32}): (SHA256:[A-Za-z0-9+/]+)\s*$")
-# What a boot.sh older than v0.6.0 prints: the key line with no nonce.
-_OLD_KEY = re.compile(r"^gpunit host key: SHA256:[A-Za-z0-9+/]+\s*$")
-# Boot says this after its key line, before the command starts; see 0006 design D1.
-_BOOT_STEP = re.compile(r"^\S+ step: the command\s*$")
-# Boot's first line: a read that opens with it holds the log from its start.
-_BOOT_START = re.compile(r"^\S+ step: the ceiling, \d+s\s*$")
 
 
 def pod_name(project: str) -> str:
@@ -27,40 +16,6 @@ def pod_name(project: str) -> str:
 
 # The statuses a delete succeeds with; `down` and `RunPod.delete` read the same set.
 DELETED = (200, 204)
-
-
-def fingerprint(lines: list[str], nonce: str) -> str | None:
-    """Return the last fingerprint printed with `nonce` before boot's command, or None.
-
-    e.g. ["gpunit host key <nonce>: SHA256:abc", "<UTC> step: the command"]
-        → "SHA256:abc"
-    """
-    # The last boot wins: a restarted container prints a new key.
-    pending = accepted = None
-    for line in lines:
-        if (match := _HOST_KEY.match(line)) and match[1] == nonce:
-            pending = match[2]
-        elif _BOOT_STEP.match(line):
-            accepted = pending
-    return accepted
-
-
-def old_boot(lines: list[str]) -> bool:
-    """Return True when a read from boot's first line holds an old key, then a step.
-
-    e.g. ["<UTC> step: the ceiling, 3600s", "gpunit host key: SHA256:abc",
-    "<UTC> step: the command"] → True
-    """
-    # A read cut before boot's lines judges nothing: 0011 design D8.
-    if not lines or not _BOOT_START.match(lines[0]):
-        return False
-    keyed = False
-    for line in lines:
-        if _OLD_KEY.match(line):
-            keyed = True
-        elif keyed and _BOOT_STEP.match(line):
-            return True
-    return False
 
 
 @dataclass(frozen=True)

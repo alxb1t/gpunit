@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `library._open` is `library.open_session`, the seam `run` and `serve` open through; the provider's 400 is
   `provider.Unplaceable`, so *refusal* names gpunit's own. `lifecycle.delete_volume` is the one volume delete and
   its ledger line (`0015`).
+- `gpunit/contract.py` holds the laptop's half of the boot contract: the pod's env (`pod_env`), the boot-log
+  patterns, `fingerprint` and `old_boot`. `gpunit/hostkey.py` proves the host key; `lifecycle.up` tears down on its
+  reason (`0015`).
 
 ## [0.10.0] - 2026-10-18
 

@@ -7,7 +7,7 @@ The layer test and the moves, one metered run, then the links test, the citation
 
 - [x] 1 — The layers
 - [x] 2 — The renames
-- [ ] 3 — The boot contract
+- [x] 3 — The boot contract
 - [ ] 4 — ⚠️ **HUMAN · METERED** — make live after the moves
 - [ ] 5 — The citations
 - [ ] 6 — Decisions and principles
@@ -37,9 +37,9 @@ The layer test and the moves, one metered run, then the links test, the citation
 
 ## 3 — The boot contract
 
-- [ ] 3.1 Add `gpunit/contract.py` per [D7](design.md#d7): move the boot-log patterns, `fingerprint` and `old_boot` from `gpunit/provider.py`; `RunPod.create` calls `contract.pod_env`; `gpunit/lifecycle.py`, `tests/test_runpod.py` and `tests/test_boot.py` import from `gpunit.contract`; `LAYERS` gains `"gpunit.contract": "model"`.
+- [x] 3.1 Add `gpunit/contract.py` per [D7](design.md#d7): move the boot-log patterns, `fingerprint` and `old_boot` from `gpunit/provider.py`; `RunPod.create` calls `contract.pod_env`; `gpunit/lifecycle.py`, `tests/test_runpod.py` and `tests/test_boot.py` import from `gpunit.contract`; `LAYERS` gains `"gpunit.contract": "model"`.
   Verify: `grep -c -E '^(_HOST_KEY|_OLD_KEY|_BOOT_STEP|_BOOT_START) = |^def (fingerprint|old_boot)\(' gpunit/provider.py` prints `0`, `grep -c -E '^(_HOST_KEY|_OLD_KEY|_BOOT_STEP|_BOOT_START) = |^def (fingerprint|old_boot)\(' gpunit/contract.py` prints `6`, `grep -c '"PUBLIC_KEY"' gpunit/runpod.py` prints `0`, `grep -c 'contract.pod_env(' gpunit/runpod.py` prints `1`, `grep -c '"gpunit.contract": "model"' tests/test_layers.py` prints `1`, and `uv run pytest -q` exits 0.
-- [ ] 3.2 Add `gpunit/hostkey.py` per [D8](design.md#d8): move `LOG_WAIT_S`, `SCAN_WAIT_S`, `LOG_TAIL`, `_scan` and `_fingerprint_of` from `gpunit/lifecycle.py`; `_verify_host_key` becomes `hostkey.verify`; `LAYERS` gains `"gpunit.hostkey": "lifecycle"`.
+- [x] 3.2 Add `gpunit/hostkey.py` per [D8](design.md#d8): move `LOG_WAIT_S`, `SCAN_WAIT_S`, `LOG_TAIL`, `_scan` and `_fingerprint_of` from `gpunit/lifecycle.py`; `_verify_host_key` becomes `hostkey.verify`; `LAYERS` gains `"gpunit.hostkey": "lifecycle"`.
   Verify: `grep -c -E '^def (_verify_host_key|_scan|_fingerprint_of)\(|^(LOG_WAIT_S|SCAN_WAIT_S|LOG_TAIL) = ' gpunit/lifecycle.py` prints `0`, `grep -c '^def verify(' gpunit/hostkey.py` prints `1`, `grep -c 'hostkey.verify(' gpunit/lifecycle.py` prints `1`, `grep -c '"gpunit.hostkey": "lifecycle"' tests/test_layers.py` prints `1`, and `uv run pytest -q` exits 0.
 
 ## 4 — ⚠️ **HUMAN · METERED** — make live after the moves
