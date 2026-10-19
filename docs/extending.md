@@ -27,10 +27,15 @@ cut, built, checked and released as one OpenSpec change under `openspec/changes/
 
 ## A serve row
 
-- **Files:** `gpunit/serve/models.toml`: the row's repository at a pinned revision, its cards, its flags. A row that
-  needs no code changes nothing else.
-- **Spec:** none, unless the row needs a new key: then `openspec/specs/serve/spec.md` and `gpunit/serve/table.py`.
-- **Tests:** `tests/test_serve_table.py` reads the bundled table, so a faulty row fails the gate.
+Your own model needs no change to gpunit: it is a row of your user file, read beside the bundled ones. A bundled row
+is a change:
+
+- **Files:** `gpunit/serve/models.toml`: the row's repository at a pinned revision, its cards, its flags.
+- **Spec:** `openspec/specs/serve/spec.md`'s *the table loads* names the bundled rows, so a new row edits it; a row that
+  needs a new key edits its requirement and `gpunit/serve/table.py` too.
+- **Tests:** `tests/test_serve_table.py::test_the_bundled_table_holds_both_rows_at_pinned_revisions` names the rows;
+  a faulty row fails the gate.
+- **Version:** a `vX.Y`.
 - **Proof:** `make live-serve MODEL=<row>`, by hand ([D6](decisions.md#d6--the-metered-proofs-run-by-hand-the-price-first-their-tails-committed-a-boot-change-rebuilds-the-images)).
 - **Docs:** `README.md`'s *Serve a model*.
 

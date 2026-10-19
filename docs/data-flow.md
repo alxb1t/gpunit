@@ -5,8 +5,9 @@ outcome becomes an exit code. Behaviour is the specs' (`openspec/specs/`); this 
 
 ## A session
 
-`up`, `run`, `serve` and `gpunit.session` all open through `gpunit/library.py::open_session`, which calls
-`gpunit/lifecycle.py::up` ([D27](decisions.md#d27--session-is-a-context-manager-over-open_session-run-is-its-first-caller)).
+`run`, `serve` and `gpunit.session` open through `gpunit/library.py::open_session`, which calls
+`gpunit/lifecycle.py::up` and owns the tunnel and the teardown. The `up` verb calls `gpunit/lifecycle.py::up` alone,
+and leaves the pod for `down` ([D27](decisions.md#d27--session-is-a-context-manager-over-open_session-run-is-its-first-caller)).
 
 ```
  checks ──▶ place ──▶ create ──▶ wait ──▶ host key ──▶ tunnel ──▶ command ──▶ teardown
@@ -24,7 +25,8 @@ outcome becomes an exit code. Behaviour is the specs' (`openspec/specs/`); this 
 - **Place and create:** one create per card; a 400 moves on, anything else is `Lost`
   ([D19](decisions.md#d19--placement-the-catalogue-floor-one-create-per-card-a-400-moves-on-the-rest-is-lost)).
 - **Wait:** a bounded poll until the pod's port 22 is mapped; two dead polls end it, and a pod outside
-  `datacenters` is torn down ([D21](decisions.md#d21--the-wait-a-bounded-poll-a-failed-read-is-not-yet-two-dead-polls-end-any-wait)).
+  `datacenters` is torn down ([D21](decisions.md#d21--the-wait-a-bounded-poll-a-failed-read-is-not-yet-two-dead-polls-end-any-wait),
+  [D26](decisions.md#d26--a-pod-outside-datacenters-is-torn-down)).
 - **Host key:** `gpunit/hostkey.py::verify` reads the log, scans the port, compares, and writes `known_hosts`
   ([D22](decisions.md#d22--the-host-key-is-proven-over-the-log)).
 - **Tunnel and command:** `gpunit/library.py::_Tunnel` forwards the spec's ports; `run`'s command gets
@@ -103,11 +105,13 @@ A network volume that outlives its sessions, to its own ceiling.
 ```
  volume up ──▶ price, y/N ──▶ create or extend ──▶ .gpunit/volume
                                                       │
- up · run · serve ──▶ mount at /runpod-volume ◀───────┤
+ up · run · serve ──▶ mount at VOLUME_PATH ◀──────────┤
                                                       │
  every sweep: past its end? ──▶ lifecycle.delete_volume ──▶ ledger: deleted
 ```
 
+- Each pod mounts the window at the provider's path, `gpunit/runpod.py::VOLUME_PATH`, and reads it as
+  `GPUNIT_VOLUME_PATH`.
 - `volume up` picks the data centre, then every pod of the window goes there
   ([D42](decisions.md#d42--the-windows-data-centre)).
 - `gpunit/lifecycle.py::sweep_window` deletes a window past its end before a verb's work, and in `down` after its pods

@@ -22,7 +22,7 @@ decision names the file.
 
 **The session talks to a GPU cloud through `gpunit/provider.py::Provider`; RunPod is one implementation of it.**
 
-Its nouns are gpunit's: a card, a pod, a volume, a log, a bill. Disputed: `gpunit/lifecycle.py::_delete_pods` compares
+Its nouns are gpunit's: a card, a pod, a volume, a log, a bill. Breached: `gpunit/lifecycle.py::_delete_pods` compares
 HTTP codes (`0015·F3`); `gpunit/lifecycle.py::DEAD` and `gpunit/volume.py::STOCK` are RunPod's words (`0015·F5`).
 
 - **Why:** The contract must not be RunPod's shape by accident, so a second provider is one more implementation.
@@ -136,7 +136,8 @@ existing one, they are refused.**
 
 Behaviour: [spec](../openspec/specs/spec/spec.md).
 
-- **Why:** Infra as config: every spec fault is exit `1`, before any request.
+- **Why:** Infra as config: the window lives in the spec, not in flags, and a spec fault is exit `1` before any
+  request. `volume` names a volume that exists and the window keys a new one; a session mounts one.
 - **Made by:** `0010·D2`.
 
 ### D14 · `datacenters` is an allow-list
@@ -184,7 +185,7 @@ writes the last.
 
 `gpunit/state.py::home_state` names the root.
 
-- **Why:** One session per model, from any directory.
+- **Why:** `serve` runs from any directory, so its state cannot live in the working one.
 - **Made by:** `0005·D2`.
 
 ## A session
@@ -320,7 +321,7 @@ it still ends on a signal.**
 and `128+n` on signal `n`.**
 
 `gpunit/cli.py::_run` and `gpunit/run.py::outcome` map outcomes to codes. Behaviour:
-[cli](../openspec/specs/cli/spec.md). Disputed: `gpunit/volume.py::_agree` exits `1` on Ctrl-C at the price
+[cli](../openspec/specs/cli/spec.md). Breached: `gpunit/volume.py::_agree` exits `1` on Ctrl-C at the price
 (`0015·F20`).
 
 - **Why:** A shell or an agent tells a refusal from a lost create by the code alone.
@@ -395,7 +396,7 @@ Behaviour: [serve](../openspec/specs/serve/spec.md).
 **`serve/Dockerfile` builds on vLLM by digest; `serve/launch.py` turns request logging and telemetry off, then
 starts vLLM.**
 
-`gpunit/serve/models.toml` pins the image. Disputed: `gpunit/serve/table.py::_args` refuses `--enable-log-requests` by
+`gpunit/serve/models.toml` pins the image. Breached: `gpunit/serve/table.py::_args` refuses `--enable-log-requests` by
 its exact name, while vLLM takes abbreviations (`0015·F23`).
 
 - **Why:** One image serves every row; only gpunit's launcher sees every row, so it holds the quiet flags.

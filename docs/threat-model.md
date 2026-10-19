@@ -129,7 +129,7 @@ Status: `mitigated` holds today · `partly` holds with a residual · `gap` does 
 | T38 | The laptop's process list shows the pod's host, port and key path | other local users | A3 (path only) | argv holds no secret (`gpunit/lifecycle.py::ssh_command`); the key file is 0600 | mitigated | `session:ssh:own-config-only` |
 | T39 | Untrusted log lines carry terminal escape sequences into the operator's terminal | the command's output | operator terminal | `log.clean` removes C0, DEL and C1 (`gpunit/log.py::_CONTROL`, `gpunit/log.py::clean`, `gpunit/log.py::_drop`) from each printed line (`gpunit/serve/session.py::_wait`, `gpunit/serve/session.py::_stopped`), and from each part the chat streams, newline and tab kept (`gpunit/serve/chat.py::_stream`); `pod.log` keeps the line as read, the conversation the part as streamed | mitigated | `serve:wait:log-lines-cleaned`, `serve:chat:streamed-text-cleaned` |
 | T40 | The chat transcript persists on disk | local | A7 | kept in memory only (`gpunit/serve/chat.py::run`, `gpunit/serve/chat.py::run`) | mitigated | `serve:chat:streams` |
-| T41 | A proxy env var routes the loopback request, with its Bearer key, to a proxy | the local env | A6 | `ProxyHandler({})` for the endpoint (`gpunit/serve/session.py::serve`); API calls honour `HTTPS_PROXY` through a CONNECT tunnel, so TLS holds (`gpunit/runpod.py::RunPod.__init__`) | mitigated | 0005 design (no proxy) |
+| T41 | A proxy env var routes the loopback request, with its Bearer key, to a proxy | the local env | A6 | `ProxyHandler({})` for the endpoint (`gpunit/serve/session.py::serve`); API calls honour `HTTPS_PROXY` through a CONNECT tunnel, so TLS holds (`gpunit/runpod.py::RunPod.__init__`) | mitigated | review; no test holds `ProxyHandler({})` (decision D36) |
 | T42 | The serve image phones home (HF and vLLM usage stats) | B5 | A7 metadata | `DO_NOT_TRACK`, `HF_HUB_DISABLE_TELEMETRY`, `VLLM_NO_USAGE_STATS`, set by `serve/launch.py` for every row (`serve/launch.py::main`), and in the image (`serve/Dockerfile`) | mitigated | `serve:image:launcher-forces-quiet` |
 | **Denial and spend** | | | | | | |
 | T43 | The laptop dies, or gpunit is SIGKILLed, and the pod runs on | operator, crash | A12 | the ceiling is required (`gpunit/spec.py::_REQUIRED`, `gpunit/spec.py::load_spec`); a forked watchdog (`boot/boot.py::arm`); a stop on any end (`boot/boot.py::main`); RunPod's default $80/h account spend limit ([spend limits](https://docs.runpod.io/accounts-billing/manage-accounts#account-spend-limits)) | mitigated | `spec:ceiling:required`, `boot:stop:ceiling`, `boot:stop:command-end` |
@@ -170,7 +170,7 @@ STRIDE by flow, as an index for completeness (— means no threat found on that 
 
 ## 5. Gaps
 
-Each gap the model found, and what became of it at `v0.10`. Sizes: line · small · design change.
+Each gap the model found, and what became of it at `v0.11`. Sizes: line · small · design change.
 
 | id | what | size | closes | outcome |
 |---|---|---|---|---|

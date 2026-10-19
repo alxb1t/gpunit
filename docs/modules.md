@@ -38,7 +38,7 @@ The main edges, each pointing down:
 ```
 
 The rules beside the layers, each in `tests/test_layers.py`: nothing imports the package `gpunit` itself; the
-package and `serve/launch.py` import the standard library and `gpunit` alone; `sys.exit` is called in `cli` alone.
+package imports the standard library and `gpunit` alone, and `serve/launch.py` the standard library alone; `sys.exit` is called in `cli` alone.
 
 ## Each module
 

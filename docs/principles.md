@@ -6,7 +6,7 @@ and where the code breaches it. **A rule claims no more than what holds it**: a 
 
 ## The words
 
-- **session** — one pod's life for one working directory: placed, proven, used and torn down, through `up` and
+- **session** — one pod's life for one working directory, or for `serve`, one model: placed, proven, used and torn down, through `up` and
   `down`, `run`, `serve` or `gpunit.session`.
 - **record** — `.gpunit/pod`: the pod a session made, its address and the time of its create.
 - **pending** — `.gpunit/pending`: a create was sent and no record names its pod yet; `.gpunit/volume.pending` is
@@ -34,13 +34,14 @@ and where the code breaches it. **A rule claims no more than what holds it**: a 
 | rule | from | held by | breach |
 |---|---|---|---|
 | The account key travels in a request header alone: on no argv, redirect or subprocess | [D3](decisions.md#d3--runpod-on-urllib-bounded-calls-the-key-in-a-header-no-redirect-quiet-log-reads-end), [D47](decisions.md#d47--boots-stop-over-urllib-the-commands-env-without-the-key-and-the-nonce) | `test_gpu_reads_the_memory_and_the_secure_price`, `test_the_commands_end_stops_the_pod`, `test_a_redirect_is_not_followed`, `test_a_redirect_is_a_failed_stop_never_followed`, `test_the_key_comes_from_the_environment_only` | — |
-| The key comes from the environment alone; no `.env` is read | [D11](decisions.md#d11--spec-from-gpunittoml-strict-keys-a-digest-a-required-ceiling-checked-ports) | `test_no_key_refuses_at_construction`, `test_a_dotenv_beside_the_spec_is_ignored` | — |
+| The key comes from the environment alone; no `.env` is read | [D3](decisions.md#d3--runpod-on-urllib-bounded-calls-the-key-in-a-header-no-redirect-quiet-log-reads-end) | `test_no_key_refuses_at_construction`, `test_a_dotenv_beside_the_spec_is_ignored` | — |
 | The consumer's command gets no account key; `[env]` names no `RUNPOD_*` or `GPUNIT_*` | [D33](decisions.md#d33--runs-command-gets-the-host-the-ports-and-gpunit_ssh-never-the-account-key), [D12](decisions.md#d12--env-passes-as-written-names-no-gpunit_-or-runpod_-gpunits-names-win) | `test_the_command_gets_no_account_key`, `test_the_child_holds_no_key_and_no_nonce`, `test_a_runpod_variable_in_env_is_refused`, `test_a_gpunit_variable_in_env_is_refused` | — |
 | A fresh keypair per session, private, deleted with the pod | [D16](decisions.md#d16--a-keypair-per-session-deleted-at-teardown) | `test_the_keypair_is_made_and_passed`, `test_the_key_files_are_0600`, `test_the_keypair_leaves_with_the_pod` | — |
 | gpunit's ssh is its own | [D24](decisions.md#d24--gpunits-ssh-is-its-own-the-tools-checked-before-any-request) | `test_ssh_reads_no_config_and_offers_the_session_key_alone` | — |
 | The host key is proven over the authenticated log before anything connects | [D22](decisions.md#d22--the-host-key-is-proven-over-the-log) | `test_a_match_is_recorded`, `test_a_mismatch_tears_down`, `test_a_key_line_the_command_echoes_is_not_the_key`, `test_a_key_line_with_another_nonce_is_not_the_key`, `test_an_older_boot_is_refused_at_once` | — |
 | A taken loopback port never receives the session's traffic | [D31](decisions.md#d31--a-taken-local-port-refuses-from-any-thread-unlatched), [D30](decisions.md#d30--the-tunnel-a-watched-ssh--n--l-a-backoff-one-forward-per-loopback-family) | `test_a_taken_port_ends_the_block`, `test_each_loopback_family_is_its_own_forward` | — |
-| Untrusted lines are cleaned before the terminal | [D39](decisions.md#d39--podlog-holds-the-log-since-the-create-printed-lines-are-cleaned), [D37](decisions.md#d37--the-chat-streamed-in-memory-cleaned-on-screen) | `test_printed_log_lines_are_cleaned`, `test_streamed_text_is_cleaned_and_kept_as_streamed` | `0014·S1`: a row's arguments can turn request logging back on (`0015·F23`) |
+| Untrusted lines are cleaned before the terminal | [D39](decisions.md#d39--podlog-holds-the-log-since-the-create-printed-lines-are-cleaned), [D37](decisions.md#d37--the-chat-streamed-in-memory-cleaned-on-screen) | `test_printed_log_lines_are_cleaned`, `test_streamed_text_is_cleaned_and_kept_as_streamed` | — |
+| Request logging and telemetry are off for every row | [D40](decisions.md#d40--the-serve-image-vllm-by-digest-the-launcher-turns-logging-and-telemetry-off) | `test_no_row_logs_requests`, `test_a_bundled_row_turning_request_logging_on_is_refused`, `test_the_launcher_keeps_logging_and_telemetry_off` | breached: `gpunit/serve/table.py::_args` refuses `--enable-log-requests` by its exact name, while vLLM rewrites argv, so a row's arguments can turn request logging back on (`0015·F23`) |
 
 ### Teardown
 
@@ -62,7 +63,7 @@ and where the code breaches it. **A rule claims no more than what holds it**: a 
 | The ceiling is required, and the pod enforces it | [D11](decisions.md#d11--spec-from-gpunittoml-strict-keys-a-digest-a-required-ceiling-checked-ports), [D25](decisions.md#d25--the-pod-stops-at-its-ceiling-and-on-any-end-down-deletes) | `test_no_ceiling_no_pod`, `test_the_ceiling_reaches_the_pod_in_seconds`, `test_the_watchdog_stops_the_pod_at_the_ceiling` | — |
 | Nothing is rented or created without the price and a `y` (`serve`, `volume up`) | [D35](decisions.md#d35--the-price-first-yn---yes-skips-it) | `test_nothing_is_rented_unless_the_operator_says_y`, `test_no_is_the_default`, `test_an_interrupt_at_the_price_creates_nothing` | — |
 | Every input that shapes a pod is pinned | [D11](decisions.md#d11--spec-from-gpunittoml-strict-keys-a-digest-a-required-ceiling-checked-ports), [D40](decisions.md#d40--the-serve-image-vllm-by-digest-the-launcher-turns-logging-and-telemetry-off) | `test_an_image_without_a_digest_is_refused`, `test_a_moving_revision_is_refused_naming_the_row`, `test_the_image_is_built_from_pinned_inputs`, `test_each_action_is_pinned_by_commit` | breached: `gpunit/serve/table.py::_args` matches exact launcher flags; an abbreviation repins a user row (`0015·F23`) |
-| Secure Cloud, port 22 alone | [D19](decisions.md#d19--placement-the-catalogue-floor-one-create-per-card-a-400-moves-on-the-rest-is-lost) | `test_the_create_is_secure_and_exposes_22_only` | — |
+| Secure Cloud, port 22 alone | [D3](decisions.md#d3--runpod-on-urllib-bounded-calls-the-key-in-a-header-no-redirect-quiet-log-reads-end) | `test_the_create_is_secure_and_exposes_22_only` | — |
 | Every amount is the provider's; an unreadable billing is an error | [D44](decisions.md#d44--spend-whole-utc-days-the-providers-amounts-one-rounding) | `test_the_total_is_the_providers_rounded_once`, `test_an_unreadable_billing_is_an_error_not_zeros` | — |
 | The ledger never blocks a session | [D17](decisions.md#d17--the-ledger-best-effort-to-write-refuses-to-read-spend-joins-on-it) | `test_an_unwritable_ledger_blocks_nothing`, `test_no_home_blocks_nothing` | — |
 
