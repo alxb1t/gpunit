@@ -10,7 +10,7 @@ cut, built, checked and released as one OpenSpec change under `openspec/changes/
   as `spend`, `volume` and `serve` are.
 - **Spec:** `openspec/specs/cli/spec.md`, plus the capability the verb belongs to.
 - **Tests:** `tests/test_cli.py` and the module's own `tests/test_<module>.py`, on `tests/fakes.py::FakeProvider`.
-- **Docs:** `README.md`'s *The verbs*, and a line in [modules](modules.md) for a new module.
+- **Docs:** `docs/usage.md`'s *The verbs*, and a line in [modules](modules.md) for a new module.
 - **Version:** a new verb needs a `vX.Y`, never a patch
   ([D8](decisions.md#d8--a-patch-closes-cards-it-adds-no-verb-gpunittoml-key-or-exit-code)).
 
@@ -21,7 +21,7 @@ cut, built, checked and released as one OpenSpec change under `openspec/changes/
   `gpunit/runpod.py::RunPod.create`.
 - **Spec:** `openspec/specs/spec/spec.md`.
 - **Tests:** `tests/test_spec.py`: the key read, and each fault refused before any request, naming the field.
-- **Docs:** `README.md`'s *Use it from a project*; [the threat model](threat-model.md) when the key reaches the pod
+- **Docs:** `docs/usage.md`'s *Use it from a project*; [the threat model](threat-model.md) when the key reaches the pod
   or the API.
 - **Version:** a `vX.Y`.
 
@@ -37,7 +37,7 @@ is a change:
   a faulty row fails the gate.
 - **Version:** a `vX.Y`.
 - **Proof:** `make live-serve MODEL=<row>`, by hand ([D6](decisions.md#d6--the-metered-proofs-run-by-hand-the-price-first-their-tails-committed-a-boot-change-rebuilds-the-images)).
-- **Docs:** `README.md`'s *Serve a model*.
+- **Docs:** `docs/usage.md`'s *Serve a model*.
 
 ## A provider
 
@@ -82,6 +82,7 @@ holds it, and runs the live proof that uses it.
   it ends ([D6](decisions.md#d6--the-metered-proofs-run-by-hand-the-price-first-their-tails-committed-a-boot-change-rebuilds-the-images)).
 - **Tests:** the check's logic, offline, in `tests/test_live.py`.
 - **Record:** the run's tail in `live/last_run.txt`, under a dated heading naming the change.
+- **Docs:** edit `docs/proofs.md`: the target's section, and its latest run.
 
 ## The rules
 

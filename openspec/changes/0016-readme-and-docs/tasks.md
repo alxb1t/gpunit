@@ -7,7 +7,7 @@ The license and the metadata, the gate workflow, the move into `docs/`, the fron
 
 - [x] 1 — The license and the metadata
 - [x] 2 — The gate workflow
-- [ ] 3 — The move
+- [x] 3 — The move
 - [ ] 4 — The front page
 - [ ] 5 — ⚠️ **HUMAN** — GitHub's fields and the first CI run
 
@@ -29,11 +29,11 @@ The license and the metadata, the gate workflow, the move into `docs/`, the fron
 
 ## 3 — The move
 
-- [ ] 3.1 Write `docs/usage.md` from README's user's guide, per [D5](design.md#d5); README stays as it is until phase 4.
+- [x] 3.1 Write `docs/usage.md` from README's user's guide, per [D5](design.md#d5); README stays as it is until phase 4.
   Verify: `grep -c -x -E '## (Use it from a project|Use it from Python|Serve a model|Working window|What it cost|Security and privacy|The verbs|The spend rules)' docs/usage.md` prints `8`, and `uv run pytest -q tests/test_docs.py` exits 0.
-- [ ] 3.2 Write `docs/proofs.md` from README's proof section and the tails, per [D6](design.md#d6).
+- [x] 3.2 Write `docs/proofs.md` from README's proof section and the tails, per [D6](design.md#d6).
   Verify: ``grep -c -x -E '## (The latest runs|`make live`|`make live-volume`|`make live-serve`|`make live-dead`|`make live-serve-dead`)' docs/proofs.md`` prints `6`, `grep -c -F -e 'live/last_run.txt' -e 'live/serve_last_run.txt' -e 'live/spend_last_run.txt' docs/proofs.md` prints a number of at least `3`, and `uv run pytest -q tests/test_docs.py` exits 0.
-- [ ] 3.3 Re-point every README citation in `docs/threat-model.md`, `docs/extending.md`, `docs/pins.md` and `docs/README.md`, per [D7](design.md#d7); add D52 to `docs/decisions.md`, per [D8](design.md#d8).
+- [x] 3.3 Re-point every README citation in `docs/threat-model.md`, `docs/extending.md`, `docs/pins.md` and `docs/README.md`, per [D7](design.md#d7); add D52 to `docs/decisions.md`, per [D8](design.md#d8).
   Verify: `cat docs/threat-model.md docs/extending.md docs/pins.md | grep -c 'README'` prints `0`, `grep -o -E '\]\((usage|proofs)\.md' docs/README.md | sort -u | wc -l | tr -d ' '` prints `2`, `grep -c 'docs/proofs.md' docs/extending.md` prints a number of at least `1`, `grep -c '^### D52 · ' docs/decisions.md` prints `1`, and `uv run pytest -q tests/test_docs.py` exits 0.
 
 ## 4 — The front page

@@ -509,6 +509,14 @@ names and imports alone.**
 - **Why:** The unchanged tests prove nothing moved.
 - **Made by:** `0015·D1`.
 
+### D52 · README is a one-screen front page
+
+**`README.md` holds at most 60 lines: what gpunit is, why, how it is built, how to try it.** The user's guide is
+`docs/usage.md`, the live proofs `docs/proofs.md`.
+
+- **Why:** A reader and a user each find their depth one link away.
+- **Made by:** `0016·D4`, `0016·D5`, `0016·D6`.
+
 ### D53 · Every push runs the gate
 
 **`.github/workflows/gate.yml` runs `make gate` on each push and pull request; the live proofs stay by hand
