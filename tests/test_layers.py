@@ -45,7 +45,8 @@ RANK = {
 }
 BUILDERS = {"gpunit.library", "gpunit.cli"}
 EXITERS = {"gpunit.cli"}
-# Outside the package, and stdlib-only too; a twin's tree may lack it.
+# Outside the package and copied alone into the serve image: the stdlib alone, not
+# gpunit. The repo holds each; a twin's tree may lack it.
 ALSO_STDLIB = ("serve/launch.py",)
 
 
@@ -146,7 +147,10 @@ def importers(root: Path, module: str) -> set[str]:
 
 
 def foreign(root: Path) -> list[str]:
-    """Return each import in the package or the launcher not of the stdlib or gpunit."""
+    """Return each import not of the stdlib, or of gpunit in the package alone.
+
+    The launcher is copied alone into the serve image, so it imports the stdlib alone.
+    """
     found = modules(root)
     faults = []
     launchers = {
@@ -155,9 +159,9 @@ def foreign(root: Path) -> list[str]:
     for name, path in {**found, **launchers}.items():
         if not path.exists():
             continue
+        allowed = sys.stdlib_module_names | ({"gpunit"} if name in found else set())
         for line, target in imports(path, name, found):
-            top = target.partition(".")[0]
-            if top != "gpunit" and top not in sys.stdlib_module_names:
+            if target.partition(".")[0] not in allowed:
                 faults.append(
                     f"{path.relative_to(root).as_posix()}:{line} imports {target}"
                 )
@@ -186,8 +190,9 @@ def exits(root: Path) -> list[str]:
 
 
 def unnamed(root: Path, layers: Mapping[str, str] = LAYERS) -> list[str]:
-    """Return each module `docs/modules.md`'s layer table misses, misplaces or invents.
+    """Return each module the page or `layers` misses, misplaces, invents or names gone.
 
+    The page is `docs/modules.md`'s layer table,
     e.g. the row "| model | gpunit.spec · gpunit.state |", each name backticked
     """
     page = (root / "docs" / "modules.md").read_text(encoding="utf-8")
@@ -198,7 +203,9 @@ def unnamed(root: Path, layers: Mapping[str, str] = LAYERS) -> list[str]:
         if len(cells) == 2
         for name in re.findall(r"`([\w.]+)`", cells[1])
     }
-    faults = [f"{name}: not in LAYERS" for name in modules(root) if name not in layers]
+    found = modules(root)
+    faults = [f"{name}: not in LAYERS" for name in found if name not in layers]
+    faults += [f"{name}: not a module" for name in layers if name not in found]
     for name, layer in layers.items():
         if name not in drawn:
             faults.append(f"{name}: not in docs/modules.md")
@@ -298,6 +305,7 @@ def test_a_third_runpod_importer_is_caught(tmp_path: Path) -> None:
 
 @pytest.mark.spec("architecture:layers:stdlib-only")
 def test_the_package_imports_the_stdlib_alone() -> None:
+    assert [name for name in ALSO_STDLIB if not (ROOT / name).exists()] == []
     assert foreign(ROOT) == []
 
 
@@ -309,7 +317,7 @@ def test_a_foreign_import_is_caught(tmp_path: Path) -> None:
             "gpunit/log.py": "import os\nimport requests\n",
             "gpunit/spec.py": "def load():\n    from tests import fakes\n",
             "gpunit/state.py": "import boot.boot\nfrom live import window\n",
-            "serve/launch.py": "import os\nimport vllm\n",
+            "serve/launch.py": "import os\nimport vllm\nimport gpunit\n",
         },
     )
 
@@ -319,6 +327,7 @@ def test_a_foreign_import_is_caught(tmp_path: Path) -> None:
         "gpunit/state.py:1 imports boot.boot",
         "gpunit/state.py:2 imports live",
         "serve/launch.py:2 imports vllm",
+        "serve/launch.py:3 imports gpunit",
     ]
 
 
@@ -359,15 +368,21 @@ def test_a_module_the_page_misses_is_caught(tmp_path: Path) -> None:
             "gpunit/extra.py": "",
             "docs/modules.md": (
                 "| layer | modules |\n|---|---|\n"
-                "| model | `gpunit.log` · `gpunit.ghost` |\n\n"
+                "| model | `gpunit.log` · `gpunit.ghost` · `gpunit.gone` |\n\n"
                 "| seam | replaced for |\n|---|---|\n| `gpunit.spec` | x |\n"
             ),
         },
     )
-    layers = {"gpunit": "interface", "gpunit.log": "foundation", "gpunit.spec": "model"}
+    layers = {
+        "gpunit": "interface",
+        "gpunit.log": "foundation",
+        "gpunit.spec": "model",
+        "gpunit.gone": "model",
+    }
 
     assert unnamed(root, layers) == [
         "gpunit.extra: not in LAYERS",
+        "gpunit.gone: not a module",
         "gpunit: not in docs/modules.md",
         "gpunit.log: model in docs/modules.md, foundation in LAYERS",
         "gpunit.spec: not in docs/modules.md",
