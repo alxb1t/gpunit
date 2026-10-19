@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from email.message import Message
 from typing import IO, Any, TypeVar
 
-from gpunit import __version__, log
+from gpunit import log
 from gpunit.provider import (
     DELETED,
     GpuInfo,
@@ -26,6 +26,7 @@ from gpunit.provider import (
     pod_name,
 )
 from gpunit.spec import Spec
+from gpunit.version import __version__
 
 API = "https://api.runpod.io/v2"
 # Bounded, so a stalled read cannot hold a poll past its deadline.

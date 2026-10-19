@@ -5,7 +5,7 @@ The layer test and the moves, one metered run, then the links test, the citation
 
 ## Progress
 
-- [ ] 1 — The layers
+- [x] 1 — The layers
 - [ ] 2 — The renames
 - [ ] 3 — The boot contract
 - [ ] 4 — ⚠️ **HUMAN · METERED** — make live after the moves
@@ -16,14 +16,14 @@ The layer test and the moves, one metered run, then the links test, the citation
 
 ## 1 — The layers
 
-- [ ] 1.1 **HALT CHECK** — none of this change exists yet, and the code is as [design](design.md#context) read it.
+- [x] 1.1 **HALT CHECK** — none of this change exists yet, and the code is as [design](design.md#context) read it.
   Verify: `grep -c '^from gpunit import __version__, log$' gpunit/runpod.py` prints `1`, `ls docs` prints `threat-model.md`, `test -e gpunit/version.py; echo $?` prints `1`, `test -e tests/test_layers.py; echo $?` prints `1`, `grep -c '^def _open(' gpunit/library.py` prints `1`, `grep -c '^class Refused' gpunit/provider.py` prints `1`, and `grep -c '^def fingerprint' gpunit/provider.py` prints `1`.
-- [ ] 1.2 Write `tests/test_layers.py` per [D9](design.md#d9): `LAYERS` keyed by dotted module name, `gpunit.version` in it; the repo tests `test_the_package_holds_its_layers`, `test_runpod_is_built_in_library_and_cli_alone`, `test_the_package_imports_the_stdlib_alone` and `test_only_the_cli_exits`; a `_caught` twin for each rule under `tmp_path`.
+- [x] 1.2 Write `tests/test_layers.py` per [D9](design.md#d9): `LAYERS` keyed by dotted module name, `gpunit.version` in it; the repo tests `test_the_package_holds_its_layers`, `test_runpod_is_built_in_library_and_cli_alone`, `test_the_package_imports_the_stdlib_alone` and `test_only_the_cli_exits`; a `_caught` twin for each rule under `tmp_path`.
   Bind `architecture:layers:` `hold`, `upward-caught`, `cycle-caught`, `provider-built`, `stdlib-only` and `exit-in-cli`.
   Verify: `grep -o -E '"architecture:layers:(hold|upward-caught|cycle-caught|provider-built|stdlib-only|exit-in-cli)"' tests/test_layers.py | sort -u | wc -l | tr -d ' '` prints `6`, `uv run pytest -q tests/test_layers.py -k caught` exits 0, and `uv run pytest -q tests/test_layers.py -k test_the_package_holds_its_layers` exits 1.
-- [ ] 1.3 Add `gpunit/version.py`, and point `gpunit/__init__.py`, `gpunit/runpod.py` and `pyproject.toml`'s `[tool.hatch.version]` at it, per [D2](design.md#d2).
+- [x] 1.3 Add `gpunit/version.py`, and point `gpunit/__init__.py`, `gpunit/runpod.py` and `pyproject.toml`'s `[tool.hatch.version]` at it, per [D2](design.md#d2).
   Verify: `grep -c 'path = "gpunit/version.py"' pyproject.toml` prints `1`, `uv run python -c "import gpunit; print(gpunit.__version__)"` prints `0.10.0`, and `uv run pytest -q tests/test_layers.py` exits 0.
-- [ ] 1.4 Move `from gpunit.serve import table` into `_known` in `gpunit/cli.py`, per [D3](design.md#d3).
+- [x] 1.4 Move `from gpunit.serve import table` into `_known` in `gpunit/cli.py`, per [D3](design.md#d3).
   Verify: `grep -c '^from gpunit.serve import table' gpunit/cli.py` prints `0`, and `uv run pytest -q` exits 0.
 
 ## 2 — The renames

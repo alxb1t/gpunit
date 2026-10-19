@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `tests/test_layers.py` holds the package's layers, lazy imports included, plus the stdlib-only, `sys.exit` and
+  `RunPod`-construction rules, each with a twin that breaks it (`0015`).
+
+### Changed
+
+- `__version__` lives in `gpunit/version.py`, which hatch reads; it breaks the cycle `gpunit.runpod` → `gpunit` →
+  `gpunit.library` → `gpunit.runpod`. `cli` imports `serve.table` inside `_known` (`0015`).
+
 ## [0.10.0] - 2026-10-18
 
 ### Added
