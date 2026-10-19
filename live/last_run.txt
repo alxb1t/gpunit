@@ -553,3 +553,42 @@ pods      <another project>      2 pods  $1.11
 pods      unattributed         0 pods  $0.00
 total                                  $1.11
 (The other project's name is withheld here; the day's live pods were not yet billed.)
+
+2026-10-19 — make live, 0015-architecture-and-docs
+NVIDIA RTX A4500: $0.25/h
+NVIDIA RTX A5000: $0.27/h
+NVIDIA A40: $0.59/h
+NVIDIA RTX A6000: $0.59/h
+at most $0.17 for 600s and a 420s wait for SSH
+uv run gpunit run --spec live/gpunit.toml -- sh -c '$GPUNIT_SSH nvidia-smi'
+2026-10-19T11:22:36Z creating on NVIDIA RTX A4500
+2026-10-19T11:22:37Z create on 'NVIDIA RTX A4500' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-19T11:22:37Z creating on NVIDIA RTX A5000
+2026-10-19T11:22:38Z create on 'NVIDIA RTX A5000' returned HTTP 400: Bad Request: There are no longer any instances available with the requested specifications. Please refresh and try again.
+2026-10-19T11:22:38Z creating on NVIDIA A40
+2026-10-19T11:22:39Z pod jwfe3sbrm03w99 created; waiting for SSH
+2026-10-19T11:23:06Z host key verified: SHA256:IYHJbbQ7n3hLVHufmDykmbQs63v1B5hwfgS71yJPP/Q
+2026-10-19T11:23:06Z session up: pod jwfe3sbrm03w99, root@194.68.245.220 -p 22011
+Mon Oct 19 11:23:07 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.159.03             Driver Version: 580.159.03     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A40                     Off |   00000000:D2:00.0 Off |                    0 |
+|  0%   35C    P8             34W /  300W |       0MiB /  46068MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+2026-10-19T11:23:09Z pod jwfe3sbrm03w99 deleted
+uv run gpunit status --spec live/gpunit.toml
+no session is recorded

@@ -8,7 +8,7 @@ The layer test and the moves, one metered run, then the links test, the citation
 - [x] 1 — The layers
 - [x] 2 — The renames
 - [x] 3 — The boot contract
-- [ ] 4 — ⚠️ **HUMAN · METERED** — make live after the moves
+- [x] 4 — ⚠️ **HUMAN · METERED** — make live after the moves
 - [ ] 5 — The citations
 - [ ] 6 — Decisions and principles
 - [ ] 7 — The pages
@@ -44,7 +44,7 @@ The layer test and the moves, one metered run, then the links test, the citation
 
 ## 4 — ⚠️ **HUMAN · METERED** — make live after the moves
 
-- [ ] 4.1 **HUMAN · METERED** — with `RUNPOD_API_KEY` set, run `mkdir -p .minions && make live 2>&1 | tee .minions/live-0015.txt`, per [D17](design.md#d17). A failed run is a halt: say so and keep its lines.
+- [x] 4.1 **HUMAN · METERED** — with `RUNPOD_API_KEY` set, run `mkdir -p .minions && make live 2>&1 | tee .minions/live-0015.txt`, per [D17](design.md#d17). A failed run is a halt: say so and keep its lines.
   Then run `{ echo; echo "$(date -u +%F) — make live, 0015-architecture-and-docs"; cat .minions/live-0015.txt; } >> live/last_run.txt`.
   Verify: `grep -c -E '^[0-9]{4}-[0-9]{2}-[0-9]{2} — make live, 0015-architecture-and-docs$' live/last_run.txt` prints `1`, and `sed -n '/make live, 0015-architecture-and-docs/,$p' live/last_run.txt | grep -c 'host key verified: SHA256:'` prints a number of at least `1`.
 

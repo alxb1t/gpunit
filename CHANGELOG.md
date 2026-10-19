@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `gpunit/contract.py` holds the laptop's half of the boot contract: the pod's env (`pod_env`), the boot-log
   patterns, `fingerprint` and `old_boot`. `gpunit/hostkey.py` proves the host key; `lifecycle.up` tears down on its
   reason (`0015`).
+- `make live` proved the moved pod env and host-key proof against RunPod on an A40 (`live/last_run.txt`,
+  `0015`).
 
 ## [0.10.0] - 2026-10-18
 
