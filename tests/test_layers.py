@@ -1,12 +1,15 @@
 """Hold the package to its layers: imports point down, per decision D49."""
 
 import ast
+import functools
 import re
 import sys
 from collections.abc import Collection, Mapping
 from pathlib import Path
 
 import pytest
+
+from tests.helpers import tree
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -41,6 +44,9 @@ RANK = {
     )
 }
 BUILDERS = {"gpunit.library", "gpunit.cli"}
+EXITERS = {"gpunit.cli"}
+# Outside the package, and stdlib-only too; a twin's tree may lack it.
+ALSO_STDLIB = ("serve/launch.py",)
 
 
 def modules(root: Path) -> dict[str, Path]:
@@ -57,6 +63,11 @@ def modules(root: Path) -> dict[str, Path]:
     return found
 
 
+@functools.cache
+def _parsed(path: Path) -> ast.Module:
+    return ast.parse(path.read_text(encoding="utf-8"))
+
+
 def imports(path: Path, names: Collection[str]) -> list[tuple[int, str]]:
     """Return each line and module the file imports, those inside functions included.
 
@@ -64,7 +75,7 @@ def imports(path: Path, names: Collection[str]) -> list[tuple[int, str]]:
     → gpunit.log, and `from gpunit import __version__` → gpunit.
     """
     found = []
-    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+    for node in ast.walk(_parsed(path)):
         if isinstance(node, ast.Import):
             found += [(node.lineno, alias.name) for alias in node.names]
         elif isinstance(node, ast.ImportFrom) and node.module:
@@ -74,18 +85,20 @@ def imports(path: Path, names: Collection[str]) -> list[tuple[int, str]]:
     return sorted(found)
 
 
-def upward(root: Path, layers: Mapping[str, str] = LAYERS) -> list[str]:
-    """Return each import that names a higher layer or the package itself."""
+def upward(root: Path) -> list[str]:
+    """Return each import that names a higher layer or the package itself.
+
+    A module with no layer is `unnamed`'s fault, not this rule's.
+    """
     found = modules(root)
     faults = []
     for name, path in found.items():
-        if name not in layers:
-            faults.append(f"{name}: no layer")
+        if name not in LAYERS:
             continue
         for line, target in imports(path, found):
             if target == "gpunit":
                 faults.append(f"{name}:{line} imports gpunit itself")
-            elif target in layers and RANK[layers[target]] > RANK[layers[name]]:
+            elif target in LAYERS and RANK[LAYERS[target]] > RANK[LAYERS[name]]:
                 faults.append(f"{name}:{line} imports {target}")
     return faults
 
@@ -127,7 +140,7 @@ def foreign(root: Path) -> list[str]:
     """Return each import in the package or the launcher not of the stdlib or gpunit."""
     found = modules(root)
     faults = []
-    for path in [*found.values(), root / "serve" / "launch.py"]:
+    for path in [*found.values(), *(root / name for name in ALSO_STDLIB)]:
         if not path.exists():
             continue
         for line, target in imports(path, found):
@@ -142,14 +155,14 @@ def foreign(root: Path) -> list[str]:
 def exits(root: Path) -> list[str]:
     """Return each `sys.exit` the package calls outside `gpunit/cli.py`."""
     faults = []
-    for path in modules(root).values():
-        where = path.relative_to(root).as_posix()
-        if where == "gpunit/cli.py":
+    for name, path in modules(root).items():
+        if name in EXITERS:
             continue
-        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        where = path.relative_to(root).as_posix()
+        for node in ast.walk(_parsed(path)):
             if isinstance(node, ast.ImportFrom) and node.module == "sys":
-                bound = [alias.name for alias in node.names if alias.name == "exit"]
-                faults += [f"{where}:{node.lineno} imports sys.exit" for _ in bound]
+                if any(alias.name == "exit" for alias in node.names):
+                    faults.append(f"{where}:{node.lineno} imports sys.exit")
             elif (
                 isinstance(node, ast.Call)
                 and isinstance(node.func, ast.Attribute)
@@ -187,11 +200,7 @@ def unnamed(root: Path, layers: Mapping[str, str] = LAYERS) -> list[str]:
 
 def package(root: Path, files: Mapping[str, str]) -> Path:
     """Write a small package under `root`, each file by its relative path."""
-    for name, source in {"gpunit/__init__.py": "", **files}.items():
-        path = root / name
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(source, encoding="utf-8")
-    return root
+    return tree(root, {"gpunit/__init__.py": "", **files})
 
 
 @pytest.mark.spec("architecture:layers:hold")
@@ -216,7 +225,6 @@ def test_the_package_holds_its_layers() -> None:
             {"gpunit/spec.py": "from gpunit import __version__\n"},
             ["gpunit.spec:1 imports gpunit itself"],
         ),
-        ({"gpunit/extra.py": ""}, ["gpunit.extra: no layer"]),
     ],
 )
 def test_an_upward_import_is_caught(

@@ -1,28 +1,33 @@
 """Hold the guide's citations true: links, anchors and decision ids (decision D50)."""
 
 import ast
+import functools
 import re
 import subprocess
-from collections.abc import Collection, Mapping
+from collections.abc import Collection
 from pathlib import Path
 
 import pytest
+
+from tests.helpers import tree
 
 ROOT = Path(__file__).resolve().parent.parent
 
 # The roots scanned for citations: every tracked root but the specs and the archive.
 SCANNED_DIRS = ("gpunit", "boot", "serve", "live", "tests", ".github", "docs")
 SCANNED_FILES = ("Makefile", "pyproject.toml", "README.md", "CLAUDE.md")
+# Records of past runs, not citations.
+RECORDS = ("*last_run.txt",)
 DECISIONS = "docs/decisions.md"
-ARCHIVED = re.compile(r"[0-9]{4} (design )?D[0-9]+")
+ARCHIVED = re.compile(r"[0-9]{4} (?:design )?D[0-9]+")
 CITED = re.compile(r"\b[Dd]ecision (D[0-9]+)\b")
-LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
+LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
 LINKED_DECISION = re.compile(r"decisions\.md#(d[0-9]+)\b")
 HEADING = re.compile(r"^#{1,6}\s+(.+?)\s*#*\s*$")
 FENCE = re.compile(r"^```.*?^```", re.MULTILINE | re.DOTALL)
 CODE = re.compile(r"`[^`\n]*`")
 SPAN = re.compile(r"`([^`\n]+)`")
-PATH = re.compile(r"[\w.-]+/[\w./{},*<>-]*(?:::[\w.]+)?")
+PATH = re.compile(r"[\w.-]+/[\w./{},*-]*(?:::[\w.]+)?")
 LINE = re.compile(r"(?:[\w./-]+\.[A-Za-z]\w*|[\w./-]*Dockerfile[\w.]*)?:\d+(?:-\d+)?")
 
 
@@ -32,26 +37,22 @@ def guide(root: Path) -> list[Path]:
     return pages + [root / name for name in ("README.md", "CLAUDE.md")]
 
 
-def scanned(root: Path) -> list[Path]:
-    """Return the text files scanned for citations; the live runs' tails are records."""
+def scanned(root: Path) -> dict[Path, str]:
+    """Return each text file scanned for citations, with its text, records skipped."""
     found = [root / name for name in SCANNED_FILES]
     for top in SCANNED_DIRS:
         found += sorted(p for p in (root / top).rglob("*") if p.is_file())
-    return [
-        path
-        for path in found
-        if path.exists()
-        and "__pycache__" not in path.parts
-        and not path.name.endswith("last_run.txt")
-        and _text(path) is not None
-    ]
-
-
-def _text(path: Path) -> str | None:
-    try:
-        return path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        return None
+    texts = {}
+    for path in found:
+        if not path.exists() or "__pycache__" in path.parts:
+            continue
+        if any(path.match(record) for record in RECORDS):
+            continue
+        try:
+            texts[path] = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+    return texts
 
 
 def _prose(text: str) -> str:
@@ -68,6 +69,7 @@ def slug(heading: str) -> str:
     return re.sub(r"[^\w\- ]", "", plain).replace(" ", "-")
 
 
+@functools.cache
 def anchors(path: Path) -> set[str]:
     """Return every anchor the page's headings make, a repeat suffixed `-1`, `-2`."""
     seen: dict[str, int] = {}
@@ -93,9 +95,9 @@ def broken_links(root: Path) -> list[str]:
                 continue
             name, _, anchor = target.partition("#")
             path = (page.parent / name).resolve() if name else page
-            if not path.exists():
-                faults.append(f"{where}: {target}")
-            elif anchor and (path.suffix != ".md" or anchor not in anchors(path)):
+            if not path.exists() or (
+                anchor and (path.suffix != ".md" or anchor not in anchors(path))
+            ):
                 faults.append(f"{where}: {target}")
     return sorted(faults)
 
@@ -110,8 +112,7 @@ def unknown_decisions(root: Path) -> list[str]:
     """Return each `decision Dn` and decision link that names no decision in force."""
     known = decision_ids(root)
     faults = []
-    for path in scanned(root):
-        text = path.read_text(encoding="utf-8")
+    for path, text in scanned(root).items():
         cited = CITED.findall(text) + [d.upper() for d in LINKED_DECISION.findall(text)]
         where = path.relative_to(root).as_posix()
         faults += [f"{where}: {d}" for d in set(cited) - known]
@@ -121,14 +122,10 @@ def unknown_decisions(root: Path) -> list[str]:
 def archived(root: Path) -> list[str]:
     """Return each archived design's decision id cited outside `docs/decisions.md`."""
     faults = []
-    for path in scanned(root):
+    for path, text in scanned(root).items():
         where = path.relative_to(root).as_posix()
-        if where == DECISIONS:
-            continue
-        faults += [
-            f"{where}: {m[0]}"
-            for m in ARCHIVED.finditer(path.read_text(encoding="utf-8"))
-        ]
+        if where != DECISIONS:
+            faults += [f"{where}: {cited}" for cited in ARCHIVED.findall(text)]
     return sorted(faults)
 
 
@@ -154,6 +151,7 @@ def _expand(path: str) -> list[str]:
     ]
 
 
+@functools.cache
 def defined(path: Path) -> set[str]:
     """Return the names a module defines: functions, classes, assignments, `C.m`."""
     names = set()
@@ -185,7 +183,7 @@ def unresolved(root: Path, tops: Collection[str]) -> list[str]:
             if LINE.fullmatch(span):
                 faults.append(f"{where}: {span} cites a line")
                 continue
-            if not PATH.fullmatch(span) or "<" in span:
+            if not PATH.fullmatch(span):
                 continue
             name, _, symbol = span.partition("::")
             if name.split("/")[0] not in tops:
@@ -197,15 +195,6 @@ def unresolved(root: Path, tops: Collection[str]) -> list[str]:
                 elif symbol and symbol not in defined(found[0]):
                     faults.append(f"{where}: {path} defines no {symbol}")
     return sorted(faults)
-
-
-def tree(root: Path, files: Mapping[str, str]) -> Path:
-    """Write each file under `root`, by its relative path, and return `root`."""
-    for name, text in files.items():
-        path = root / name
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
-    return root
 
 
 @pytest.mark.spec("architecture:docs:links-resolve")
