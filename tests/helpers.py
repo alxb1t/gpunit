@@ -88,3 +88,9 @@ def triggers(text: str) -> list[str]:
     block = re.search(r"^on:\n((?:[ \t]+.*\n|\n)*)", text, re.MULTILINE)
     assert block is not None
     return re.findall(r"^  ([a-z_]+):", block[1], re.MULTILINE)
+
+
+def unpinned(text: str) -> list[str]:
+    """Return each action a workflow names by anything but a 40-hex commit."""
+    uses = re.findall(r"uses: (\S+)", text)
+    return [a for a in uses if not re.fullmatch(r"[\w./-]+@[0-9a-f]{40}", a)]

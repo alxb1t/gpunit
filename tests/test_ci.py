@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.helpers import triggers
+from tests.helpers import triggers, unpinned
 
 ROOT = Path(__file__).resolve().parent.parent
 WORKFLOWS = ROOT / ".github" / "workflows"
@@ -20,14 +20,6 @@ def openspec_version() -> str:
     return found[1]
 
 
-def unpinned(text: str) -> list[str]:
-    """Return each action a workflow names by anything but a 40-hex commit."""
-    uses = re.findall(r"uses: (\S+)", text)
-    return [
-        action for action in uses if not re.fullmatch(r"[\w./-]+@[0-9a-f]{40}", action)
-    ]
-
-
 @pytest.mark.spec("architecture:ci:runs-the-gate")
 def test_the_gate_workflow_runs_the_gate() -> None:
     text = GATE.read_text(encoding="utf-8")
@@ -42,7 +34,8 @@ def test_a_third_trigger_is_caught() -> None:
     # The twin: the check fails on the same file with a schedule trigger added.
     text = GATE.read_text(encoding="utf-8")
 
-    assert triggers(text.replace("on:\n", "on:\n  schedule:\n", 1)) != [
+    assert triggers(text.replace("on:\n", "on:\n  schedule:\n", 1)) == [
+        "schedule",
         "push",
         "pull_request",
     ]
