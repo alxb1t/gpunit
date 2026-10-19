@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `README.md` is a one-screen front page: what gpunit is, why, each claim linked to the decision that holds it, and
+  how to try it. `tests/test_docs.py` holds it to 60 lines, linking `docs/usage.md` (`0016`).
 - `pyproject.toml`'s `description` and `keywords` are the text GitHub's description and topics mirror (`0016`).
 - The threat model, `docs/extending.md`, `docs/pins.md` and the guide's map cite `docs/usage.md` and
   `docs/proofs.md` where they cited README (`0016`).

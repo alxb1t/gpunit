@@ -8,7 +8,7 @@ The license and the metadata, the gate workflow, the move into `docs/`, the fron
 - [x] 1 — The license and the metadata
 - [x] 2 — The gate workflow
 - [x] 3 — The move
-- [ ] 4 — The front page
+- [x] 4 — The front page
 - [ ] 5 — ⚠️ **HUMAN** — GitHub's fields and the first CI run
 
 ## 1 — The license and the metadata
@@ -38,9 +38,9 @@ The license and the metadata, the gate workflow, the move into `docs/`, the fron
 
 ## 4 — The front page
 
-- [ ] 4.1 Rewrite `README.md` as the front page, per [D4](design.md#d4).
+- [x] 4.1 Rewrite `README.md` as the front page, per [D4](design.md#d4).
   Verify: `test "$(grep -c '' README.md)" -le 60; echo $?` prints `0`, `grep -o -E 'decisions\.md#d(1|5|20|22|23|25|35|46|49|50)-' README.md | sort -u | wc -l | tr -d ' '` prints `10`, `grep -c 'actions/workflows/gate.yml/badge.svg' README.md` prints `1`, `grep -c '](docs/usage.md)' README.md` prints a number of at least `1`, and `grep -c '](docs/proofs.md)' README.md` prints a number of at least `1`.
-- [ ] 4.2 Add `test_the_front_page_fits_one_screen` and its twin to `tests/test_docs.py`, bound to `architecture:readme:one-screen`, per [D9](design.md#d9).
+- [x] 4.2 Add `test_the_front_page_fits_one_screen` and its twin to `tests/test_docs.py`, bound to `architecture:readme:one-screen`, per [D9](design.md#d9).
   Verify: `grep -c '"architecture:readme:one-screen"' tests/test_docs.py` prints a number of at least `1`, and `uv run pytest -q` exits 0.
 
 ## 5 — ⚠️ **HUMAN** — GitHub's fields and the first CI run
