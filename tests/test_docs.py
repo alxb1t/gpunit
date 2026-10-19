@@ -1,4 +1,4 @@
-"""Hold the guide's citations true: links, anchors and decision ids (decision D50)."""
+"""Hold the guide's citations, and the front page short: decision D50, decision D52."""
 
 import ast
 import functools
@@ -19,6 +19,7 @@ SCANNED_FILES = ("Makefile", "pyproject.toml", "README.md", "CLAUDE.md")
 # Records of past runs, not citations.
 RECORDS = ("*last_run.txt",)
 DECISIONS = "docs/decisions.md"
+FRONT_PAGE_LINES = 60
 ARCHIVED = re.compile(r"[0-9]{4}(?:-[a-z0-9-]+)?(?: design)? D[0-9]+|[0-9]{4}·D[0-9]+")
 CITED = re.compile(r"\b[Dd]ecision (D[0-9]+)\b")
 LINK = re.compile(r'\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)')
@@ -205,6 +206,18 @@ def unresolved(root: Path, tops: Collection[str]) -> list[str]:
     return sorted(faults)
 
 
+def front_page(root: Path) -> list[str]:
+    """Return why `README.md` is no front page: its length, or no usage link."""
+    text = (root / "README.md").read_text(encoding="utf-8")
+    faults = []
+    if (length := len(text.splitlines())) > FRONT_PAGE_LINES:
+        faults.append(f"README.md holds {length} lines, over {FRONT_PAGE_LINES}")
+    links = {target.partition("#")[0] for target in LINK.findall(_prose(text))}
+    if "docs/usage.md" not in links:
+        faults.append("README.md links no docs/usage.md")
+    return faults
+
+
 @pytest.mark.spec("architecture:docs:links-resolve")
 def test_the_guides_links_resolve() -> None:
     assert broken_links(ROOT) == []
@@ -316,3 +329,20 @@ def test_a_missing_symbol_or_a_line_citation_is_caught(tmp_path: Path) -> None:
         "docs/a.md: gpunit/x.py:75 cites a line",
         "docs/a.md: gpunit/y.py does not exist",
     ]
+
+
+@pytest.mark.spec("architecture:readme:one-screen")
+def test_the_front_page_fits_one_screen() -> None:
+    assert front_page(ROOT) == []
+
+
+@pytest.mark.spec("architecture:readme:one-screen")
+def test_a_front_page_of_61_lines_is_caught(tmp_path: Path) -> None:
+    # The twin: a line over is named with its length; no usage link is caught.
+    long = tree(
+        tmp_path / "long", {"README.md": "[usage](docs/usage.md)\n" + "x\n" * 60}
+    )
+    unlinked = tree(tmp_path / "unlinked", {"README.md": "`[usage](docs/usage.md)`\n"})
+
+    assert front_page(long) == ["README.md holds 61 lines, over 60"]
+    assert front_page(unlinked) == ["README.md links no docs/usage.md"]

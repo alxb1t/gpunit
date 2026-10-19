@@ -1,6 +1,6 @@
 # The guide to gpunit
 
-How gpunit is built, why, and where to change it. For using gpunit, read the [project README](../README.md).
+How gpunit is built, why, and where to change it. For using gpunit, read [usage](usage.md).
 
 gpunit opens a RunPod GPU session from a laptop, runs work on it, and closes it, from the CLI or from Python. The
 laptop half places a pod, proves its host key, tunnels its ports and tears it down; the pod half stops the pod at
@@ -29,6 +29,8 @@ its own layer and those below ([modules](modules.md)).
 
 | page | for |
 |---|---|
+| [usage](usage.md) | how to use gpunit: from a project, from Python, and through `serve` |
+| [proofs](proofs.md) | the live proofs, what each proves, and their latest runs |
 | [principles](principles.md) | the words, and each rule with what holds it |
 | [decisions](decisions.md) | the decisions in force, each with why and what made it |
 | [data-flow](data-flow.md) | a session, the boot contract, the state files, `serve`, the window, `spend`, exit codes |

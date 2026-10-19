@@ -1,5 +1,6 @@
-"""Write a spec, a tree or stubs, and run the CLI in-process, for the tests."""
+"""Write a spec, a tree or stubs, run the CLI, and read a workflow, for the tests."""
 
+import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import NoReturn, cast
@@ -80,3 +81,16 @@ def gpunit(argv: list[str], provider: Provider | None = None) -> int | str | Non
     with pytest.raises(SystemExit) as exited:
         cli.main(argv, provider=provider)
     return exited.value.code
+
+
+def triggers(text: str) -> list[str]:
+    """Return the workflow's trigger names: the keys one level under `on:`."""
+    block = re.search(r"^on:\n((?:[ \t]+.*\n|\n)*)", text, re.MULTILINE)
+    assert block is not None
+    return re.findall(r"^  ([a-z_]+):", block[1], re.MULTILINE)
+
+
+def unpinned(text: str) -> list[str]:
+    """Return each action a workflow names by anything but a 40-hex commit."""
+    uses = re.findall(r"uses: (\S+)", text)
+    return [a for a in uses if not re.fullmatch(r"[\w./-]+@[0-9a-f]{40}", a)]

@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from gpunit.spec import DIGEST
-from tests.helpers import install_stubs
+from tests.helpers import install_stubs, triggers, unpinned
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCKERFILE = ROOT / "serve" / "Dockerfile"
@@ -19,13 +19,6 @@ def instructions(text: str) -> list[str]:
     """Return the Dockerfile's instructions, continuation lines joined."""
     joined = re.sub(r"\\\n", " ", text)
     return [line for line in joined.splitlines() if line and not line.startswith("#")]
-
-
-def triggers(text: str) -> list[str]:
-    """Return the workflow's trigger names: the keys one level under `on:`."""
-    block = re.search(r"^on:\n((?:[ \t]+.*\n|\n)*)", text, re.MULTILINE)
-    assert block is not None
-    return re.findall(r"^  ([a-z_]+):", block[1], re.MULTILINE)
 
 
 def pinned(text: str) -> bool:
@@ -66,10 +59,10 @@ def test_a_tagged_base_is_caught() -> None:
 
 @pytest.mark.spec("serve:image:pinned-inputs")
 def test_each_action_is_pinned_by_commit() -> None:
-    uses = re.findall(r"uses: (\S+)", WORKFLOW.read_text(encoding="utf-8"))
+    text = WORKFLOW.read_text(encoding="utf-8")
 
-    assert uses
-    assert all(re.fullmatch(r"[\w./-]+@[0-9a-f]{40}", action) for action in uses)
+    assert "uses: " in text
+    assert unpinned(text) == []
 
 
 @pytest.mark.spec("serve:image:only-a-request-builds")

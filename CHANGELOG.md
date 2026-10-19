@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-10-19
+
+### Added
+
+- `LICENSE`, Apache-2.0, named in `pyproject.toml` by `license` and `license-files`; the hatchling floor is 1.27,
+  which reads them (`0016`).
+- `.github/workflows/gate.yml` runs `make gate` on every push and pull request; D53 records it. `tests/test_ci.py`
+  holds its triggers, its OpenSpec CLI at `CLAUDE.md`'s version, and every workflow's actions pinned by commit (`0016`).
+- `docs/usage.md` holds the user's guide, whole; `docs/proofs.md` holds the live proofs and each one's latest dated
+  run, quoted from its tail. D52 records the split (`0016`).
+
+### Changed
+
+- `README.md` is a one-screen front page: what gpunit is, why, each claim linked to the decision that holds it, and
+  how to try it. `tests/test_docs.py` holds it to 60 lines, linking `docs/usage.md` (`0016`).
+- `pyproject.toml`'s `description` and `keywords` are the text GitHub's description and topics mirror (`0016`).
+- The threat model, `docs/extending.md`, `docs/pins.md` and the guide's map cite `docs/usage.md` and
+  `docs/proofs.md` where they cited README (`0016`).
+- GitHub's description and topics are set from `pyproject.toml`; the gate workflow's first run passed on Linux
+  (`0016`).
+
 ## [0.11.0] - 2026-10-19
 
 ### Added
