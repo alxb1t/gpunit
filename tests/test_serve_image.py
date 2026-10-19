@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from gpunit.spec import DIGEST
-from tests.helpers import install_stubs
+from tests.helpers import install_stubs, triggers
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCKERFILE = ROOT / "serve" / "Dockerfile"
@@ -19,13 +19,6 @@ def instructions(text: str) -> list[str]:
     """Return the Dockerfile's instructions, continuation lines joined."""
     joined = re.sub(r"\\\n", " ", text)
     return [line for line in joined.splitlines() if line and not line.startswith("#")]
-
-
-def triggers(text: str) -> list[str]:
-    """Return the workflow's trigger names: the keys one level under `on:`."""
-    block = re.search(r"^on:\n((?:[ \t]+.*\n|\n)*)", text, re.MULTILINE)
-    assert block is not None
-    return re.findall(r"^  ([a-z_]+):", block[1], re.MULTILINE)
 
 
 def pinned(text: str) -> bool:

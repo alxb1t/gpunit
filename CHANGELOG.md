@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `LICENSE`, Apache-2.0, named in `pyproject.toml` by `license` and `license-files`; the hatchling floor is 1.27,
   which reads them (`0016`).
+- `.github/workflows/gate.yml` runs `make gate` on every push and pull request; D53 records it. `tests/test_ci.py`
+  holds its triggers, its OpenSpec CLI at `CLAUDE.md`'s version, and every workflow's actions pinned by commit (`0016`).
 
 ### Changed
 

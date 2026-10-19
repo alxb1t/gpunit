@@ -6,7 +6,7 @@ The license and the metadata, the gate workflow, the move into `docs/`, the fron
 ## Progress
 
 - [x] 1 — The license and the metadata
-- [ ] 2 — The gate workflow
+- [x] 2 — The gate workflow
 - [ ] 3 — The move
 - [ ] 4 — The front page
 - [ ] 5 — ⚠️ **HUMAN** — GitHub's fields and the first CI run
@@ -22,9 +22,9 @@ The license and the metadata, the gate workflow, the move into `docs/`, the fron
 
 ## 2 — The gate workflow
 
-- [ ] 2.1 Write `.github/workflows/gate.yml` per [D3](design.md#d3); add D53 to `docs/decisions.md` per [D8](design.md#d8); edit the OpenSpec row of `docs/pins.md` per [D3](design.md#d3).
+- [x] 2.1 Write `.github/workflows/gate.yml` per [D3](design.md#d3); add D53 to `docs/decisions.md` per [D8](design.md#d8); edit the OpenSpec row of `docs/pins.md` per [D3](design.md#d3).
   Verify: `grep -c -x '      - run: make gate' .github/workflows/gate.yml` prints `1`, `grep -c '^### D53 · ' docs/decisions.md` prints `1`, `grep -c 'gate.yml' docs/pins.md` prints a number of at least `1`, and `uv run pytest -q tests/test_docs.py tests/test_serve_image.py` exits 0.
-- [ ] 2.2 Write `tests/test_ci.py` per [D9](design.md#d9), each test with its twin; bind `architecture:ci:runs-the-gate` and `architecture:ci:actions-pinned`.
+- [x] 2.2 Write `tests/test_ci.py` per [D9](design.md#d9), each test with its twin; bind `architecture:ci:runs-the-gate` and `architecture:ci:actions-pinned`.
   Verify: `grep -o -E '"architecture:ci:(runs-the-gate|actions-pinned)"' tests/test_ci.py | sort -u | wc -l | tr -d ' '` prints `2`, and `uv run pytest -q tests/test_ci.py` exits 0.
 
 ## 3 — The move

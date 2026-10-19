@@ -10,10 +10,10 @@ The values live in the files named here, never on this page
 | the serve image, by digest | `gpunit/serve/models.toml`'s `image` | `gpunit/serve/table.py::load` refuses a missing digest | running `.github/workflows/build-serve-image.yml` by hand, then pinning its digest |
 | the live images, by digest | `live/gpunit.toml`, `live/gpunit.volume.toml`, `live/gpunit.dead.toml` | `gpunit/spec.py::load_spec` refuses a missing digest (`test_an_image_without_a_digest_is_refused`) | building `live/Dockerfile` or `live/Dockerfile.dead` by hand, then pinning its digest |
 | each row's model revision, a 40-hex commit | `gpunit/serve/models.toml`, `live/models.toml` | `gpunit/serve/table.py::_row` (`test_a_moving_revision_is_refused_naming_the_row`) | editing the row's `revision`, then `make live-serve MODEL=<row>` |
-| each action, by commit | `.github/workflows/build-serve-image.yml`'s `uses:` | `test_each_action_is_pinned_by_commit` | editing the commit and its version comment |
+| each action, by commit | each workflow's `uses:` under `.github/workflows/` | `test_every_workflow_pins_its_actions` | editing the commit and its version comment |
 | the locked environment | `uv.lock` | `make gate`, which syncs from the lock first | `uv lock`, with a dependency change human-approved |
 | a consumer's `boot.py`, at a tag | the consumer's Dockerfile: `ADD --checksum=sha256:…` of `boot/boot.py` at a release tag | BuildKit, at the consumer's build | the consumer bumping the tag and the checksum; `README.md`'s *Use it from a project* shows the line |
-| the OpenSpec CLI | recorded in `CLAUDE.md`, not pinned; resolved on `PATH` | `make gate`, which validates the specs | editing the recorded version |
+| the OpenSpec CLI | recorded in `CLAUDE.md`, resolved on `PATH`; installed at that version by `.github/workflows/gate.yml` | `tests/test_ci.py` holds the two equal | editing both |
 | the package's Python floor, 3.11 | `pyproject.toml`'s `requires-python` | nothing runs 3.11; `ruff` and `ty` read it as their target | a `vX.Y` change |
 | `boot.py`'s Python, 3.10 | `pyproject.toml`'s `per-file-target-version` | `make gate`, which type-checks `boot/boot.py` as 3.10 | a change to the images' base, then to both |
 

@@ -508,3 +508,11 @@ names and imports alone.**
 
 - **Why:** The unchanged tests prove nothing moved.
 - **Made by:** `0015·D1`.
+
+### D53 · Every push runs the gate
+
+**`.github/workflows/gate.yml` runs `make gate` on each push and pull request; the live proofs stay by hand
+(decision D6).**
+
+- **Why:** The gate's result shows without a clone.
+- **Made by:** `0016·D3`.
