@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `RunPod`-construction rules, each with a twin that breaks it (`0015`).
 - `docs/decisions.md`: the decisions in force, `D1`–`D51`, grouped by area. `tests/test_docs.py` holds the guide's
   links and anchors, every `decision Dn` cited, and no archived design's id outside that page (`0015`).
+- Each decision in `docs/decisions.md` gains its *Why* and *Made by*. `docs/principles.md` defines the words, then
+  each rule with its decision, what holds it and where the code breaches it (`0015`).
 
 ### Changed
 

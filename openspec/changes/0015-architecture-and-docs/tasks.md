@@ -10,7 +10,7 @@ The layer test and the moves, one metered run, then the links test, the citation
 - [x] 3 — The boot contract
 - [x] 4 — ⚠️ **HUMAN · METERED** — make live after the moves
 - [x] 5 — The citations
-- [ ] 6 — Decisions and principles
+- [x] 6 — Decisions and principles
 - [ ] 7 — The pages
 - [ ] 8 — The map and the handover
 
@@ -59,9 +59,9 @@ The layer test and the moves, one metered run, then the links test, the citation
 
 ## 6 — Decisions and principles
 
-- [ ] 6.1 Write each decision's body in `docs/decisions.md`, re-read against the code, per [D12](design.md#d12).
+- [x] 6.1 Write each decision's body in `docs/decisions.md`, re-read against the code, per [D12](design.md#d12).
   Verify: `grep -c '^- \*\*Why:\*\* ' docs/decisions.md` prints `51`, `grep -c '^- \*\*Made by:\*\* ' docs/decisions.md` prints `51`, and `uv run pytest -q tests/test_docs.py` exits 0.
-- [ ] 6.2 Write `docs/principles.md` with `## The words` and `## The rules`, from [Seed: principles](design.md#seed-principles), per [D13](design.md#d13).
+- [x] 6.2 Write `docs/principles.md` with `## The words` and `## The rules`, from [Seed: principles](design.md#seed-principles), per [D13](design.md#d13).
   Verify: `grep -c -x -E '## (The words|The rules)' docs/principles.md` prints `2`, `grep -o -E '0015·F[0-9]+' docs/principles.md | sort -u | grep -c -x -E '0015·F(2|3|5|20|23)'` prints `5`, and `uv run pytest -q tests/test_docs.py` exits 0.
 
 ## 7 — The pages
