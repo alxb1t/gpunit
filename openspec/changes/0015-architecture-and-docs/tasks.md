@@ -11,7 +11,7 @@ The layer test and the moves, one metered run, then the links test, the citation
 - [x] 4 — ⚠️ **HUMAN · METERED** — make live after the moves
 - [x] 5 — The citations
 - [x] 6 — Decisions and principles
-- [ ] 7 — The pages
+- [x] 7 — The pages
 - [ ] 8 — The map and the handover
 
 ## 1 — The layers
@@ -66,15 +66,15 @@ The layer test and the moves, one metered run, then the links test, the citation
 
 ## 7 — The pages
 
-- [ ] 7.1 Write `docs/modules.md` per [D14](design.md#d14), its layer table `| layer | modules |` with backticked dotted names; add `test_the_modules_page_names_every_module` and its twin to `tests/test_layers.py`, bound to `architecture:layers:modules-named`, per [D9](design.md#d9).
+- [x] 7.1 Write `docs/modules.md` per [D14](design.md#d14), its layer table `| layer | modules |` with backticked dotted names; add `test_the_modules_page_names_every_module` and its twin to `tests/test_layers.py`, bound to `architecture:layers:modules-named`, per [D9](design.md#d9).
   Verify: `grep -c '"architecture:layers:modules-named"' tests/test_layers.py` prints a number of at least `1`, and `uv run pytest -q tests/test_layers.py tests/test_docs.py` exits 0.
-- [ ] 7.2 Write `docs/data-flow.md` per [D14](design.md#d14), with the sections `## A session`, `## The boot contract`, `## The state files`, `## Serve`, `## The window volume`, `## Spend` and `## Exit codes`.
+- [x] 7.2 Write `docs/data-flow.md` per [D14](design.md#d14), with the sections `## A session`, `## The boot contract`, `## The state files`, `## Serve`, `## The window volume`, `## Spend` and `## Exit codes`.
   Verify: `grep -c -x -E '## (A session|The boot contract|The state files|Serve|The window volume|Spend|Exit codes)' docs/data-flow.md` prints `7`, and `uv run pytest -q tests/test_docs.py` exits 0.
-- [ ] 7.3 Write `docs/extending.md` per [D14](design.md#d14), with the sections `## A verb`, `## A gpunit.toml key`, `## A serve row`, `## A provider`, `## A boot.py change`, `## A pin bump`, `## A live proof` and `## The rules`.
+- [x] 7.3 Write `docs/extending.md` per [D14](design.md#d14), with the sections `## A verb`, `## A gpunit.toml key`, `## A serve row`, `## A provider`, `## A boot.py change`, `## A pin bump`, `## A live proof` and `## The rules`.
   Verify: `grep -c -x -E '## (A verb|A gpunit\.toml key|A serve row|A provider|A boot\.py change|A pin bump|A live proof|The rules)' docs/extending.md` prints `8`, and `uv run pytest -q tests/test_docs.py` exits 0.
-- [ ] 7.4 Write `docs/pins.md` per [D14](design.md#d14).
+- [x] 7.4 Write `docs/pins.md` per [D14](design.md#d14).
   Verify: `grep -c -F -e 'serve/Dockerfile' -e 'gpunit/serve/models.toml' -e 'uv.lock' -e '.github/workflows/build-serve-image.yml' docs/pins.md` prints a number of at least `4`, and `uv run pytest -q tests/test_docs.py` exits 0.
-- [ ] 7.5 In `docs/threat-model.md`, turn every line citation into a symbol or file citation, set T13 and T30 to `partly` wherever their status is listed, and edit *Counts*, line 3 and *Sources*, per [D15](design.md#d15). Add the symbol rule and its twin to `tests/test_docs.py`, bound to `architecture:docs:symbols-resolve`.
+- [x] 7.5 In `docs/threat-model.md`, turn every line citation into a symbol or file citation, set T13 and T30 to `partly` wherever their status is listed, and edit *Counts*, line 3 and *Sources*, per [D15](design.md#d15). Add the symbol rule and its twin to `tests/test_docs.py`, bound to `architecture:docs:symbols-resolve`.
   Verify: `grep -E '^\| T(13|30) ' docs/threat-model.md | grep -c '| partly |'` prints `2`, `grep -c 'mitigated 26 · partly 16' docs/threat-model.md` prints `1`, `grep -c '"architecture:docs:symbols-resolve"' tests/test_docs.py` prints a number of at least `1`, and `uv run pytest -q` exits 0.
 
 ## 8 — The map and the handover

@@ -1,7 +1,9 @@
 """Hold the guide's citations true: links, anchors and decision ids (decision D50)."""
 
+import ast
 import re
-from collections.abc import Mapping
+import subprocess
+from collections.abc import Collection, Mapping
 from pathlib import Path
 
 import pytest
@@ -19,6 +21,9 @@ LINKED_DECISION = re.compile(r"decisions\.md#(d[0-9]+)\b")
 HEADING = re.compile(r"^#{1,6}\s+(.+?)\s*#*\s*$")
 FENCE = re.compile(r"^```.*?^```", re.MULTILINE | re.DOTALL)
 CODE = re.compile(r"`[^`\n]*`")
+SPAN = re.compile(r"`([^`\n]+)`")
+PATH = re.compile(r"[\w.-]+/[\w./{},*<>-]*(?:::[\w.]+)?")
+LINE = re.compile(r"(?:[\w./-]+\.[A-Za-z]\w*|[\w./-]*Dockerfile[\w.]*)?:\d+(?:-\d+)?")
 
 
 def guide(root: Path) -> list[Path]:
@@ -127,6 +132,73 @@ def archived(root: Path) -> list[str]:
     return sorted(faults)
 
 
+def tracked_tops(root: Path) -> set[str]:
+    """Return the tracked top-level directories, e.g. {"gpunit", ".github"}."""
+    listed = subprocess.run(
+        ["git", "ls-files"], cwd=root, capture_output=True, text=True, check=True
+    ).stdout.split()
+    return {name.split("/")[0] for name in listed if "/" in name}
+
+
+def _expand(path: str) -> list[str]:
+    """Return `path` with its braces expanded.
+
+    e.g. "x/{a,b}.py" → ["x/a.py", "x/b.py"]
+    """
+    if not (match := re.search(r"\{([^{}]*)\}", path)):
+        return [path]
+    return [
+        found
+        for part in match[1].split(",")
+        for found in _expand(path[: match.start()] + part + path[match.end() :])
+    ]
+
+
+def defined(path: Path) -> set[str]:
+    """Return the names a module defines: functions, classes, assignments, `C.m`."""
+    names = set()
+    for node in ast.parse(path.read_text(encoding="utf-8")).body:
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+            names.add(node.name)
+        if isinstance(node, ast.ClassDef):
+            names |= {
+                f"{node.name}.{sub.name}"
+                for sub in node.body
+                if isinstance(sub, ast.FunctionDef | ast.AsyncFunctionDef)
+            }
+        elif isinstance(node, ast.Assign | ast.AnnAssign):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            names |= {t.id for t in targets if isinstance(t, ast.Name)}
+    return names
+
+
+def unresolved(root: Path, tops: Collection[str]) -> list[str]:
+    """Return each guide path, symbol or line citation that names nothing at `root`.
+
+    e.g. `gpunit/lifecycle.py::up` passes while `up` is defined;
+    `gpunit/lifecycle.py:75` is a line citation, and fails.
+    """
+    faults = []
+    for page in sorted((root / "docs").glob("*.md")):
+        where = page.relative_to(root).as_posix()
+        for span in SPAN.findall(FENCE.sub("", page.read_text(encoding="utf-8"))):
+            if LINE.fullmatch(span):
+                faults.append(f"{where}: {span} cites a line")
+                continue
+            if not PATH.fullmatch(span) or "<" in span:
+                continue
+            name, _, symbol = span.partition("::")
+            if name.split("/")[0] not in tops:
+                continue
+            for path in _expand(name):
+                found = list(root.glob(path)) if "*" in path else [root / path]
+                if not any(p.exists() for p in found):
+                    faults.append(f"{where}: {path} does not exist")
+                elif symbol and symbol not in defined(found[0]):
+                    faults.append(f"{where}: {path} defines no {symbol}")
+    return sorted(faults)
+
+
 def tree(root: Path, files: Mapping[str, str]) -> Path:
     """Write each file under `root`, by its relative path, and return `root`."""
     for name, text in files.items():
@@ -207,4 +279,32 @@ def test_an_archived_citation_is_caught(tmp_path: Path) -> None:
     assert archived(root) == [
         f"Makefile: {cited.replace('design ', '')}",
         f"gpunit/x.py: {cited}",
+    ]
+
+
+@pytest.mark.spec("architecture:docs:symbols-resolve")
+def test_the_guides_symbols_resolve() -> None:
+    assert unresolved(ROOT, tracked_tops(ROOT)) == []
+
+
+@pytest.mark.spec("architecture:docs:symbols-resolve")
+def test_a_missing_symbol_or_a_line_citation_is_caught(tmp_path: Path) -> None:
+    root = tree(
+        tmp_path,
+        {
+            "gpunit/x.py": "N = 1\n\ndef up(): ...\n\nclass C:\n    def m(self): ...\n",
+            "docs/a.md": (
+                "`gpunit/x.py::up` `gpunit/x.py::N` `gpunit/x.py::C.m` `gpunit/*.py`"
+                " `tests/test_<m>.py` `vllm/arg_utils.py` `127.0.0.1:8000`\n"
+                "`gpunit/x.py::gone` `gpunit/{x,y}.py` `gpunit/x.py:75` `:12-14`\n"
+                "```\n`gpunit/fenced.py`\n```\n"
+            ),
+        },
+    )
+
+    assert unresolved(root, {"gpunit", "tests"}) == [
+        "docs/a.md: :12-14 cites a line",
+        "docs/a.md: gpunit/x.py defines no gone",
+        "docs/a.md: gpunit/x.py:75 cites a line",
+        "docs/a.md: gpunit/y.py does not exist",
     ]

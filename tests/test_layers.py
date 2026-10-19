@@ -1,6 +1,7 @@
 """Hold the package to its layers: imports point down, per decision D49."""
 
 import ast
+import re
 import sys
 from collections.abc import Collection, Mapping
 from pathlib import Path
@@ -159,6 +160,31 @@ def exits(root: Path) -> list[str]:
     return faults
 
 
+def unnamed(root: Path, layers: Mapping[str, str] = LAYERS) -> list[str]:
+    """Return each module `docs/modules.md`'s layer table misses, misplaces or invents.
+
+    e.g. the row "| model | gpunit.spec · gpunit.state |", each name backticked
+    """
+    page = (root / "docs" / "modules.md").read_text(encoding="utf-8")
+    table = page.partition("| layer | modules |")[2].partition("\n\n")[0]
+    drawn = {
+        name: cells[0].strip()
+        for cells in (line.strip("|").split("|") for line in table.splitlines())
+        if len(cells) == 2
+        for name in re.findall(r"`([\w.]+)`", cells[1])
+    }
+    faults = [f"{name}: not in LAYERS" for name in modules(root) if name not in layers]
+    for name, layer in layers.items():
+        if name not in drawn:
+            faults.append(f"{name}: not in docs/modules.md")
+        elif drawn[name] != layer:
+            faults.append(
+                f"{name}: {drawn[name]} in docs/modules.md, {layer} in LAYERS"
+            )
+    faults += [f"{name}: not in LAYERS" for name in drawn if name not in layers]
+    return faults
+
+
 def package(root: Path, files: Mapping[str, str]) -> Path:
     """Write a small package under `root`, each file by its relative path."""
     for name, source in {"gpunit/__init__.py": "", **files}.items():
@@ -280,4 +306,35 @@ def test_an_exit_outside_the_cli_is_caught(tmp_path: Path) -> None:
     assert exits(root) == [
         "gpunit/spend.py:1 imports sys.exit",
         "gpunit/volume.py:4 calls sys.exit",
+    ]
+
+
+@pytest.mark.spec("architecture:layers:modules-named")
+def test_the_modules_page_names_every_module() -> None:
+    assert unnamed(ROOT) == []
+
+
+@pytest.mark.spec("architecture:layers:modules-named")
+def test_a_module_the_page_misses_is_caught(tmp_path: Path) -> None:
+    root = package(
+        tmp_path,
+        {
+            "gpunit/log.py": "",
+            "gpunit/spec.py": "",
+            "gpunit/extra.py": "",
+            "docs/modules.md": (
+                "| layer | modules |\n|---|---|\n"
+                "| model | `gpunit.log` · `gpunit.ghost` |\n\n"
+                "| seam | replaced for |\n|---|---|\n| `gpunit.spec` | x |\n"
+            ),
+        },
+    )
+    layers = {"gpunit": "interface", "gpunit.log": "foundation", "gpunit.spec": "model"}
+
+    assert unnamed(root, layers) == [
+        "gpunit.extra: not in LAYERS",
+        "gpunit: not in docs/modules.md",
+        "gpunit.log: model in docs/modules.md, foundation in LAYERS",
+        "gpunit.spec: not in docs/modules.md",
+        "gpunit.ghost: not in LAYERS",
     ]

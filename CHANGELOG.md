@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   links and anchors, every `decision Dn` cited, and no archived design's id outside that page (`0015`).
 - Each decision in `docs/decisions.md` gains its *Why* and *Made by*. `docs/principles.md` defines the words, then
   each rule with its decision, what holds it and where the code breaches it (`0015`).
+- `docs/modules.md`, `docs/data-flow.md`, `docs/extending.md` and `docs/pins.md`: the layers and each module, the
+  flows, a recipe for each kind of change, and each pin. The layer test holds the modules page; the docs test holds
+  every backticked path and `path::symbol` in `docs/` (`0015`).
 
 ### Changed
 
@@ -28,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reason (`0015`).
 - Code, configuration and the threat model cite `decision Dn` in place of an archived design's id; a live proof's
   own design id is dropped, its reason kept (`0015`).
+- The threat model cites symbols, not lines. T13 and T30 are `partly`: the launcher-flag refusal matches exact
+  names, and vLLM takes abbreviations (`0015·F23`) (`0015`).
 - `make live` proved the moved pod env and host-key proof against RunPod on an A40 (`live/last_run.txt`,
   `0015`).
 
