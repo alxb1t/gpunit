@@ -109,8 +109,8 @@ breaks the guide; the moves leave every scenario as it is.
 where it imports or names what moved. `docs/extending.md` states it as a rule ([D14](#d14)), and `docs/decisions.md`
 records it as D51 ([D12](#d12)).
 
-The one order that moves: `lifecycle.sweep_window` now writes the ledger's `deleted` line before it clears the window
-record, through [D6](#d6). No scenario reads that order.
+The one order that moves: `lifecycle.sweep_window` and `volume.down` now write the ledger's `deleted` line before they
+clear the window record, through [D6](#d6). No scenario reads that order.
 
 ### D2
 
