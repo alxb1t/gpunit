@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/modules.md`, `docs/data-flow.md`, `docs/extending.md` and `docs/pins.md`: the layers and each module, the
   flows, a recipe for each kind of change, and each pin. The layer test holds the modules page; the docs test holds
   every backticked path and `path::symbol` in `docs/` (`0015`).
+- `docs/README.md`, the guide's map: the laptop and pod halves, the layers, each page, and where to start (`0015`).
 
 ### Changed
 
@@ -33,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   own design id is dropped, its reason kept (`0015`).
 - The threat model cites symbols, not lines. T13 and T30 are `partly`: the launcher-flag refusal matches exact
   names, and vLLM takes abbreviations (`0015·F23`) (`0015`).
+- `README.md` points to the guide, not to an archived design. `CLAUDE.md` opens on the guide, links the modules
+  and principles pages in place of its layout and invariants, gains *The rules for a change*, and names
+  `gpunit/version.py` (`0015`).
 - `make live` proved the moved pod env and host-key proof against RunPod on an A40 (`live/last_run.txt`,
   `0015`).
 

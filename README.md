@@ -12,7 +12,7 @@ gpunit run -- <cmd>                              boot.py -- <cmd>
  └─ down: delete · sweep                          stops itself at the ceiling
 ```
 
-The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/archive/0001-core/design.md).
+How it is built, why, and where to change it: [the guide](docs/README.md).
 
 ## Use it from a project
 

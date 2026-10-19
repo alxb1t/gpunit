@@ -12,7 +12,7 @@ The layer test and the moves, one metered run, then the links test, the citation
 - [x] 5 — The citations
 - [x] 6 — Decisions and principles
 - [x] 7 — The pages
-- [ ] 8 — The map and the handover
+- [x] 8 — The map and the handover
 
 ## 1 — The layers
 
@@ -79,9 +79,9 @@ The layer test and the moves, one metered run, then the links test, the citation
 
 ## 8 — The map and the handover
 
-- [ ] 8.1 Write `docs/README.md` per [D16](design.md#d16).
+- [x] 8.1 Write `docs/README.md` per [D16](design.md#d16).
   Verify: `grep -o -E '\]\((principles|decisions|data-flow|modules|extending|pins|threat-model)\.md' docs/README.md | sort -u | wc -l | tr -d ' '` prints `7`, and `uv run pytest -q tests/test_docs.py` exits 0.
-- [ ] 8.2 Cut `README.md` to the user's guide, per [D16](design.md#d16).
+- [x] 8.2 Cut `README.md` to the user's guide, per [D16](design.md#d16).
   Verify: `grep -c 'openspec/changes/archive' README.md` prints `0`, `grep -c '](docs/README.md)' README.md` prints a number of at least `1`, and `uv run pytest -q tests/test_docs.py` exits 0.
-- [ ] 8.3 Rewrite `CLAUDE.md` per [D16](design.md#d16).
+- [x] 8.3 Rewrite `CLAUDE.md` per [D16](design.md#d16).
   Verify: `grep -c -x -E '## (Layout — where things live here|Invariants)' CLAUDE.md` prints `0`, `grep -c -x '## The rules for a change' CLAUDE.md` prints `1`, `grep -c 'docs/README.md' CLAUDE.md` prints a number of at least `1`, `grep -c 'gpunit/version.py' CLAUDE.md` prints a number of at least `1`, and `uv run pytest -q tests/test_docs.py` exits 0.
