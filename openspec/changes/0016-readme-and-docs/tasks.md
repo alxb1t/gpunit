@@ -9,7 +9,7 @@ The license and the metadata, the gate workflow, the move into `docs/`, the fron
 - [x] 2 — The gate workflow
 - [x] 3 — The move
 - [x] 4 — The front page
-- [ ] 5 — ⚠️ **HUMAN** — GitHub's fields and the first CI run
+- [x] 5 — ⚠️ **HUMAN** — GitHub's fields and the first CI run
 
 ## 1 — The license and the metadata
 
@@ -45,7 +45,7 @@ The license and the metadata, the gate workflow, the move into `docs/`, the fron
 
 ## 5 — ⚠️ **HUMAN** — GitHub's fields and the first CI run
 
-- [ ] 5.1 **HUMAN** — run `gh repo edit alxb1t/gpunit --description "Rent a cloud GPU, use it, and tear it down on every way out — a stdlib-only Python CLI and library. Serves open models over vLLM, proves the host key, and enforces a spend ceiling on the pod itself." --add-topic gpu,cloud-gpu,runpod,vllm,llm-inference,openai-compatible,python,cli,ssh,mlops,self-hosted,cost-control`, per [D11](design.md#d11).
+- [x] 5.1 **HUMAN** — run `gh repo edit alxb1t/gpunit --description "Rent a cloud GPU, use it, and tear it down on every way out — a stdlib-only Python CLI and library. Serves open models over vLLM, proves the host key, and enforces a spend ceiling on the pod itself." --add-topic gpu,cloud-gpu,runpod,vllm,llm-inference,openai-compatible,python,cli,ssh,mlops,self-hosted,cost-control`, per [D11](design.md#d11).
   Verify: `gh repo view alxb1t/gpunit --json repositoryTopics --jq '.repositoryTopics | length'` prints `12`, and `gh repo view alxb1t/gpunit --json description --jq .description | grep -c 'tear it down on every way out'` prints `1`.
-- [ ] 5.2 **HUMAN** · **HALT CHECK** — run `git push -u origin v0.11.1_readme_and_docs`, then `gh run watch "$(gh run list --workflow gate.yml --branch v0.11.1_readme_and_docs --limit 1 --json databaseId --jq '.[0].databaseId')"`, per [D11](design.md#d11). A red run is a halt: keep its log.
+- [x] 5.2 **HUMAN** · **HALT CHECK** — run `git push -u origin v0.11.1_readme_and_docs`, then `gh run watch "$(gh run list --workflow gate.yml --branch v0.11.1_readme_and_docs --limit 1 --json databaseId --jq '.[0].databaseId')"`, per [D11](design.md#d11). A red run is a halt: keep its log.
   Verify: `gh run list --workflow gate.yml --branch v0.11.1_readme_and_docs --status success --limit 1 --json databaseId --jq length` prints `1`.

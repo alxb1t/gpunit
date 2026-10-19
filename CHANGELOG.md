@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `pyproject.toml`'s `description` and `keywords` are the text GitHub's description and topics mirror (`0016`).
 - The threat model, `docs/extending.md`, `docs/pins.md` and the guide's map cite `docs/usage.md` and
   `docs/proofs.md` where they cited README (`0016`).
+- GitHub's description and topics are set from `pyproject.toml`; the gate workflow's first run passed on Linux
+  (`0016`).
 
 ## [0.11.0] - 2026-10-19
 
