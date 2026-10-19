@@ -24,7 +24,7 @@ def run(spec: Spec, provider: Provider, state: State, command: list[str]) -> int
     """
 
     def body() -> int:
-        with library._open(spec, provider, state, None) as opened:
+        with library.open_session(spec, provider, state, None) as opened:
             return _command(spec, opened, command)
 
     return outcome(body)

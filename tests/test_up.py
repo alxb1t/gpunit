@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from gpunit.provider import GpuInfo, Lost, PodInfo, Refused, Unknown, VolumeInfo
+from gpunit.provider import GpuInfo, Lost, PodInfo, Unknown, Unplaceable, VolumeInfo
 from gpunit.runpod import RunPod
 from gpunit.spec import Spec
 from gpunit.state import State
@@ -98,7 +98,7 @@ def test_a_card_over_max_hourly_is_skipped(cwd: Path) -> None:
 
 @pytest.mark.spec("session:place:400-moves-on")
 def test_a_400_moves_on_to_the_next_card(cwd: Path) -> None:
-    provider = FakeProvider(creates=[Refused("no capacity"), "pod-2"])
+    provider = FakeProvider(creates=[Unplaceable("no capacity"), "pod-2"])
 
     assert gpunit(["up"], provider=provider) == 0
     assert creates(provider) == ["RTX 4090", "RTX A6000"]
@@ -108,7 +108,7 @@ def test_a_400_moves_on_to_the_next_card(cwd: Path) -> None:
 
 @pytest.mark.spec("session:place:none-placed")
 def test_none_placed_exits_1_with_no_record(cwd: Path) -> None:
-    provider = FakeProvider(creates=[Refused("no capacity")])
+    provider = FakeProvider(creates=[Unplaceable("no capacity")])
 
     assert gpunit(["up"], provider=provider) == 1
     assert creates(provider) == ["RTX 4090", "RTX A6000"]

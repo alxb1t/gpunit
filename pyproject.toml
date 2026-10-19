@@ -4,7 +4,7 @@ dynamic = ["version"]
 description = "Open, use and close a RunPod GPU session from any project."
 readme = "README.md"
 requires-python = ">=3.11"
-# Stdlib only: a consumer installs gpunit as a dev tool and inherits nothing (0001 design D1).
+# Stdlib only: a consumer installs gpunit as a dev tool and inherits nothing (decision D1).
 dependencies = []
 
 [project.scripts]
@@ -15,7 +15,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
-path = "gpunit/__init__.py"
+path = "gpunit/version.py"
 
 [dependency-groups]
 dev = [
@@ -26,7 +26,7 @@ dev = [
 ]
 
 [tool.ruff]
-# boot.py runs on the pod's Python, 3.10 on Ubuntu 22.04 (0012 design D2, D7).
+# boot.py runs on the pod's Python, 3.10 on Ubuntu 22.04 (decision D45, decision D5).
 per-file-target-version = { "boot/boot.py" = "py310" }
 
 [tool.ruff.lint]
@@ -51,7 +51,7 @@ markers = [
 ]
 
 # The unit tests alone hold boot.py at 100 %: the end-to-end tests run it in a child
-# process, which coverage does not follow (0012 design D7).
+# process, which coverage does not follow (decision D5).
 [tool.coverage.run]
 source = ["boot"]
 branch = true

@@ -12,7 +12,7 @@ gpunit run -- <cmd>                              boot.py -- <cmd>
  └─ down: delete · sweep                          stops itself at the ceiling
 ```
 
-The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/archive/0001-core/design.md).
+How it is built, why, and where to change it: [the guide](docs/README.md).
 
 ## Use it from a project
 
@@ -46,7 +46,7 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    the file in. `python3-minimal` is not enough: it lacks the modules the stop's request needs.
 
    ```dockerfile
-   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.10.0/boot/boot.py /opt/gpunit/boot.py
+   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.11.0/boot/boot.py /opt/gpunit/boot.py
    ENTRYPOINT ["python3", "/opt/gpunit/boot.py", "--"]
    CMD ["python3", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
    ```
@@ -64,7 +64,7 @@ The design: [openspec/changes/archive/0001-core/design.md](openspec/changes/arch
    key.
 
    ```sh
-   uv add --dev git+https://github.com/alxb1t/gpunit@v0.10.0
+   uv add --dev git+https://github.com/alxb1t/gpunit@v0.11.0
    echo .gpunit/ >> .gitignore
    export RUNPOD_API_KEY=...
    uv run gpunit run -- python3 render.py

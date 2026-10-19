@@ -7,11 +7,11 @@ from dataclasses import replace
 from decimal import ROUND_UP, Decimal
 
 from gpunit import ledger, lifecycle, log
-from gpunit.provider import Lost, Provider, Refused, Unknown, pod_name
+from gpunit.provider import Lost, Provider, Unknown, Unplaceable, pod_name
 from gpunit.spec import Spec
 from gpunit.state import State, Window
 
-# RunPod's standard storage under 1 TB, billed by the hour: 0010 design D5.
+# RunPod's standard storage under 1 TB, billed by the hour: decision D41.
 VOLUME_GB_MONTH = Decimal("0.07")
 HOURS_A_MONTH = 730
 # The stock levels a volume may be placed on, best first.
@@ -54,9 +54,9 @@ def up(
     state.mark_volume_pending()
     try:
         volume_id = provider.create_volume(name, spec.volume_gb, datacenter)
-    except Refused as refusal:
+    except Unplaceable as unplaceable:
         state.clear_volume_pending()
-        log.refuse(str(refusal))
+        log.refuse(str(unplaceable))
     except Lost as lost:
         log.say(str(lost))
         log.say(f"the create's outcome is unknown: a volume {name} may exist and bill;")
@@ -79,10 +79,9 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
     failed = False
     window = state.window()
     if window is not None:
-        code = provider.delete_volume(window.id)
+        code = lifecycle.delete_volume(provider, window.id)
         if code == 204:
             state.clear_window()
-            ledger.record_deleted(window.id)
             log.say(f"volume {window.id} deleted")
         else:
             # A 404 is never gone: a wrong key gets one too.
@@ -119,7 +118,7 @@ def _sweep(name: str, provider: Provider, state: State) -> int:
     for volume_id in listed:
         if volume_id in known:
             continue
-        # No script or agent answers for an unrecorded volume: 0011 design D5.
+        # No script or agent answers for an unrecorded volume: decision D41.
         tty = sys.stdin.isatty()
         try:
             answer = (
@@ -139,8 +138,7 @@ def _sweep(name: str, provider: Provider, state: State) -> int:
             settled = False
         elif not answer:
             log.say(f"volume {volume_id} kept")
-        elif (code := provider.delete_volume(volume_id)) == 204:
-            ledger.record_deleted(volume_id)
+        elif (code := lifecycle.delete_volume(provider, volume_id)) == 204:
             log.say(f"swept volume {volume_id}")
         else:
             log.say(f"delete of swept volume {volume_id} answered HTTP {code}")
@@ -176,7 +174,7 @@ def _extend(
         )
     question = f"extend volume {window.id}"
     _agree(window.size_gb, ceiling_s, question, "not extended", yes)
-    # Never earlier: a session may be running to the recorded end. 0011 design D1.
+    # Never earlier: a session may be running to the recorded end. decision D41.
     extended = replace(window, ends=max(window.ends, log.utc(ceiling_s)))
     state.write_window(extended)
     ledger.record_volume(project, window.id, extended.ends)

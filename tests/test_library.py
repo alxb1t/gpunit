@@ -39,7 +39,9 @@ time.sleep(30)
 def opened(
     cwd: Path, provider: Provider, say: Callable[[str], None] | None = None
 ) -> AbstractContextManager[Session]:
-    return library._open(load_spec(cwd / "gpunit.toml"), provider, State(cwd), say)
+    return library.open_session(
+        load_spec(cwd / "gpunit.toml"), provider, State(cwd), say
+    )
 
 
 def until(done: Callable[[], bool], seconds: float = 10.0) -> bool:

@@ -1,4 +1,4 @@
-"""Write a spec, install stub commands, and run the CLI in-process, for the tests."""
+"""Write a spec, a tree or stubs, and run the CLI in-process, for the tests."""
 
 from collections.abc import Mapping
 from pathlib import Path
@@ -55,6 +55,15 @@ def open_window(
 def with_port(cwd: Path, local: int) -> None:
     """Write the valid spec into `cwd`, forwarding remote 8188 to `local`."""
     write_spec(cwd, VALID + f"ports = [{{ remote = 8188, local = {local} }}]\n")
+
+
+def tree(root: Path, files: Mapping[str, str]) -> Path:
+    """Write each file under `root`, by its relative path, and return `root`."""
+    for name, text in files.items():
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+    return root
 
 
 def install_stubs(bin_dir: Path, scripts: Mapping[str, str]) -> Path:

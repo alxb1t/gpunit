@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-19
+
+### Added
+
+- `tests/test_layers.py` holds the package's layers, lazy imports included, plus the stdlib-only, `sys.exit` and
+  `RunPod`-construction rules, each with a twin that breaks it (`0015`).
+- `docs/decisions.md`: the decisions in force, `D1`–`D51`, grouped by area. `tests/test_docs.py` holds the guide's
+  links and anchors, every `decision Dn` cited, and no archived design's id outside that page (`0015`).
+- Each decision in `docs/decisions.md` gains its *Why* and *Made by*. `docs/principles.md` defines the words, then
+  each rule with its decision, what holds it and where the code breaches it (`0015`).
+- `docs/modules.md`, `docs/data-flow.md`, `docs/extending.md` and `docs/pins.md`: the layers and each module, the
+  flows, a recipe for each kind of change, and each pin. The layer test holds the modules page; the docs test holds
+  every backticked path and `path::symbol` in `docs/` (`0015`).
+- `docs/README.md`, the guide's map: the laptop and pod halves, the layers, each page, and where to start (`0015`).
+
+### Changed
+
+- `__version__` lives in `gpunit/version.py`, which hatch reads; it breaks the cycle `gpunit.runpod` → `gpunit` →
+  `gpunit.library` → `gpunit.runpod`. `cli` imports `serve.table` inside `_known` (`0015`).
+- `library._open` is `library.open_session`, the seam `run` and `serve` open through; the provider's 400 is
+  `provider.Unplaceable`, so *refusal* names gpunit's own. `lifecycle.delete_volume` is the one volume delete and
+  its ledger line (`0015`).
+- `gpunit/contract.py` holds the laptop's half of the boot contract: the pod's env (`pod_env`), the boot-log
+  patterns, `fingerprint` and `old_boot`. `gpunit/hostkey.py` proves the host key; `lifecycle.up` tears down on its
+  reason (`0015`).
+- Code, configuration and the threat model cite `decision Dn` in place of an archived design's id; a live proof's
+  own design id is dropped, its reason kept (`0015`).
+- The threat model cites symbols, not lines. T13 and T30 are `partly`: the launcher-flag refusal matches exact
+  names, and vLLM takes abbreviations (`0015·F23`) (`0015`).
+- `README.md` points to the guide, not to an archived design. `CLAUDE.md` opens on the guide, links the modules
+  and principles pages in place of its layout and invariants, gains *The rules for a change*, and names
+  `gpunit/version.py` (`0015`).
+- `make live` proved the moved pod env and host-key proof against RunPod on an A40 (`live/last_run.txt`,
+  `0015`).
+
 ## [0.10.0] - 2026-10-18
 
 ### Added

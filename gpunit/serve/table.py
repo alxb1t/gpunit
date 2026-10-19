@@ -195,7 +195,7 @@ def _args(where: str, items: list[object]) -> tuple[str, ...]:
     args = strings(where, "args", items)
     if any(" " in arg for arg in args):
         log.refuse(f"{where}: 'args' holds an argument with a space, which sh splits")
-    # Refused before a pod is rented, whatever the launcher does: 0014 design D4.
+    # Refused before a pod is rented, whatever the launcher does: decision D40.
     if "--enable-log-requests" in args:
         log.refuse(
             f"{where}: 'args' holds --enable-log-requests; request logging stays off"

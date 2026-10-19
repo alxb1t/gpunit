@@ -20,7 +20,7 @@ from gpunit.state import Record, State
 
 SIGNALS = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
 TUNNEL_POLL_S = 1.0
-# A tunnel that cannot bind dies at once; each reopening waits longer (0002 design D8).
+# A tunnel that cannot bind dies at once; each reopening waits longer (decision D30).
 REOPEN_FIRST_S = 1.0
 REOPEN_CAP_S = 30.0
 TUNNEL_CONNECT_S = 10
@@ -68,22 +68,26 @@ def session(
 ) -> Generator[Session, None, None]:
     """Open a session on `spec` for the block's life; tear it down when it ends.
 
-    Raise `Refused`, `Lost`, `TeardownFailed` or `Interrupted` (0004 design D2).
+    Raise `Refused`, `Lost`, `TeardownFailed` or `Interrupted` (decision D28).
     """
     with _saying(say):
         loaded = spec if isinstance(spec, Spec) else load_spec(Path(spec))
         provider = RunPod(environ if environ is not None else os.environ)
-    with _open(loaded, provider, State(cwd or Path.cwd()), say) as opened:
+    with open_session(loaded, provider, State(cwd or Path.cwd()), say) as opened:
         yield opened
 
 
 @contextmanager
-def _open(
+def open_session(
     spec: Spec,
     provider: Provider,
     state: State,
     say: Callable[[str], None] | None,
 ) -> Generator[Session, None, None]:
+    """Open a session on a loaded spec and a built provider; tear it down when it ends.
+
+    `session` is this for a consumer; `run`, `serve` and the tests call it directly.
+    """
     with _saying(say):
         # `signal.signal` raises off the main thread.
         if threading.current_thread() is not threading.main_thread():
@@ -187,7 +191,7 @@ class _Signals:
     def refuse(self, text: str) -> None:
         """Raise `Refused` with `text` in the main thread, from any thread."""
         self._refusal = text
-        # A signal wakes a main thread blocked in a wait; why: 0013 design D6.
+        # A signal wakes a main thread blocked in a wait; why: decision D31.
         signal.pthread_kill(self._main, signal.SIGINT)
 
     def shield(self) -> None:
@@ -294,7 +298,7 @@ def _tunnel_argv(spec: Spec, ssh: Sequence[str]) -> list[str]:
         for bind in binds
     ]
     # Until `ssh` binds, after its connect and authentication, the port is unheld; the
-    # timeout bounds that span's connect and key exchange (0013 design D5).
+    # timeout bounds that span's connect and key exchange (decision D30).
     options = [
         "-N",
         "-o",

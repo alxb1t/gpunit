@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from gpunit.contract import fingerprint
 from gpunit.log import Refusal
 from gpunit.provider import (
     GpuInfo,
@@ -17,11 +18,10 @@ from gpunit.provider import (
     NoImage,
     PodCost,
     PodInfo,
-    Refused,
     Unknown,
+    Unplaceable,
     VolumeCost,
     VolumeInfo,
-    fingerprint,
 )
 from gpunit.runpod import API, LOG_IDLE_S, RunPod, _NoRedirect
 from gpunit.spec import Spec
@@ -55,7 +55,7 @@ def test_gpu_reads_the_memory_and_the_secure_price() -> None:
     url = opener.requests[0].full_url
     assert url.endswith("/catalog/gpus/NVIDIA%20GeForce%20RTX%204090")
     assert opener.requests[0].get_header("Authorization") == f"Bearer {KEY}"
-    assert opener.requests[0].get_header("User-agent") == "gpunit/0.10.0"
+    assert opener.requests[0].get_header("User-agent") == "gpunit/0.11.0"
 
 
 @pytest.mark.spec("session:place:unknown-card-refuses")
@@ -154,7 +154,7 @@ def test_a_secret_reference_reaches_the_create_as_written() -> None:
 def test_a_400_create_is_refused_with_the_problem() -> None:
     provider, _ = runpod((400, fixture("problem.json")))
 
-    with pytest.raises(Refused, match="Bad Request: There are no instances"):
+    with pytest.raises(Unplaceable, match="Bad Request: There are no instances"):
         provider.create(SPEC, "RTX 4090", "key", 2700, nonce=NONCE)
 
 
@@ -257,7 +257,7 @@ def stamped(*events: tuple[str | None, str]) -> bytes:
 
 @pytest.mark.spec("serve:wait:log-kept")
 def test_a_since_read_takes_the_tail_from_that_second_on() -> None:
-    # RunPod's own `since` sends no past line (0010 design D14): the read is the tail's.
+    # RunPod's own `since` sends no past line (decision D22): the read is the tail's.
     provider, opener = runpod(
         (
             200,
@@ -572,7 +572,7 @@ def test_the_volume_create_names_the_standard_tier() -> None:
 def test_a_refused_volume_create_is_refused(status: int) -> None:
     provider, _ = runpod((status, fixture("problem.json")))
 
-    with pytest.raises(Refused, match="no instances"):
+    with pytest.raises(Unplaceable, match="no instances"):
         provider.create_volume("gpunit-isekai", 60, "EU-RO-1")
 
 

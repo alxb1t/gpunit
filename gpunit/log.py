@@ -19,7 +19,7 @@ def utc(after_s: int = 0) -> str:
 
 
 def _stderr(line: str) -> None:
-    # A dead pipe or a closed stream ends no teardown (0004 design D5).
+    # A dead pipe or a closed stream ends no teardown (decision D4).
     try:
         print(line, file=sys.stderr, flush=True)
     except BrokenPipeError:

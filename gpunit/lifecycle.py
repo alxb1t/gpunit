@@ -11,17 +11,15 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from typing import NoReturn, TypeVar
 
-from gpunit import ledger, log
+from gpunit import hostkey, ledger, log
 from gpunit.provider import (
     DELETED,
     Lost,
     NoImage,
     PodInfo,
     Provider,
-    Refused,
     Unknown,
-    fingerprint,
-    old_boot,
+    Unplaceable,
     pod_name,
 )
 from gpunit.spec import Spec
@@ -30,10 +28,6 @@ from gpunit.state import Record, State, Window
 POLL_S = 5
 # The statuses of a container that is not running; two polls in a row end the wait.
 DEAD = ("EXITED", "ERROR", "TERMINATED")
-LOG_WAIT_S = 60
-# sshd can answer after the port is mapped, so the scan waits longer than the log.
-SCAN_WAIT_S = 180
-LOG_TAIL = 5000
 # Checked before the create: a tool missing after it leaves a pod rented.
 SSH_TOOLS = ("ssh", "ssh-keygen", "ssh-keyscan")
 
@@ -104,7 +98,7 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
     pubkey = state.keygen(pod_name(spec.project))
     nonce = NONCE()
     # Before the create, so a log read `since` it misses none of the pod's lines
-    # within the provider's tail (0003 design D2, 0010 design D14).
+    # within the provider's tail (decision D22).
     created = log.utc()
     state.mark_pending()
     pod_id = _create(spec, provider, cards, pubkey, nonce)
@@ -117,14 +111,15 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
     log.say(f"pod {pod_id} created; waiting for SSH")
 
     record = _wait(spec, provider, state, record)
-    _verify_host_key(spec, provider, state, record, nonce)
+    if reason := hostkey.verify(provider, state, record, nonce, _poll):
+        _tear_down(spec, provider, state, reason)
     log.say(f"session up: pod {record.id}, root@{record.host} -p {record.port}")
     return record
 
 
 def ssh_command(state: State, record: Record) -> list[str]:
     """Return the `ssh` argv that opens a shell on the recorded pod."""
-    # Every ssh line is gpunit's own: no ssh_config, no agent key (0002 design D1).
+    # Every ssh line is gpunit's own: no ssh_config, no agent key (decision D24).
     return [
         "ssh",
         "-F",
@@ -230,6 +225,14 @@ def _delete_pods(spec: Spec, provider: Provider, state: State) -> int:
     return 0
 
 
+def delete_volume(provider: Provider, volume_id: str) -> int:
+    """Return the delete's status; on a 204, record `deleted` in the ledger."""
+    code = provider.delete_volume(volume_id)
+    if code == 204:
+        ledger.record_deleted(volume_id)
+    return code
+
+
 def sweep_window(state: State, provider: Callable[[], Provider]) -> None:
     """Delete the window volume once its end has passed; build `provider` only then.
 
@@ -238,12 +241,11 @@ def sweep_window(state: State, provider: Callable[[], Provider]) -> None:
     window = state.window()
     if window is None or not window.ends_within(0):
         return
-    code = provider().delete_volume(window.id)
+    code = delete_volume(provider(), window.id)
     if code == 204:
         state.clear_window()
-        # A record beside the mark: the create came back. 0011 design D2.
+        # A record beside the mark: the create came back. decision D43.
         state.clear_volume_pending()
-        ledger.record_deleted(window.id)
         log.say(f"volume {window.id} passed its ceiling at {window.ends}; deleted")
     else:
         log.say(
@@ -343,8 +345,8 @@ def _create(
         log.say(f"creating on {card}")
         try:
             pod_id = provider.create(spec, card, pubkey, spec.ceiling_s, nonce=nonce)
-        except Refused as refusal:
-            log.say(str(refusal))
+        except Unplaceable as unplaceable:
+            log.say(str(unplaceable))
             continue
         except Lost as lost:
             log.say(str(lost))
@@ -373,7 +375,7 @@ def _wait(spec: Spec, provider: Provider, state: State, record: Record) -> Recor
             )
         if info is None:
             return None
-        # RunPod calls the create's data centres preferred: 0013 design D8.
+        # RunPod calls the create's data centres preferred: decision D26.
         if not spec.allows(info.datacenter):
             if info.datacenter is not None:
                 _tear_down(
@@ -399,50 +401,6 @@ def _wait(spec: Spec, provider: Provider, state: State, record: Record) -> Recor
     return ready
 
 
-def _verify_host_key(
-    spec: Spec, provider: Provider, state: State, record: Record, nonce: str
-) -> None:
-    # The fingerprint comes over the authenticated API, never over the connection
-    # it vouches for; nothing connects until the two agree.
-    def read() -> str | None:
-        # The last LOG_TAIL lines alone: RunPod's `since` reads the same tail (0010
-        # design D14), so a key line a heavy boot pushes out of it is not read.
-        lines = provider.log(record.id, tail=LOG_TAIL)
-        if printed := fingerprint(lines, nonce):
-            return printed
-        # Judged on a read that holds the whole log, its first line boot's
-        # `step: the ceiling`, whose key line is boot's own: a full tail can hold
-        # only a command's echo of an older one.
-        if len(lines) < LOG_TAIL and old_boot(lines):
-            _tear_down(
-                spec,
-                provider,
-                state,
-                "the image's boot.sh prints no session nonce; "
-                "ADD boot.sh from gpunit v0.6.0",
-            )
-        return None
-
-    printed = _poll(LOG_WAIT_S, read)
-    if printed is None:
-        _tear_down(spec, provider, state, f"no host-key line within {LOG_WAIT_S}s")
-    scanned = _poll(SCAN_WAIT_S, lambda: _scan(str(record.host), int(record.port or 0)))
-    if scanned is None:
-        _tear_down(
-            spec, provider, state, f"no host-key scan answered within {SCAN_WAIT_S}s"
-        )
-    served = _fingerprint_of(scanned)
-    if served != printed:
-        _tear_down(
-            spec,
-            provider,
-            state,
-            f"the pod's host key {served} does not match the printed {printed}",
-        )
-    state.write_known_hosts(scanned)
-    log.say(f"host key verified: {printed}")
-
-
 def _poll(seconds: int, attempt: Callable[[], T | None]) -> T | None:
     deadline = CLOCK.monotonic() + seconds
     while True:
@@ -450,32 +408,6 @@ def _poll(seconds: int, attempt: Callable[[], T | None]) -> T | None:
         if found is not None or CLOCK.monotonic() >= deadline:
             return found
         CLOCK.sleep(POLL_S)
-
-
-def _scan(host: str, port: int) -> str | None:
-    """Return the pod's Ed25519 host key as a known-hosts line, or None."""
-    done = subprocess.run(
-        ["ssh-keyscan", "-T", "10", "-t", "ed25519", "-p", str(port), host],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    lines = [
-        line for line in done.stdout.splitlines() if line and not line.startswith("#")
-    ]
-    return lines[0] if lines else None
-
-
-def _fingerprint_of(known_hosts_line: str) -> str | None:
-    done = subprocess.run(
-        ["ssh-keygen", "-lf", "-"],
-        input=known_hosts_line + "\n",
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    fields = done.stdout.split()
-    return fields[1] if done.returncode == 0 and len(fields) > 1 else None
 
 
 def _tear_down(spec: Spec, provider: Provider, state: State, reason: str) -> NoReturn:

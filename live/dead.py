@@ -1,9 +1,9 @@
-"""Prove a container that exits at once ends `up`'s wait (0006 design D6).
+"""Prove a container that exits at once ends `up`'s wait.
 
 e.g. `RUNPOD_API_KEY=<key> python live/dead.py` prints the price, boots the dead
 image, deletes what `up` left, says how `up` exited and why, shows that no pod is
 left, and exits 0 when `check` passes. RunPod may restart the container, so the
-reason can be the wait's deadline (0010 design D10). It refuses, with no `up` and
+reason can be the wait's deadline (decision D6). It refuses, with no `up` and
 no `down`, when this checkout already records a pod: `down` would delete it.
 """
 

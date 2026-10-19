@@ -1,7 +1,7 @@
 """The live scripts' shared steps: gpunit's argv, the price, the verdict, the window.
 
 e.g. `window(gpunit("volume", "up", …), gpunit("volume", "down", …), body, run)`
-runs `up`, then `body`, then `down`; why each live run holds one: 0010 design D10.
+runs `up`, then `body`, then `down`; why each live run holds one: decision D6.
 """
 
 import contextlib

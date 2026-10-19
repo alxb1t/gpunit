@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from email.message import Message
 from typing import IO, Any, TypeVar
 
-from gpunit import __version__, log
+from gpunit import contract, log
 from gpunit.provider import (
     DELETED,
     GpuInfo,
@@ -19,13 +19,14 @@ from gpunit.provider import (
     NoImage,
     PodCost,
     PodInfo,
-    Refused,
     Unknown,
+    Unplaceable,
     VolumeCost,
     VolumeInfo,
     pod_name,
 )
 from gpunit.spec import Spec
+from gpunit.version import __version__
 
 API = "https://api.runpod.io/v2"
 # Bounded, so a stalled read cannot hold a poll past its deadline.
@@ -115,18 +116,13 @@ class RunPod:
     def create(
         self, spec: Spec, gpu: str, pubkey: str, ceiling_s: int, *, nonce: str
     ) -> str:
-        """Return the new pod's id; raise `Refused` on a 400, else `Lost`."""
+        """Return the new pod's id; raise `Unplaceable` on a 400, else `Lost`."""
         card: dict[str, object] = {"id": gpu, "count": 1}
         if spec.ram_gb is not None:
             card["minRamPerGpu"] = spec.ram_gb
         if spec.cuda is not None:
             card["minCudaVersion"] = spec.cuda
-        env = {
-            **spec.env,
-            "PUBLIC_KEY": pubkey,
-            "GPUNIT_CEILING": str(ceiling_s),
-            "GPUNIT_NONCE": nonce,
-        }
+        env = contract.pod_env(spec, pubkey, ceiling_s, nonce, volume_path=VOLUME_PATH)
         placement: dict[str, object] = {}
         if spec.datacenters:
             placement = {"dataCenterIds": list(spec.datacenters)}
@@ -140,8 +136,6 @@ class RunPod:
                 "mounts": {"network": [{"volumeId": spec.volume, "path": VOLUME_PATH}]},
                 "dataCenterIds": [datacenter],
             }
-            # The pod reads its volume in gpunit's words, not the provider's (0004 D7).
-            env |= {"GPUNIT_VOLUME_ID": spec.volume, "GPUNIT_VOLUME_PATH": VOLUME_PATH}
         body: dict[str, object] = {
             "name": pod_name(spec.project),
             "image": spec.image,
@@ -154,7 +148,7 @@ class RunPod:
         }
         answer = self._call("POST", "/pods", body)
         if answer.status == 400:
-            raise Refused(_report(f"create on {gpu!r}", answer))
+            raise Unplaceable(_report(f"create on {gpu!r}", answer))
         try:
             pod_id = answer.json(201)["id"]
         except (TypeError, KeyError, ValueError):
@@ -185,7 +179,7 @@ class RunPod:
         With `since`, an RFC 3339 time, return the lines from then on instead, among
         the provider's longest tail: RunPod's last 5000, so a line before them is lost.
         """
-        # RunPod's own `since` sends no past line, so it is the tail's: 0010 design D14.
+        # RunPod's own `since` sends no past line, so it is the tail's: decision D22.
         query = urllib.parse.urlencode(
             {"tail": tail if since is None else MAX_TAIL, "source": "container"}
         )
@@ -311,7 +305,7 @@ class RunPod:
             raise Lost(_report("data centre read", answer)) from None
 
     def create_volume(self, name: str, size_gb: int, datacenter: str) -> str:
-        """Return the new volume's id; raise `Refused` on a 400 or 422, else `Lost`."""
+        """Return the volume's id; raise `Unplaceable` on a 400 or 422, else `Lost`."""
         body = {
             "name": name,
             "size": size_gb,
@@ -321,7 +315,7 @@ class RunPod:
         answer = self._call("POST", "/network-volumes", body)
         call = f"volume create in {datacenter!r}"
         if answer.status in (400, 422):
-            raise Refused(_report(call, answer))
+            raise Unplaceable(_report(call, answer))
         try:
             volume_id = answer.json(201)["id"]
         except (TypeError, KeyError, ValueError):

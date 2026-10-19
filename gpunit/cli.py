@@ -10,7 +10,6 @@ from typing import NoReturn
 from gpunit import lifecycle, log, run
 from gpunit.provider import Lost, Provider
 from gpunit.runpod import RunPod
-from gpunit.serve import table
 from gpunit.spec import Spec, load_spec, parse_ceiling
 from gpunit.state import State
 
@@ -225,6 +224,9 @@ def _volume(
 
 
 def _known(model: str, models: Path | None) -> None:
+    # Here, not at the top: the serve layer loads for a model, not for every verb.
+    from gpunit.serve import table
+
     found = table.rows(models)
     if found.replaced:
         log.say(f"{found.user} replaces the bundled {', '.join(found.replaced)}")

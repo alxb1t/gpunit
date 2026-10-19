@@ -4,6 +4,8 @@ A RunPod GPU session any project can open, use and close: the `gpunit` CLI and t
 
 > **This file is what is true of this repo. It is not a script.** What to do comes from the task you were given.
 
+**Read [docs/README.md](docs/README.md) first:** the guide's map, and where to start for a task.
+
 ## The quality gate — `make gate`
 
 The gate is **`make gate`**, run at the repository root. The `Makefile` recipe is the one list of its commands;
@@ -15,48 +17,31 @@ in a task.
 ## How a change is cut here
 
 Each version is one change, cut, built, checked and released with the MinionsFactory `mf-*` skills. The OpenSpec
-CLI is recorded, not pinned: `@fission-ai/openspec@1.11.0`, resolved on `PATH`.
+CLI is recorded, not pinned: `@fission-ai/openspec@1.11.0`, resolved on `PATH`. The version lives in
+`gpunit/version.py`, which hatch reads; the release bumps it there.
 
-## Layout — where things live here
+## Where things live
 
-- **`gpunit/`** — the package: `cli.py` (verbs, exit codes), `spec.py` (`gpunit.toml`), `state.py` (`.gpunit/`
-  and `~/.local/state/gpunit`), `provider.py` (the `Provider` seam), `runpod.py` (RunPod's REST v2), `lifecycle.py`
-  (`up · status · down · ssh`), `volume.py` (`volume up · down`: the window volume), `library.py` (the public
-  session: signals, tunnel, teardown), `run.py` (`run`, on the library), `log.py` (gpunit's lines, to stderr or a
-  sink), `ledger.py` (each pod's and window volume's project, under the home directory), `spend.py` (`spend`: the
-  billing by project).
-- **`gpunit/serve/`** — `gpunit serve`: `models.toml` (the model table and the image's digest), `table.py` (a row's
-  `Spec`; the user file's lookup and merge), `session.py` (the price, the wait, the `--api` hold), `chat.py` (the
-  streamed chat).
-- **`boot/boot.py`** — the pod's entrypoint, one stdlib file for Python 3.10: the ceiling, sshd, the fingerprint,
-  the command.
-- **`serve/Dockerfile`** — the serve image, vLLM by digest; built on request by
-  `.github/workflows/build-serve-image.yml`. **`serve/launch.py`** — its command: `HF_HOME` on a volume,
-  logging and telemetry off, then vLLM.
-- **`tests/`** — `fakes.py` (`FakeProvider`, `FakeOpener`), `fixtures/` (v2 bodies), one `test_*.py` per module;
-  `boot.py` has `tests/test_boot_steps.py` (each step alone) and `tests/test_boot.py` (the whole run); every test
-  carries `@pytest.mark.spec("<scenario key>")`.
-- **`live/`** — the metered proof on a real pod, run by hand: `live/*.py`, one script a `make live-*` target, and
-  `live/window.py`, their shared steps and the window volume's teardown; `live/models.toml`, the user file
-  `make live-serve` proves.
-- **`docs/threat-model.md`** — what gpunit protects, from whom, and what holds: the assets, the flows, each threat's
-  status and the probe's results.
-- **`openspec/`** — the living specs in `specs/`; the changes in `changes/`, the shipped ones in `changes/archive/`.
-- **`.minions/`** — run artefacts, **gitignored**; nothing in it is tracked.
-- **`CHANGELOG.md`** — Keep a Changelog: each phase appends under `## [Unreleased]`, the release cuts it.
+The package's modules, their layers and the test seams: [docs/modules.md](docs/modules.md). Beside the package:
+`boot/` (the pod's entrypoint), `serve/` (the serve image), `live/` (the metered proofs), `tests/`, `docs/` (the
+guide), `openspec/` (the specs and the changes) and `CHANGELOG.md`. **`.minions/` holds run artefacts and is
+gitignored**; nothing in it is tracked.
 
-## Invariants
+## What holds
 
-- **No runtime dependency:** `dependencies = []` in `pyproject.toml`; the stdlib carries the package.
-- **The key never on argv:** `runpod.py` and `boot.py` send it in a request header
-  (`test_gpu_reads_the_memory_and_the_secure_price`, `test_the_commands_end_stops_the_pod`).
-- **The ceiling is required:** no default, no pod without it (`test_no_ceiling_no_pod`).
-- **A 404 is never gone:** `down` keeps the record (`test_a_404_keeps_the_record`).
-- **`make live`, `make live-volume`, `make live-serve`, `make live-dead` and `make live-serve-dead` are never in CI:**
-  they rent a real pod or volume; the gate fakes every provider answer.
-- **A patch closes cards and fixes; it adds no verb, `gpunit.toml` key or exit code.**
-- **A change that touches a trust boundary updates `docs/threat-model.md`**: a new flow, secret, file mode, network
-  call or log line.
+The rules the code follows, each with the test that holds it: [docs/principles.md](docs/principles.md). The
+decisions behind them: [docs/decisions.md](docs/decisions.md).
+
+## The rules for a change
+
+- An archived change is a record; a finding against it is fixed in a new change (decision D7).
+- A patch closes cards and fixes; it adds no verb, `gpunit.toml` key or exit code (decision D8).
+- A change that touches a trust boundary updates `docs/threat-model.md`: a new flow, secret, file mode, network call
+  or log line (decision D9).
+- A decision made or overturned edits `docs/decisions.md`; the change's own `design.md` keeps the history.
+- A new module edits `tests/test_layers.py`'s `LAYERS` and `docs/modules.md` together.
+- A refactor changes no spec scenario, message or exit code (decision D51).
+- The live targets rent a real pod or volume: they run by hand, never in CI (decision D6).
 
 ## Guardrails (hold for every role)
 

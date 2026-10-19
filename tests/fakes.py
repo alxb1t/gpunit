@@ -135,7 +135,7 @@ class FakeProvider:
         """Answer the next log read in its script: `since_logs` for a `since` read.
 
         A `since` read is a later read of the same tail, from then on: no test scripts
-        it a line a tail read at the same poll has lost (0010 design D14).
+        it a line a tail read at the same poll has lost (decision D22).
         """
         self.calls.append(("log", (pod_id, tail, since)))
         return list(_next(self.logs if since is None else self.since_logs))

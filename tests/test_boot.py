@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from boot.boot import KEY_GAP_S
-from gpunit.provider import fingerprint
+from gpunit.contract import fingerprint
 from tests.helpers import install_stubs
 
 BOOT = Path(__file__).parent.parent / "boot" / "boot.py"
@@ -452,7 +452,7 @@ def test_the_fingerprint_line(pod: dict[str, str]) -> None:
     # The pause that keeps the key line ahead of `step: the command` in RunPod's log.
     assert KEY_GAP in result.order
     # gpunit accepts a key line only once boot's `step: the command` line follows it
-    # (0006 design D1): rewording that line would leave every session unverified.
+    # (decision D22): rewording that line would leave every session unverified.
     assert fingerprint(result.out.splitlines(), NONCE) == FINGERPRINT
 
 
