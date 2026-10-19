@@ -19,16 +19,19 @@ SCANNED_FILES = ("Makefile", "pyproject.toml", "README.md", "CLAUDE.md")
 # Records of past runs, not citations.
 RECORDS = ("*last_run.txt",)
 DECISIONS = "docs/decisions.md"
-ARCHIVED = re.compile(r"[0-9]{4} (?:design )?D[0-9]+")
+ARCHIVED = re.compile(r"[0-9]{4}(?:-[a-z0-9-]+)?(?: design)? D[0-9]+|[0-9]{4}·D[0-9]+")
 CITED = re.compile(r"\b[Dd]ecision (D[0-9]+)\b")
-LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
+LINK = re.compile(r'\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)')
 LINKED_DECISION = re.compile(r"decisions\.md#(d[0-9]+)\b")
 HEADING = re.compile(r"^#{1,6}\s+(.+?)\s*#*\s*$")
 FENCE = re.compile(r"^```.*?^```", re.MULTILINE | re.DOTALL)
 CODE = re.compile(r"`[^`\n]*`")
 SPAN = re.compile(r"`([^`\n]+)`")
 PATH = re.compile(r"[\w.-]+/[\w./{},*-]*(?:::[\w.]+)?")
-LINE = re.compile(r"(?:[\w./-]+\.[A-Za-z]\w*|[\w./-]*Dockerfile[\w.]*)?:\d+(?:-\d+)?")
+# A file name holds a letter, so `127.0.0.1:8000` is an address, not a line.
+LINE = re.compile(r"(?:[\w./-]*[A-Za-z][\w./-]*)?:\d+(?:-\d+)?")
+# In prose, a dotted file and a line, not inside a URL: `see gpunit/x.py:12`.
+PROSE_LINE = re.compile(r"(?<![\w./:-])[\w./-]+\.[A-Za-z]\w*:\d+(?:-\d+)?")
 
 
 def guide(root: Path) -> list[Path]:
@@ -174,12 +177,17 @@ def unresolved(root: Path, tops: Collection[str]) -> list[str]:
     """Return each guide path, symbol or line citation that names nothing at `root`.
 
     e.g. `gpunit/lifecycle.py::up` passes while `up` is defined;
-    `gpunit/lifecycle.py:75` is a line citation, and fails.
+    `gpunit/lifecycle.py:75` is a line citation, and fails, in a span or in prose.
     """
     faults = []
     for page in sorted((root / "docs").glob("*.md")):
         where = page.relative_to(root).as_posix()
-        for span in SPAN.findall(FENCE.sub("", page.read_text(encoding="utf-8"))):
+        text = FENCE.sub("", page.read_text(encoding="utf-8"))
+        faults += [
+            f"{where}: {line} cites a line"
+            for line in PROSE_LINE.findall(CODE.sub("", text))
+        ]
+        for span in SPAN.findall(text):
             if LINE.fullmatch(span):
                 faults.append(f"{where}: {span} cites a line")
                 continue
@@ -211,6 +219,7 @@ def test_a_broken_link_is_caught(tmp_path: Path) -> None:
                 "[ok](b.md#d22--the-host-key) [ok](b.md#the-rules)"
                 " [ok](b.md#the-rules-1) [ok](#a) [ok](../README.md) [web](https://example.com/x.md)\n"
                 "[gone](missing.md) [none](b.md#nope) `[code](missing.md)`\n"
+                '[ok](b.md "Title") [titled](gone.md "Title")\n'
                 "```\n[fenced](missing.md)\n```\n# A\n"
             ),
             "docs/b.md": "### D22 · The host key\n## The rules\n## The rules\n",
@@ -221,6 +230,7 @@ def test_a_broken_link_is_caught(tmp_path: Path) -> None:
     assert broken_links(root) == [
         "README.md: docs/a.md#b",
         "docs/a.md: b.md#nope",
+        "docs/a.md: gone.md",
         "docs/a.md: missing.md",
     ]
 
@@ -255,11 +265,14 @@ def test_no_archived_citation_is_left() -> None:
 def test_an_archived_citation_is_caught(tmp_path: Path) -> None:
     # Joined, so this file holds no citation of its own.
     cited = " ".join(["0010", "design", "D10"])
+    named = " ".join(["0016-x", "design", "D3"])
+    dotted = "·".join(["0014", "D4"])
     root = tree(
         tmp_path,
         {
             DECISIONS: f"- **Made by:** {cited}\n",
             "gpunit/x.py": f"# why: {cited}\n",
+            "gpunit/y.py": f"# why: ({named}), {dotted}; not 0015·F23 or 0014·S1\n",
             "Makefile": f"# ({cited.replace('design ', '')})\n",
             "live/last_run.txt": f"{cited}\n",
         },
@@ -268,6 +281,8 @@ def test_an_archived_citation_is_caught(tmp_path: Path) -> None:
     assert archived(root) == [
         f"Makefile: {cited.replace('design ', '')}",
         f"gpunit/x.py: {cited}",
+        f"gpunit/y.py: {dotted}",
+        f"gpunit/y.py: {named}",
     ]
 
 
@@ -286,13 +301,17 @@ def test_a_missing_symbol_or_a_line_citation_is_caught(tmp_path: Path) -> None:
                 "`gpunit/x.py::up` `gpunit/x.py::N` `gpunit/x.py::C.m` `gpunit/*.py`"
                 " `tests/test_<m>.py` `vllm/arg_utils.py` `127.0.0.1:8000`\n"
                 "`gpunit/x.py::gone` `gpunit/{x,y}.py` `gpunit/x.py:75` `:12-14`\n"
-                "```\n`gpunit/fenced.py`\n```\n"
+                "`Makefile:12`, see gpunit/lifecycle.py:75, not 127.0.0.1:8000"
+                " or https://example.com:8080/x\n"
+                "```\n`gpunit/fenced.py`\ngpunit/fenced.py:3\n```\n"
             ),
         },
     )
 
     assert unresolved(root, {"gpunit", "tests"}) == [
         "docs/a.md: :12-14 cites a line",
+        "docs/a.md: Makefile:12 cites a line",
+        "docs/a.md: gpunit/lifecycle.py:75 cites a line",
         "docs/a.md: gpunit/x.py defines no gone",
         "docs/a.md: gpunit/x.py:75 cites a line",
         "docs/a.md: gpunit/y.py does not exist",
