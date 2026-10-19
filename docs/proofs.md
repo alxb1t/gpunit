@@ -17,13 +17,13 @@ Each quote is a line its tail holds, word for word.
   no session is recorded
   ```
 
-- **A dead container ended by the dead-pod rule:** [`live/last_run.txt`](../live/last_run.txt), `make live-dead`,
-  2026-10-17, `0012-boot-in-python`.
+- **A dead pod ended by the dead-pod rule:** [`live/serve_last_run.txt`](../live/serve_last_run.txt),
+  `make live-serve-dead`, 2026-10-16, `0010-on-demand-volumes`.
 
   ```
-  2026-10-17T15:47:39Z refused: pod sfv6ql737yuakr got no host and port 22 within 120s
-  up exited 1 after 126s
-  no session is recorded
+  2026-10-16T12:16:58Z refused: the pod stopped while the model loaded
+  2026-10-16T12:16:59Z pod 5k87rljyfb9bse deleted
+  check passed: the dead pod ended the wait and was deleted
   ```
 
 - **A tool call on the `qwen3.8-27b` row:** [`live/serve_last_run.txt`](../live/serve_last_run.txt),
