@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.3] - 2026-11-03
+
+Gate: local 0m18s · CI not read under mf-ship · 0.11.2: local 0m13s · CI not read under mf-ship
+
 ### Fixed
 
 - `volume down` and the ceiling's sweep clear a window volume RunPod no longer knows: its delete and read answer

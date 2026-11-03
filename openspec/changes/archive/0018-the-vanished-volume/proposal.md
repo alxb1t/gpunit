@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: v0.11.3
 ---
 
 # 0018 — the vanished volume
