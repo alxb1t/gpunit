@@ -485,7 +485,10 @@ class Answered(urllib.response.addinfourl):
 @pytest.mark.spec("boot:needs:no-curl")
 @pytest.mark.spec("boot:stop:retries")
 def test_a_redirect_is_a_failed_stop_never_followed(
-    pod: Pod, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    pod: Pod,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    no_proxy: None,
 ) -> None:
     api = Redirecting()
     # urllib's own opener and redirect handling, on a faked HTTPS answer.

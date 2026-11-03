@@ -5,37 +5,37 @@ relative to the repository's root.
 
 ## Progress
 
-- [ ] 1 — The sandbox-safe gate
+- [x] 1 — The sandbox-safe gate
 - [ ] 2 — The root documents
 - [ ] 3 — **HUMAN** — The ruleset and CI
 
 ## 1 — The sandbox-safe gate
 
-- [ ] 1.1 **HALT CHECK** The redirect tests pass with the proxy variables unset, per [D3](design.md#d3). No file changes.
+- [x] 1.1 **HALT CHECK** The redirect tests pass with the proxy variables unset, per [D3](design.md#d3). No file changes.
   Verify: `env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy uv run pytest -q --no-cov tests/test_runpod.py::test_a_redirect_is_not_followed tests/test_boot_steps.py::test_a_redirect_is_a_failed_stop_never_followed` exits 0.
-- [ ] 1.2 Add the `no_proxy` fixture of [D3](design.md#d3) to `tests/conftest.py`, and request it in
+- [x] 1.2 Add the `no_proxy` fixture of [D3](design.md#d3) to `tests/conftest.py`, and request it in
   `test_a_redirect_is_not_followed` (`tests/test_runpod.py`) and `test_a_redirect_is_a_failed_stop_never_followed`
   (`tests/test_boot_steps.py`).
   Verify: `grep -c 'def no_proxy' tests/conftest.py` prints `1`, and `uv run pytest -q --no-cov tests/test_runpod.py tests/test_boot_steps.py` exits 0.
-- [ ] 1.3 Register the `e2e` mark in `pyproject.toml` and reword its coverage comment, per
+- [x] 1.3 Register the `e2e` mark in `pyproject.toml` and reword its coverage comment, per
   [The tests moved](design.md#the-tests-moved). Add the autouse `fixed_port` fixture of [D1](design.md#d1) to
   `tests/conftest.py`, and mark `test_a_busy_local_port_is_skipped_before_the_price` `e2e`.
   Verify: `grep -c '"e2e: ' pyproject.toml` prints `1`, `grep -c 'end-to-end' pyproject.toml` prints `0`, and `grep -c 'def fixed_port' tests/conftest.py` prints `1`.
-- [ ] 1.4 **HALT CHECK** Serve's tests pass past the faked probe under this build's sandbox, per [D1](design.md#d1).
+- [x] 1.4 **HALT CHECK** Serve's tests pass past the faked probe under this build's sandbox, per [D1](design.md#d1).
   A failure past the bind means D1 is wrong. No file changes.
   Verify: `uv run pytest -q --no-cov -m "not e2e" tests/test_serve_session.py tests/test_cli.py` exits 0.
-- [ ] 1.5 Mark `e2e` every test of [The tests moved](design.md#the-tests-moved): `pytestmark` in
+- [x] 1.5 Mark `e2e` every test of [The tests moved](design.md#the-tests-moved): `pytestmark` in
   `tests/test_tool_call.py`, `@pytest.mark.e2e` on each named test in `tests/test_library.py`, `tests/test_run.py` and
   `tests/test_serve_chat.py`.
   Verify: `uv run pytest --collect-only -q -m e2e | grep -c '::'` prints `32`, and `uv run pytest --collect-only -q -m "not e2e" | grep -c '::'` prints `535`.
-- [ ] 1.6 In `Makefile`, the gate's `pytest` line takes `-m "not e2e"`, and the `e2e` target joins it and `.PHONY`,
+- [x] 1.6 In `Makefile`, the gate's `pytest` line takes `-m "not e2e"`, and the `e2e` target joins it and `.PHONY`,
   per [The tests moved](design.md#the-tests-moved).
   Verify: `make -n e2e` prints `uv run pytest -m e2e`, and `grep -c -F 'uv run pytest --cov -m "not e2e"' Makefile` prints `1`. `make e2e` binds loopback, so CI runs it, in 3.2.
-- [ ] 1.7 Add `      - run: make e2e` after `      - run: make gate` in `.github/workflows/gate.yml`, per
+- [x] 1.7 Add `      - run: make e2e` after `      - run: make gate` in `.github/workflows/gate.yml`, per
   [D4](design.md#d4). In `tests/test_ci.py`, `test_the_gate_workflow_runs_the_gate` also asserts a `make e2e` step
   after the `make gate` step.
   Verify: `grep -c -x '      - run: make e2e' .github/workflows/gate.yml` prints `1`, `grep -c 'make e2e' tests/test_ci.py` prints a number of at least `1`, and `uv run pytest -q --no-cov tests/test_ci.py` exits 0.
-- [ ] 1.8 Add D54 to the end of `docs/decisions.md`, per [D54's text](design.md#d54s-text).
+- [x] 1.8 Add D54 to the end of `docs/decisions.md`, per [D54's text](design.md#d54s-text).
   Verify: `grep -c '^### D54 · The gate runs inside a sandboxed worker$' docs/decisions.md` prints `1`, and `uv run pytest -q --no-cov tests/test_docs.py` exits 0.
 
 ## 2 — The root documents

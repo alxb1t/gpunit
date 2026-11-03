@@ -78,6 +78,7 @@ class SignallingProvider(FakeProvider):
 
 
 @pytest.mark.spec("library:session:yields-the-session")
+@pytest.mark.e2e
 def test_the_block_sees_the_session(
     cwd: Path, free_port: int, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -244,6 +245,7 @@ def test_another_thread_is_refused(cwd: Path) -> None:
 
 
 @pytest.mark.spec("library:tunnel:reopened")
+@pytest.mark.e2e
 def test_a_dead_tunnel_is_reopened(
     cwd: Path, free_port: int, dying_tunnel: Path
 ) -> None:
@@ -264,6 +266,7 @@ def test_a_dead_tunnel_is_reopened(
 
 
 @pytest.mark.spec("library:tunnel:taken-port-refuses")
+@pytest.mark.e2e
 def test_a_taken_port_ends_the_block(
     cwd: Path, free_port: int, gated_tunnel: Path, saved_handlers: None
 ) -> None:
@@ -280,6 +283,7 @@ def test_a_taken_port_ends_the_block(
 
 
 @pytest.mark.spec("library:tunnel:taken-during-wait-refuses")
+@pytest.mark.e2e
 def test_a_port_taken_while_the_tunnel_waits_refuses(
     cwd: Path,
     free_port: int,
@@ -323,6 +327,7 @@ class TakingProvider(FakeProvider):
 
 
 @pytest.mark.spec("library:tunnel:taken-before-open-refuses")
+@pytest.mark.e2e
 def test_a_port_taken_while_the_pod_came_up_refuses(
     cwd: Path, free_port: int, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -341,6 +346,7 @@ def test_a_port_taken_while_the_pod_came_up_refuses(
 
 
 @pytest.mark.spec("library:tunnel:swallowed-refusal-keeps-signals")
+@pytest.mark.e2e
 def test_a_swallowed_refusal_leaves_the_signals_live(
     cwd: Path, free_port: int, gated_tunnel: Path, saved_handlers: None
 ) -> None:
@@ -373,6 +379,7 @@ def binds_v6_loopback() -> bool:
 
 
 @pytest.mark.spec("library:tunnel:each-family-forwarded")
+@pytest.mark.e2e
 def test_each_loopback_family_is_its_own_forward(cwd: Path, free_port: int) -> None:
     with_port(cwd, free_port)
 
@@ -386,6 +393,7 @@ def test_each_loopback_family_is_its_own_forward(cwd: Path, free_port: int) -> N
 
 
 @pytest.mark.spec("library:tunnel:each-family-forwarded")
+@pytest.mark.e2e
 def test_a_host_without_v6_loopback_forwards_v4_alone(
     cwd: Path, free_port: int, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -399,6 +407,7 @@ def test_a_host_without_v6_loopback_forwards_v4_alone(
 
 
 @pytest.mark.spec("library:tunnel:connect-bounded")
+@pytest.mark.e2e
 def test_the_tunnels_connect_is_bounded(cwd: Path, free_port: int) -> None:
     with_port(cwd, free_port)
 

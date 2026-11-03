@@ -25,7 +25,11 @@ def test_the_gate_workflow_runs_the_gate() -> None:
     text = GATE.read_text(encoding="utf-8")
 
     assert triggers(text) == ["push", "pull_request"]
-    assert re.search(r"^\s+- run: make gate$", text, re.MULTILINE)
+    gate = re.search(r"^\s+- run: make gate$", text, re.MULTILINE)
+    e2e = re.search(r"^\s+- run: make e2e$", text, re.MULTILINE)
+    assert gate is not None
+    assert e2e is not None
+    assert gate.start() < e2e.start()
     assert f"run: npm install -g @fission-ai/openspec@{openspec_version()}\n" in text
 
 

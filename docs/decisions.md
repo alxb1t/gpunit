@@ -524,3 +524,11 @@ names and imports alone.**
 
 - **Why:** The gate's result shows without a clone.
 - **Made by:** `0016·D3`.
+
+### D54 · The gate runs inside a sandboxed worker
+
+**`make gate` binds no loopback socket and reaches no host but the package index; a test whose proof is a real loopback
+socket is marked `e2e` and runs in `make e2e`, which `.github/workflows/gate.yml` runs after the gate.**
+
+- **Why:** MinionsFactory runs each phase's gate in an OS sandbox that refuses a loopback bind.
+- **Made by:** `0017·D2`.
