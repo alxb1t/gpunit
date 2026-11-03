@@ -604,6 +604,12 @@ def test_the_volume_listing_walks_the_cursor_and_keeps_the_name() -> None:
     assert provider.volumes("gpunit-isekai") == ["v1", "v3"]
     assert opener.requests[0].full_url.endswith("/network-volumes?limit=1000")
     assert "cursor=c1" in opener.requests[1].full_url
+    provider, opener = runpod(
+        (200, page([ours, other], "c1", "networkVolumes")),
+        (200, page([again], None, "networkVolumes")),
+    )
+    assert provider.volume_ids() == ["v1", "v2", "v3"]
+    assert "cursor=c1" in opener.requests[1].full_url
 
 
 @pytest.mark.spec("volume:down:sweeps-by-name")

@@ -83,6 +83,7 @@ class FakeProvider:
         volume_creates: Sequence[str | Exception] = ("vol-1",),
         volume_listings: Sequence[list[str] | Exception] = ([],),
         volume_deletes: Mapping[str, int] | None = None,
+        account_volumes: Sequence[str] | Exception = (),
     ) -> None:
         """Script the answers; a card or volume not named answers `CARD` or fails.
 
@@ -103,6 +104,7 @@ class FakeProvider:
         self.volume_creates = list(volume_creates)
         self.volume_listings = list(volume_listings)
         self.volume_deletes = dict(volume_deletes or {})
+        self.account_volumes = account_volumes
         self.calls: list[tuple[str, tuple[object, ...]]] = []
 
     def named(self, verb: str) -> list[tuple[object, ...]]:
@@ -179,6 +181,11 @@ class FakeProvider:
         """Answer the next volume listing in the script."""
         self.calls.append(("volumes", (name,)))
         return list(_raise_or(_next(self.volume_listings)))
+
+    def volume_ids(self) -> list[str]:
+        """Answer the account's scripted volumes."""
+        self.calls.append(("volume_ids", ()))
+        return list(_raise_or(self.account_volumes))
 
     def delete_volume(self, volume_id: str) -> int:
         """Answer the volume's scripted status, or 204."""

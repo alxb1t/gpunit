@@ -387,7 +387,8 @@ chat and `--api`'s two lines, or to `spend`'s report.
 
 - **The ceiling is required.** `boot.py` stops the pod at it, whatever happens to the laptop.
 - **The pod stops; `down` deletes.** A stopped pod bills storage, not GPU, until the next `gpunit down`.
-- **A 404 is not "gone".** A wrong key gets a 404 too; `down` keeps the record and exits `1`.
+- **A 404 is not "gone".** A wrong key gets a 404 too; `down` keeps a pod's record and exits `1`. A window
+  volume is gone only when the account's listing lacks it too; then its record clears (decision D55).
 - **A lost create exits `3`.** `.gpunit/pending` stays, and `down` sweeps every live `gpunit-<project>` pod.
 - **One session per project.** `up` refuses on a record, a pending create, or a listed pod.
 - **Secure cloud, port 22 only.** Other ports reach the laptop over the SSH tunnel, never a public proxy.

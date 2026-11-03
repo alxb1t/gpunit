@@ -3,7 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from gpunit import log
+from gpunit import ledger, log
+from gpunit.provider import Unknown
 from gpunit.state import State, Window
 from tests.fakes import RECORD, FakeProvider
 from tests.helpers import IMAGE, NO_REQUESTS, gpunit
@@ -81,3 +82,27 @@ def test_an_overdue_volume_is_deleted_first(
     else:
         assert state.window() is not None
         assert "ends=overdue" in captured.out
+
+
+@pytest.mark.spec("volume:gone:sweep-clears")
+@pytest.mark.parametrize(
+    ("listed", "cleared"), [([], True), (["v1"], False)], ids=["gone", "twin-listed"]
+)
+def test_the_sweep_clears_a_gone_volume(
+    listed: list[str], cleared: bool, cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    state = State(cwd)
+    state.write_window(Window("v1", "EU-RO-1", 60, log.utc(-60)))
+    state.mark_volume_pending()
+    provider = FakeProvider(
+        volumes={"v1": Unknown("RunPod does not know volume 'v1'")},
+        volume_deletes={"v1": 404},
+        account_volumes=listed,
+    )
+
+    assert gpunit(["status"], provider=provider) == 0
+    assert (state.window() is None) is cleared
+    assert (not state.volume_pending.exists()) is cleared
+    assert (ledger.deleted() == {"v1"}) is cleared
+    err = capsys.readouterr().err
+    assert ("and is gone; the record is cleared" in err) is cleared

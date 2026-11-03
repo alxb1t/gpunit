@@ -533,3 +533,15 @@ socket is marked `e2e` and runs in `make e2e`, which `.github/workflows/gate.yml
 
 - **Why:** MinionsFactory runs each phase's gate in an OS sandbox that refuses a loopback bind.
 - **Made by:** `0017·D2`.
+
+### D55 · A volume is gone when its read and the account's listing both lack it
+
+**A recorded volume whose read answers `404` and which the account's listing, read with the same key, does not hold is
+gone: `volume up` makes a new window, `volume down` and the ceiling's sweep clear the record. A pod's `404` still keeps
+its record (decision D23).**
+
+`gpunit/lifecycle.py::gone` holds the check; `gpunit/provider.py::Provider.volume_ids` is the listing.
+
+- **Why:** A key that fails the listing cannot pass for gone, and a volume deleted outside gpunit left a record
+  nothing cleared.
+- **Made by:** `0018·D1`.

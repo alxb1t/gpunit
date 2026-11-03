@@ -233,20 +233,44 @@ def delete_volume(provider: Provider, volume_id: str) -> int:
     return code
 
 
+def gone(provider: Provider, volume_id: str) -> bool:
+    """Return True when the volume's read answers 404 and the listing lacks it."""
+    # A wrong key gets a 404 too, but fails the listing: decision D55.
+    try:
+        provider.volume(volume_id)
+    except Unknown:
+        try:
+            return volume_id not in provider.volume_ids()
+        except Lost:
+            return False
+    except Lost:
+        pass
+    return False
+
+
 def sweep_window(state: State, provider: Callable[[], Provider]) -> None:
     """Delete the window volume once its end has passed; build `provider` only then.
 
-    A delete that fails keeps the record, and warns.
+    A delete that fails keeps the record, and warns, unless the volume is gone.
     """
     window = state.window()
     if window is None or not window.ends_within(0):
         return
-    code = delete_volume(provider(), window.id)
+    built = provider()
+    code = delete_volume(built, window.id)
     if code == 204:
         state.clear_window()
         # A record beside the mark: the create came back. decision D43.
         state.clear_volume_pending()
         log.say(f"volume {window.id} passed its ceiling at {window.ends}; deleted")
+    elif code == 404 and gone(built, window.id):
+        ledger.record_deleted(window.id)
+        state.clear_window()
+        state.clear_volume_pending()
+        log.say(
+            f"volume {window.id} passed its ceiling at {window.ends} "
+            "and is gone; the record is cleared"
+        )
     else:
         log.say(
             f"warning: volume {window.id} passed its ceiling at {window.ends}; its "

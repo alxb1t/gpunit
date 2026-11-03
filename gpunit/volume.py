@@ -83,8 +83,12 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
         if code == 204:
             state.clear_window()
             log.say(f"volume {window.id} deleted")
+        elif code == 404 and lifecycle.gone(provider, window.id):
+            ledger.record_deleted(window.id)
+            state.clear_window()
+            log.say(f"volume {window.id} is gone; the record is cleared")
         else:
-            # A 404 is never gone: a wrong key gets one too.
+            # A 404 is gone only when the listing lacks it too: decision D55.
             log.say(
                 f"delete of volume {window.id} answered HTTP {code}; the record is kept"
             )

@@ -6,7 +6,7 @@ from typing import NoReturn
 import pytest
 
 from gpunit import ledger, log
-from gpunit.provider import GpuInfo, Lost, Unplaceable
+from gpunit.provider import GpuInfo, Lost, Unknown, Unplaceable
 from gpunit.state import State
 from gpunit.volume import most_cost
 from tests.fakes import FakeProvider, TtyInput
@@ -328,11 +328,67 @@ def test_a_refused_delete_keeps_the_record(
     code: int, cwd: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     state = open_window(cwd, 3600)
-    provider = FakeProvider(volume_deletes={"v1": code})
+    provider = FakeProvider(
+        volumes={"v1": Unknown("RunPod does not know volume 'v1'")},
+        volume_deletes={"v1": code},
+        account_volumes=["v1"],
+    )
 
     assert gpunit(["volume", "down"], provider=provider) == 1
     assert state.window() is not None
     assert f"answered HTTP {code}; the record is kept" in capsys.readouterr().err
+
+
+@pytest.mark.spec("volume:gone:down-clears")
+def test_down_clears_a_gone_volume(
+    cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    state = open_window(cwd, 3600)
+    provider = FakeProvider(
+        volumes={"v1": Unknown("RunPod does not know volume 'v1'")},
+        volume_deletes={"v1": 404},
+    )
+
+    assert gpunit(["volume", "down"], provider=provider) == 0
+    assert not state.volume.exists()
+    assert ledger.deleted() == {"v1"}
+    assert "volume v1 is gone; the record is cleared" in capsys.readouterr().err
+
+
+@pytest.mark.spec("volume:gone:listed-kept")
+def test_down_keeps_a_volume_the_listing_holds(cwd: Path) -> None:
+    state = open_window(cwd, 3600)
+    provider = FakeProvider(
+        volumes={"v1": Unknown("RunPod does not know volume 'v1'")},
+        volume_deletes={"v1": 404},
+        account_volumes=["v7", "v1"],
+    )
+
+    assert gpunit(["volume", "down"], provider=provider) == 1
+    assert state.window() is not None
+    assert ledger.deleted() == set()
+
+
+@pytest.mark.spec("volume:gone:listing-lost-kept")
+@pytest.mark.parametrize(
+    "read",
+    [
+        Unknown("RunPod does not know volume 'v1'"),
+        Lost("volume read returned HTTP 500"),
+    ],
+    ids=["listing-lost", "read-lost"],
+)
+def test_down_keeps_the_record_when_a_read_fails(read: Exception, cwd: Path) -> None:
+    state = open_window(cwd, 3600)
+    provider = FakeProvider(
+        volumes={"v1": read},
+        volume_deletes={"v1": 404},
+        account_volumes=Lost("volume listing returned HTTP 401"),
+    )
+
+    assert gpunit(["volume", "down"], provider=provider) == 1
+    assert state.window() is not None
+    assert ledger.deleted() == set()
 
 
 @pytest.mark.spec("volume:down:refused-delete-kept")

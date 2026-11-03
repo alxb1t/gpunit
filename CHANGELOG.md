@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `volume down` and the ceiling's sweep clear a window volume RunPod no longer knows: its delete and read answer
+  `404` and the account's listing lacks it. A failed listing still keeps the record, so a wrong key never clears it.
+  D55 records it (`0018`).
+
 ## [0.11.2] - 2026-11-03
 
 Gate: local 0m13s · CI not read under mf-ship · 0.11.1: none
