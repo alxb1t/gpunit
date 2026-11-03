@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: v0.11.2
 ---
 
 # 0017 — mf readiness

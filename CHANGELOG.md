@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-11-03
+
+Gate: local 0m13s · CI not read under mf-ship · 0.11.1: none
+
 ### Changed
 
 - `make gate` binds no loopback socket, so it passes in a sandboxed worker: serve's port probe and the tunnel's
