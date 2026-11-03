@@ -1,10 +1,12 @@
-# gpunit — shared context for Claude Code
+# gpunit — shared context for coding agents
 
 A RunPod GPU session any project can open, use and close: the `gpunit` CLI and the pod's `boot/boot.py`.
 
 > **This file is what is true of this repo. It is not a script.** What to do comes from the task you were given.
 
-**Read [docs/README.md](docs/README.md) first:** the guide's map, and where to start for a task.
+**Before work, read [the coding standards](CODING_STANDARDS.md) and [how a change lands](CONTRIBUTING.md): mandatory
+shared context.** **Before designing, building or reviewing, also read [the architecture](ARCHITECTURE.md),
+[the decisions in force](docs/decisions.md) and [the threat model](THREAT_MODEL.md).**
 
 ## The quality gate — `make gate`
 
@@ -12,18 +14,22 @@ The gate is **`make gate`**, run at the repository root. The `Makefile` recipe i
 prose names `make gate` and never copies them. It syncs the locked environment, formats, lints, type-checks (and
 `boot/boot.py` as Python 3.10), runs the tests offline on faked provider answers with `boot/boot.py` at 100 % line
 and branch coverage, and validates the specs. A new command lands through a change whose cut names the gate recipe
-in a task.
+in a task. `make e2e` runs the tests that need a real loopback socket, out of the gate (decision D54).
 
 ## The run's lines
 
 - **Worktrees:** `../` — each version's worktree sits beside the primary, named by its change id.
 - **Workspace setup:** `uv sync --locked` — restores the environment a fresh worktree lacks.
 
-## How a change is cut here
+## Tests
 
-Each version is one change, cut, built, checked and released with the MinionsFactory `mf-*` skills. The OpenSpec
-CLI is recorded, not pinned: `@fission-ai/openspec@1.11.0`, resolved on `PATH`. The version lives in
-`gpunit/version.py`, which hatch reads; the release bumps it there.
+A test is placed by its cost: every gate run pays for it again.
+
+- **The lowest layer that can fail for it** — unit, then integration, then end-to-end only for what a real socket
+  or child process alone shows (decision D54).
+- **A step in an existing test before a new one** — one that already reaches the page, record or fixture.
+- **Deleted or merged only as a change's `## Tests` table names it** — each removed test mapped to the test that
+  carries its proofs, or to a decision in force at the base that retires it.
 
 ## Where things live
 
@@ -37,20 +43,10 @@ gitignored**; nothing in it is tracked.
 The rules the code follows, each with the test that holds it: [docs/principles.md](docs/principles.md). The
 decisions behind them: [docs/decisions.md](docs/decisions.md).
 
-## The rules for a change
-
-- An archived change is a record; a finding against it is fixed in a new change (decision D7).
-- A patch closes cards and fixes; it adds no verb, `gpunit.toml` key or exit code (decision D8).
-- A change that touches a trust boundary updates `docs/threat-model.md`: a new flow, secret, file mode, network call
-  or log line (decision D9).
-- A decision made or overturned edits `docs/decisions.md`; the change's own `design.md` keeps the history.
-- A new module edits `tests/test_layers.py`'s `LAYERS` and `docs/modules.md` together.
-- A refactor changes no spec scenario, message or exit code (decision D51).
-- The live targets rent a real pod or volume: they run by hand, never in CI (decision D6).
-
 ## Guardrails (hold for every role)
 
 - **Never commit a secret, or a real absolute path from the machine the run is on.**
 - **Dependencies are minimal and human-approved.** Argue for a new one, and wait for approval before installing it.
 - **Never weaken the gate to pass.** A deleted test, a blanket suppression, a loosened config: halt and say so.
+  A test deleted or merged as the change's `## Tests` table names it is not a weakening.
 - **State lives on disk.** Rebuild where the work is from the active change's `tasks.md` and git.

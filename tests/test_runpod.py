@@ -55,7 +55,7 @@ def test_gpu_reads_the_memory_and_the_secure_price() -> None:
     url = opener.requests[0].full_url
     assert url.endswith("/catalog/gpus/NVIDIA%20GeForce%20RTX%204090")
     assert opener.requests[0].get_header("Authorization") == f"Bearer {KEY}"
-    assert opener.requests[0].get_header("User-agent") == "gpunit/0.11.1"
+    assert opener.requests[0].get_header("User-agent") == "gpunit/0.11.2"
 
 
 @pytest.mark.spec("session:place:unknown-card-refuses")
@@ -331,7 +331,9 @@ class Redirecting(urllib.request.BaseHandler):
 
 
 @pytest.mark.spec("spec:secrets:redirect-not-followed")
-def test_a_redirect_is_not_followed(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_redirect_is_not_followed(
+    monkeypatch: pytest.MonkeyPatch, no_proxy: None
+) -> None:
     # The baseline: an opener without `_NoRedirect` sends the key to the new host.
     unguarded = Redirecting()
     exposed = RunPod(

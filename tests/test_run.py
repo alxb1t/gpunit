@@ -54,6 +54,7 @@ class InterruptingProvider(FakeProvider):
 
 
 @pytest.mark.spec("run:handover:env")
+@pytest.mark.e2e
 def test_the_environment_names_the_session(
     cwd: Path, free_port: int, capfd: pytest.CaptureFixture[str]
 ) -> None:
@@ -272,6 +273,7 @@ def test_an_interrupt_with_a_failed_teardown_is_exit_1(cwd: Path) -> None:
 
 @pytest.mark.spec("run:tunnel:reopened")
 @pytest.mark.spec("session:ssh:own-config-only")
+@pytest.mark.e2e
 def test_a_dead_tunnel_is_reopened(
     cwd: Path, free_port: int, dying_tunnel: Path, capfd: pytest.CaptureFixture[str]
 ) -> None:
@@ -310,6 +312,7 @@ def test_a_tunnel_that_keeps_dying_backs_off() -> None:
 
 
 @pytest.mark.spec("run:ports:busy-refuses")
+@pytest.mark.e2e
 def test_a_busy_port_refuses_before_any_request(
     cwd: Path, listening: int, capfd: pytest.CaptureFixture[str]
 ) -> None:
@@ -320,6 +323,7 @@ def test_a_busy_port_refuses_before_any_request(
 
 
 @pytest.mark.spec("run:ports:busy-on-v6-refuses")
+@pytest.mark.e2e
 def test_a_port_busy_on_v6_loopback_refuses(
     cwd: Path, listening_v6: int, capfd: pytest.CaptureFixture[str]
 ) -> None:
@@ -330,6 +334,7 @@ def test_a_port_busy_on_v6_loopback_refuses(
 
 
 @pytest.mark.spec("run:tunnel:taken-port-refuses")
+@pytest.mark.e2e
 def test_a_taken_port_ends_the_run(
     cwd: Path, free_port: int, gated_tunnel: Path, capfd: pytest.CaptureFixture[str]
 ) -> None:

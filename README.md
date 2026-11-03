@@ -45,12 +45,12 @@ disk_gb = 20
 ```
 
 ```sh
-uv add --dev git+https://github.com/alxb1t/gpunit@v0.11.1
+uv add --dev git+https://github.com/alxb1t/gpunit@v0.11.2
 export RUNPOD_API_KEY=...
 uv run gpunit run -- sh -c '$GPUNIT_SSH nvidia-smi'
 ```
 
 ## Read more
 
-[usage](docs/usage.md) · [proofs](docs/proofs.md) · [the guide](docs/README.md) ·
-[threat model](docs/threat-model.md) · [CHANGELOG](CHANGELOG.md) · [LICENSE](LICENSE)
+[usage](docs/usage.md) · [proofs](docs/proofs.md) · [the guide](ARCHITECTURE.md) ·
+[threat model](THREAT_MODEL.md) · [CHANGELOG](CHANGELOG.md) · [LICENSE](LICENSE)

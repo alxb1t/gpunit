@@ -1,13 +1,17 @@
+import io
 import json
 import os
 import subprocess
 import sys
 import threading
+import urllib.request
 from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import pytest
+
+from live import tool_call
 
 CHECK = Path(__file__).parent.parent / "live" / "tool_call.py"
 KEY = "k" * 43
@@ -71,6 +75,34 @@ def model() -> Iterator[ModelServer]:
     server.server_close()
 
 
+class Opener:
+    """Answer each request in-process as `ModelServer` does, and keep it."""
+
+    def __init__(self) -> None:
+        self.requests: list[urllib.request.Request] = []
+
+    def open(self, sent: urllib.request.Request, timeout: float) -> io.BytesIO:
+        self.requests.append(sent)
+        reply = answer("tool_calls", [weather('{"city": "Paris"}')])
+        return io.BytesIO(json.dumps(reply).encode())
+
+
+@pytest.fixture
+def opener(monkeypatch: pytest.MonkeyPatch) -> Opener:
+    # The key's proofs need no socket, so they stay in the gate (decision D54).
+    fake = Opener()
+    monkeypatch.setattr(tool_call, "OPENER", fake)
+    return fake
+
+
+def main(monkeypatch: pytest.MonkeyPatch, *argv: str, key: str | None = KEY) -> int:
+    if key is None:
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    else:
+        monkeypatch.setenv("OPENAI_API_KEY", key)
+    return tool_call.main(list(argv))
+
+
 def check(*argv: str, key: str | None = KEY) -> subprocess.CompletedProcess[str]:
     env = {
         name: value for name, value in os.environ.items() if name != "OPENAI_API_KEY"
@@ -87,6 +119,7 @@ def check(*argv: str, key: str | None = KEY) -> subprocess.CompletedProcess[str]
     )
 
 
+@pytest.mark.e2e
 @pytest.mark.spec("serve:tools:call-passes")
 def test_a_tool_call_passes(model: ModelServer) -> None:
     done = check(model.base_url, "qwen3.8-27b")
@@ -104,6 +137,7 @@ def test_a_tool_call_passes(model: ModelServer) -> None:
     assert tool["function"]["name"] == "get_weather"
 
 
+@pytest.mark.e2e
 @pytest.mark.spec("serve:tools:plain-text-fails")
 @pytest.mark.parametrize(
     "reply",
@@ -119,6 +153,7 @@ def test_plain_text_fails(model: ModelServer, reply: dict) -> None:
     assert "held no tool call" in done.stderr
 
 
+@pytest.mark.e2e
 @pytest.mark.spec("serve:tools:bad-arguments-fail")
 def test_unparseable_arguments_fail(model: ModelServer) -> None:
     model.answer = answer("tool_calls", [weather("{city: Paris")])
@@ -129,6 +164,7 @@ def test_unparseable_arguments_fail(model: ModelServer) -> None:
     assert "arguments are not JSON" in done.stderr
 
 
+@pytest.mark.e2e
 @pytest.mark.spec("serve:tools:other-function-fails")
 def test_a_call_to_another_function_fails(model: ModelServer) -> None:
     call: dict[str, object] = {
@@ -150,26 +186,36 @@ def test_a_call_to_another_function_fails(model: ModelServer) -> None:
     ids=["key-on-argv", "unset", "twin-from-env"],
 )
 def test_the_key_comes_from_the_environment_only(
-    model: ModelServer, extra: list[str], key: str | None
+    opener: Opener,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    extra: list[str],
+    key: str | None,
 ) -> None:
-    done = check(model.base_url, "qwen3.8-27b", *extra, key=key)
+    code = main(monkeypatch, "http://127.0.0.1:8000/v1", "qwen3.8-27b", *extra, key=key)
 
-    assert KEY not in done.stderr + done.stdout
+    out, err = capsys.readouterr()
+    assert KEY not in err + out
     if extra or key is None:
-        assert done.returncode == 1
-        assert "usage" in done.stderr
-        assert model.requests == []
+        assert code == 1
+        assert "usage" in err
+        assert opener.requests == []
         return
-    assert done.returncode == 0
-    [(_, authorization, _)] = model.requests
-    assert authorization == f"Bearer {KEY}"
+    assert code == 0
+    [sent] = opener.requests
+    assert sent.get_header("Authorization") == f"Bearer {KEY}"
 
 
 @pytest.mark.spec("serve:tools:key-from-the-environment")
-def test_a_key_given_as_the_base_url_is_not_echoed(model: ModelServer) -> None:
-    done = check(KEY, "qwen3.8-27b", key="x")
+def test_a_key_given_as_the_base_url_is_not_echoed(
+    opener: Opener,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    code = main(monkeypatch, KEY, "qwen3.8-27b", key="x")
 
-    assert done.returncode == 1
-    assert "not http(s)" in done.stderr
-    assert KEY not in done.stderr + done.stdout
-    assert model.requests == []
+    out, err = capsys.readouterr()
+    assert code == 1
+    assert "not http(s)" in err
+    assert KEY not in err + out
+    assert opener.requests == []

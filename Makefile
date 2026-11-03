@@ -1,7 +1,7 @@
 # The gate: the one list of the commands that say a change is done. Prose names
 # `make gate` and never copies them. A new command lands through a change whose
 # cut names this recipe in a task.
-.PHONY: gate live live-volume live-serve live-dead live-serve-dead
+.PHONY: gate e2e live live-volume live-serve live-dead live-serve-dead
 
 # The row `make live-serve` proves: e.g. `make live-serve MODEL=qwen3.8-27b`.
 MODEL ?= qwen3-4b
@@ -15,8 +15,13 @@ gate:
 # boot.py runs on the pod's 3.10: ty alone catches a newer stdlib name (decision D5)
 	uv run ty check --python-version 3.10 boot/boot.py
 # offline: every provider answer is faked (decision D5); boot.py at 100 % coverage
-	uv run pytest --cov
+	uv run pytest --cov -m "not e2e"
 	openspec validate --all --strict --no-interactive
+
+# The loopback proof: the tests a sandboxed worker cannot run, since they bind a real
+# socket (decision D54). Not part of the gate; CI runs it after the gate.
+e2e:
+	uv run pytest -m e2e
 
 # The metered proof: one real pod, run by hand, its price printed first (decision D6).
 # Not part of the gate: it rents a pod with RUNPOD_API_KEY.

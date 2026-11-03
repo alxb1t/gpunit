@@ -54,15 +54,17 @@ module of the package in the layer the gate holds it to.
 
 ### Requirement: The guide's citations resolve
 
-The gate SHALL fail when a relative link in `docs/`, `README.md` or `CLAUDE.md` names a file that does not exist, or an
-anchor its target does not hold. Every decision id the guide links, and every `decision Dn` cited in the code,
-configuration and guide, SHALL name a decision in `docs/decisions.md`. No file the gate scans SHALL cite an archived
-change's design by its decision id. A backticked repository path in the guide SHALL name a file that exists, a
-`path::symbol` citation SHALL name a file that defines that symbol, and the guide SHALL cite no source line by number.
+The gate SHALL fail when a relative link in `docs/`, `README.md`, `AGENTS.md`, `ARCHITECTURE.md`, `THREAT_MODEL.md`,
+`CODING_STANDARDS.md` or `CONTRIBUTING.md` names a file that does not exist, or an anchor its target does not hold.
+Every decision id the guide links, and every `decision Dn` cited in the code, configuration and guide, SHALL name a
+decision in `docs/decisions.md`. No file the gate scans SHALL cite an archived change's design by its decision id. A
+backticked repository path in the guide SHALL name a file that exists, a `path::symbol` citation SHALL name a file
+that defines that symbol, and the guide SHALL cite no source line by number.
 
 #### Scenario: the guide's links resolve
 - **Key:** `architecture:docs:links-resolve`
-- **WHEN** the gate reads every relative link in `docs/`, `README.md` and `CLAUDE.md`
+- **WHEN** the gate reads every relative link in `docs/`, `README.md`, `AGENTS.md`, `ARCHITECTURE.md`,
+  `THREAT_MODEL.md`, `CODING_STANDARDS.md` and `CONTRIBUTING.md`
 - **THEN** each names a file that exists, and each anchor names a heading of that file
 
 #### Scenario: a broken link is caught
@@ -98,14 +100,14 @@ front page SHALL link it.
 
 ### Requirement: Every push runs the gate
 
-The repository SHALL hold a workflow that runs `make gate` on every push and every pull request, with the OpenSpec CLI
-at the version `CLAUDE.md` records. Every workflow SHALL name each action it uses by a full commit hash.
+The repository SHALL hold a workflow that runs `make gate` and then `make e2e` on every push and every pull request, with the
+OpenSpec CLI at the version `CONTRIBUTING.md` records. Every workflow SHALL name each action it uses by a full commit hash.
 
 #### Scenario: the gate workflow runs the gate
 - **Key:** `architecture:ci:runs-the-gate`
 - **WHEN** the gate reads `.github/workflows/gate.yml`
-- **THEN** its triggers are `push` and `pull_request`, a step runs `make gate`, and a step installs the OpenSpec CLI at
-  the version `CLAUDE.md` records
+- **THEN** its triggers are `push` and `pull_request`, a step runs `make gate`, a later step runs `make e2e`, and a step
+  installs the OpenSpec CLI at the version `CONTRIBUTING.md` records
 
 #### Scenario: every workflow pins its actions
 - **Key:** `architecture:ci:actions-pinned`

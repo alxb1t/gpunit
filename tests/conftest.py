@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from gpunit import library, lifecycle
+from gpunit.serve import session
 from tests.fakes import NONCE, SERVED, FakeClock
 from tests.helpers import install_stubs, write_spec
 
@@ -70,6 +71,17 @@ def drawn_nonce(monkeypatch: pytest.MonkeyPatch) -> Callable[[], str]:
     return drawn
 
 
+@pytest.fixture(autouse=True)
+def fixed_port(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Serve's port probe and the tunnel's loopback probes bind or connect loopback,
+    # which a sandboxed worker refuses and the host's own listeners would answer; an
+    # `e2e` test keeps the real ones (decision D54).
+    if request.node.get_closest_marker("e2e") is None:
+        monkeypatch.setattr(session, "_free_port", lambda: 18000)
+        monkeypatch.setattr(library, "_taken", lambda spec: None)
+        monkeypatch.setattr(library, "_binds_v6_loopback", lambda: True)
+
+
 @pytest.fixture
 def clock(monkeypatch: pytest.MonkeyPatch) -> FakeClock:
     fake = FakeClock()
@@ -105,6 +117,15 @@ def free_port() -> int:
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         return probe.getsockname()[1]
+
+
+@pytest.fixture
+def no_proxy(monkeypatch: pytest.MonkeyPatch) -> None:
+    # urllib's opener reads these, so a sandbox's proxy would take the faked request
+    # (decision D54).
+    for name in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY"):
+        monkeypatch.delenv(name, raising=False)
+        monkeypatch.delenv(name.lower(), raising=False)
 
 
 def _fast_tunnel(cwd: Path, monkeypatch: pytest.MonkeyPatch) -> Path:

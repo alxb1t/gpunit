@@ -11,10 +11,10 @@ GATE = WORKFLOWS / "gate.yml"
 
 
 def openspec_version() -> str:
-    """Return the OpenSpec CLI version `CLAUDE.md` records, e.g. "1.11.0"."""
+    """Return the OpenSpec CLI version `CONTRIBUTING.md` records, e.g. "1.11.0"."""
     found = re.search(
         r"@fission-ai/openspec@([\w.-]+)",
-        (ROOT / "CLAUDE.md").read_text(encoding="utf-8"),
+        (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8"),
     )
     assert found is not None
     return found[1]
@@ -25,7 +25,11 @@ def test_the_gate_workflow_runs_the_gate() -> None:
     text = GATE.read_text(encoding="utf-8")
 
     assert triggers(text) == ["push", "pull_request"]
-    assert re.search(r"^\s+- run: make gate$", text, re.MULTILINE)
+    gate = re.search(r"^\s+- run: make gate$", text, re.MULTILINE)
+    e2e = re.search(r"^\s+- run: make e2e$", text, re.MULTILINE)
+    assert gate is not None
+    assert e2e is not None
+    assert gate.start() < e2e.start()
     assert f"run: npm install -g @fission-ai/openspec@{openspec_version()}\n" in text
 
 
