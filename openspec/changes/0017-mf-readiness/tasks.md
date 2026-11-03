@@ -6,7 +6,7 @@ relative to the repository's root.
 ## Progress
 
 - [x] 1 — The sandbox-safe gate
-- [ ] 2 — The root documents
+- [x] 2 — The root documents
 - [ ] 3 — **HUMAN** — The ruleset and CI
 
 ## 1 — The sandbox-safe gate
@@ -51,28 +51,28 @@ relative to the repository's root.
 
 ## 2 — The root documents
 
-- [ ] 2.1 `git mv docs/threat-model.md THREAT_MODEL.md`, per [D6](design.md#d6). Re-point its own links into `docs/`
+- [x] 2.1 `git mv docs/threat-model.md THREAT_MODEL.md`, per [D6](design.md#d6). Re-point its own links into `docs/`
   (`usage.md#…` → `docs/usage.md#…`, `principles.md#…` → `docs/principles.md#…`). Re-point each link and path to it in
   `README.md`, `AGENTS.md`, `docs/README.md`, `docs/decisions.md`, `docs/extending.md`, `docs/pins.md` and
   `docs/usage.md`. Add `THREAT_MODEL.md` to `tests/test_docs.py`'s `guide` and `SCANNED_FILES`.
   Verify: `test -e docs/threat-model.md; echo $?` prints `1`, `git grep -n 'threat-model.md' -- . ':!openspec/changes' ':!CHANGELOG.md' | wc -l | tr -d ' '` prints `0`, and `uv run pytest -q --no-cov tests/test_docs.py` exits 0.
-- [ ] 2.2 Rewrite D9 in `docs/decisions.md` per [D9's text](design.md#d9s-text), and its anchor in
+- [x] 2.2 Rewrite D9 in `docs/decisions.md` per [D9's text](design.md#d9s-text), and its anchor in
   `docs/extending.md` and `docs/principles.md`.
   Verify: `grep -c '^### D9 · The threat model is ' docs/decisions.md` prints `1`, `git grep -c 'the-threat-model-lives-in-docs' -- docs | wc -l | tr -d ' '` prints `0`, and `uv run pytest -q --no-cov tests/test_docs.py` exits 0.
-- [ ] 2.3 Add the actor row and G17 of [The threat model's additions](design.md#the-threat-models-additions) to
+- [x] 2.3 Add the actor row and G17 of [The threat model's additions](design.md#the-threat-models-additions) to
   `THREAT_MODEL.md`.
   Verify: `grep -c '^| a MinionsFactory worker in the checkout |' THREAT_MODEL.md` prints `1`, and `grep -c '^| G17 |' THREAT_MODEL.md` prints `1`.
-- [ ] 2.4 `git mv docs/README.md ARCHITECTURE.md`, per [D7](design.md#d7): its title, and its links re-pointed into
+- [x] 2.4 `git mv docs/README.md ARCHITECTURE.md`, per [D7](design.md#d7): its title, and its links re-pointed into
   `docs/` and to `THREAT_MODEL.md`. Re-point the links to it in `README.md` and `AGENTS.md`. Add `ARCHITECTURE.md` to
   `tests/test_docs.py`'s `guide` and `SCANNED_FILES`.
   Verify: `test -e docs/README.md; echo $?` prints `1`, `head -1 ARCHITECTURE.md` prints `# gpunit — architecture`, `git grep -n 'docs/README.md' -- . ':!openspec/changes' ':!CHANGELOG.md' | wc -l | tr -d ' '` prints `0`, and `uv run pytest -q --no-cov tests/test_docs.py` exits 0.
-- [ ] 2.5 Write `CODING_STANDARDS.md` and `CONTRIBUTING.md` per [The root documents](design.md#the-root-documents),
+- [x] 2.5 Write `CODING_STANDARDS.md` and `CONTRIBUTING.md` per [The root documents](design.md#the-root-documents),
   moving `## How a change is cut here` and `## The rules for a change` out of `AGENTS.md`, per [D8](design.md#d8).
   `docs/extending.md`'s `## The rules` becomes one line linking `CONTRIBUTING.md`'s. `tests/test_ci.py` reads the
   OpenSpec version from `CONTRIBUTING.md`; `docs/pins.md`'s OpenSpec row and `gate.yml`'s step name say
   `CONTRIBUTING.md`. Add both files to `tests/test_docs.py`'s `guide` and `SCANNED_FILES`.
   Verify: `grep -c '@fission-ai/openspec@1.11.0' CONTRIBUTING.md` prints `1`, `grep -c '^## The rules for a change$' CONTRIBUTING.md` prints `1`, `grep -c -E '^## (How a change is cut here|The rules for a change)$' AGENTS.md` prints `0`, `grep -c 'CLAUDE.md' tests/test_ci.py docs/pins.md .github/workflows/gate.yml` prints `0` for each file, and `uv run pytest -q --no-cov tests/test_ci.py tests/test_docs.py` exits 0.
-- [ ] 2.6 Rewrite `AGENTS.md` per [The root documents](design.md#the-root-documents): its title, the mandatory lines,
+- [x] 2.6 Rewrite `AGENTS.md` per [The root documents](design.md#the-root-documents): its title, the mandatory lines,
   the gate's `make e2e` sentence, the template's `## Tests`, the guardrail's line. In `tests/test_docs.py`, `AGENTS.md`
   takes `CLAUDE.md`'s place in `guide`, `SCANNED_FILES` and `guide`'s docstring, per [D9](design.md#d9).
   Verify: `head -1 AGENTS.md` prints `# gpunit — shared context for coding agents`, `grep -c -E 'CODING_STANDARDS.md|THREAT_MODEL.md|ARCHITECTURE.md' AGENTS.md` prints a number of at least `3`, `grep -c '^## Tests$' AGENTS.md` prints `1`, `grep -c 'CLAUDE.md' tests/test_docs.py` prints `0`, `test -L CLAUDE.md` exits 0, and `uv run pytest -q --no-cov tests/test_docs.py` exits 0.

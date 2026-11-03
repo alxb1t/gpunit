@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `make gate` binds no loopback socket, so it passes in a sandboxed worker: serve's port probe is faked, and the tests
   whose proof is a real socket are marked `e2e` and run in `make e2e`, which CI runs after the gate. The redirect
   tests clear the proxy variables. D54 records it (`0017`).
+- The root documents MinionsFactory's review reads by name: `docs/threat-model.md` is `THREAT_MODEL.md`, with the
+  worker and G17; `docs/README.md` is `ARCHITECTURE.md`; `CODING_STANDARDS.md` and `CONTRIBUTING.md` are new, and the
+  rules for a change move into the latter. `AGENTS.md` names its mandatory context; the links test holds each (`0017`).
 
 ## [0.11.1] - 2026-10-19
 

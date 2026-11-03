@@ -88,14 +88,15 @@ carry it before the live runs.
 - **Why:** A patch is safe to take without reading a new interface.
 - **Made by:** `0006·D5`.
 
-### D9 · The threat model lives in `docs/` and moves with every trust-boundary change
+### D9 · The threat model is `THREAT_MODEL.md` and moves with every trust-boundary change
 
-**`docs/threat-model.md` is edited by the change that adds a flow, secret, file mode, network call or log line.**
+**`THREAT_MODEL.md` is edited by the change that adds a flow, secret, file mode, network call or log line.**
 
-The page is [the threat model](threat-model.md).
+The page is [the threat model](../THREAT_MODEL.md).
 
-- **Why:** It is versioned with the code, so it is current when the code is.
-- **Made by:** `0013·D14`.
+- **Why:** It is versioned with the code, so it is current when the code is; MinionsFactory's review reads it at the
+  root.
+- **Made by:** `0013·D14`, `0017·D6`.
 
 ### D10 · The lifecycle module is `lifecycle.py`
 

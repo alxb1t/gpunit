@@ -302,7 +302,7 @@ total                                  $1.79
 ## Security and privacy
 
 **What gpunit puts on RunPod, where it can land, and what gpunit cannot protect.** The full model, its threats and
-its gaps: [the threat model](threat-model.md).
+its gaps: [the threat model](../THREAT_MODEL.md).
 
 ### Where your data lands
 
@@ -335,7 +335,7 @@ Keep private data off stdout and off the volume: both outlive the command.
 - **Where it goes:** a request header to `https://api.runpod.io/v2`, never argv, never a redirect; `run`'s command
   does not get it in its environment, though it can read gpunit's (step 3).
 - **Measured minimum:** a restricted key, made in the console with `api.runpod.io/graphql` Read / Write and
-  `api.runpod.ai` None, covers every call above (2026-10-18, [the probe](threat-model.md#7-the-probe)). RunPod
+  `api.runpod.ai` None, covers every call above (2026-10-18, [the probe](../THREAT_MODEL.md#7-the-probe)). RunPod
   offers no scope finer than the account's pods, volumes and billing, so a leaked key still reaches all of them.
 
 ### Accepted risks

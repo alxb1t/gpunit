@@ -13,13 +13,13 @@ The values live in the files named here, never on this page
 | each action, by commit | each workflow's `uses:` under `.github/workflows/` | `test_every_workflow_pins_its_actions` | editing the commit and its version comment |
 | the locked environment | `uv.lock` | `make gate`, which syncs from the lock first | `uv lock`, with a dependency change human-approved |
 | a consumer's `boot.py`, at a tag | the consumer's Dockerfile: `ADD --checksum=sha256:…` of `boot/boot.py` at a release tag | BuildKit, at the consumer's build | the consumer bumping the tag and the checksum; `docs/usage.md`'s *Use it from a project* shows the line |
-| the OpenSpec CLI | recorded in `CLAUDE.md`, resolved on `PATH`; installed at that version by `.github/workflows/gate.yml` | `tests/test_ci.py` holds the two equal | editing both |
+| the OpenSpec CLI | recorded in `CONTRIBUTING.md`, resolved on `PATH`; installed at that version by `.github/workflows/gate.yml` | `tests/test_ci.py` holds the two equal | editing both |
 | the package's Python floor, 3.11 | `pyproject.toml`'s `requires-python` | nothing runs 3.11; `ruff` and `ty` read it as their target | a `vX.Y` change |
 | `boot.py`'s Python, 3.10 | `pyproject.toml`'s `per-file-target-version` | `make gate`, which type-checks `boot/boot.py` as 3.10 | a change to the images' base, then to both |
 
 ## What the threat model relies on in vLLM
 
-[The threat model](threat-model.md) holds two vLLM behaviours at the serve image's base: request logging is off by
+[The threat model](../THREAT_MODEL.md) holds two vLLM behaviours at the serve image's base: request logging is off by
 default, and `--no-enable-log-requests` is its explicit off; output logging needs request logging. `serve/launch.py`
 passes the off flag after every row's arguments, but vLLM rewrites argv and takes abbreviations, so a row's
 arguments can still turn request logging on (`0015·F23`). A bump of the vLLM base re-reads both in the new version's source

@@ -52,5 +52,5 @@ uv run gpunit run -- sh -c '$GPUNIT_SSH nvidia-smi'
 
 ## Read more
 
-[usage](docs/usage.md) · [proofs](docs/proofs.md) · [the guide](docs/README.md) ·
-[threat model](docs/threat-model.md) · [CHANGELOG](CHANGELOG.md) · [LICENSE](LICENSE)
+[usage](docs/usage.md) · [proofs](docs/proofs.md) · [the guide](ARCHITECTURE.md) ·
+[threat model](THREAT_MODEL.md) · [CHANGELOG](CHANGELOG.md) · [LICENSE](LICENSE)
