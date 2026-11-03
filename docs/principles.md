@@ -100,6 +100,6 @@ and where the code breaches it. **A rule claims no more than what holds it**: a 
 |---|---|---|---|
 | An archived change is a record | [D7](decisions.md#d7--an-archived-change-is-a-record-a-card-against-it-closes-wont-fix) | review | — |
 | A patch adds no verb, key or exit code | [D8](decisions.md#d8--a-patch-closes-cards-it-adds-no-verb-gpunittoml-key-or-exit-code) | review | — |
-| A trust-boundary change edits the threat model | [D9](decisions.md#d9--the-threat-model-lives-in-docs-and-moves-with-every-trust-boundary-change) | review | — |
+| A trust-boundary change edits the threat model | [D9](decisions.md#d9--the-threat-model-is-threat_modelmd-and-moves-with-every-trust-boundary-change) | review | — |
 | The live proofs run by hand, outside CI; the price prints first | [D6](decisions.md#d6--the-metered-proofs-run-by-hand-the-price-first-their-tails-committed-a-boot-change-rebuilds-the-images) | review | — |
 | A refactor changes no scenario | [D51](decisions.md#d51--a-refactor-changes-no-scenario-message-or-exit-code) | the unchanged tests; review | — |

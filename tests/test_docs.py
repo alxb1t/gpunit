@@ -15,7 +15,15 @@ ROOT = Path(__file__).resolve().parent.parent
 
 # The roots scanned for citations: every tracked root but the specs and the archive.
 SCANNED_DIRS = ("gpunit", "boot", "serve", "live", "tests", ".github", "docs")
-SCANNED_FILES = ("Makefile", "pyproject.toml", "README.md", "CLAUDE.md")
+ROOT_DOCUMENTS = (
+    "README.md",
+    "AGENTS.md",
+    "ARCHITECTURE.md",
+    "THREAT_MODEL.md",
+    "CODING_STANDARDS.md",
+    "CONTRIBUTING.md",
+)
+SCANNED_FILES = ("Makefile", "pyproject.toml", *ROOT_DOCUMENTS)
 # Records of past runs, not citations.
 RECORDS = ("*last_run.txt",)
 DECISIONS = "docs/decisions.md"
@@ -36,9 +44,12 @@ PROSE_LINE = re.compile(r"(?<![\w./:-])[\w./-]+\.[A-Za-z]\w*:\d+(?:-\d+)?")
 
 
 def guide(root: Path) -> list[Path]:
-    """Return the pages whose links are held: `docs/`, `README.md` and `CLAUDE.md`."""
+    """Return the pages whose links are held: `docs/` and the root documents.
+
+    e.g. docs/usage.md, README.md, AGENTS.md, THREAT_MODEL.md
+    """
     pages = sorted((root / "docs").glob("*.md"))
-    return pages + [root / name for name in ("README.md", "CLAUDE.md")]
+    return pages + [root / name for name in ROOT_DOCUMENTS]
 
 
 def scanned(root: Path) -> dict[Path, str]:

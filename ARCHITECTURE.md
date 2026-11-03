@@ -1,0 +1,51 @@
+# gpunit — architecture
+
+How gpunit is built, why, and where to change it. For using gpunit, read [usage](docs/usage.md).
+
+gpunit opens a RunPod GPU session from a laptop, runs work on it, and closes it, from the CLI or from Python. The
+laptop half places a pod, proves its host key, tunnels its ports and tears it down; the pod half stops the pod at
+its ceiling and whenever its command ends.
+
+```
+ laptop                                            pod
+ ──────                                            ───
+ cli ─┬─▶ run · serve ─▶ library ─▶ lifecycle      boot/boot.py
+      ├─▶ volume ─────────────────▶ lifecycle        ceiling watchdog, sshd,
+      └─▶ spend                                      key line, the command, stop
+                   library's tunnel: ssh -N -L ────▶ sshd :22
+                                                     serve/launch.py ──▶ vLLM
+ lifecycle · volume · spend ──▶ RunPod REST v2 ◀── the container log
+                                create · log · delete · billing
+```
+
+They meet at RunPod's API, which carries the create's env in and boot's lines out, and at the pod's sshd, which the
+laptop reaches only after the key in the log matches the scan
+([D22](docs/decisions.md#d22--the-host-key-is-proven-over-the-log)).
+
+**The layers**, lowest last: interface · serve · session · lifecycle · cloud · model · foundation. A module imports
+its own layer and those below ([modules](docs/modules.md)).
+
+## The map
+
+| page | for |
+|---|---|
+| [usage](docs/usage.md) | how to use gpunit: from a project, from Python, and through `serve` |
+| [proofs](docs/proofs.md) | the live proofs, what each proves, and their latest runs |
+| [principles](docs/principles.md) | the words, and each rule with what holds it |
+| [decisions](docs/decisions.md) | the decisions in force, each with why and what made it |
+| [data-flow](docs/data-flow.md) | a session, the boot contract, the state files, `serve`, the window, `spend`, exit codes |
+| [modules](docs/modules.md) | the layers, each module, where RunPod is built, the test seams |
+| [extending](docs/extending.md) | a recipe for each kind of change, and the rules for a change |
+| [pins](docs/pins.md) | each pin, where it is checked and how it moves |
+| [threat-model](THREAT_MODEL.md) | what gpunit protects, from whom, and what holds |
+
+## Where to start
+
+| to | read |
+|---|---|
+| fix a bug in a session | [data-flow](docs/data-flow.md), then [modules](docs/modules.md) for the file |
+| add a verb, a key or a row | [extending](docs/extending.md) |
+| change what the pod runs | [extending](docs/extending.md#a-bootpy-change), then [pins](docs/pins.md) |
+| change a secret, a file mode, a network call or a log line | [threat-model](THREAT_MODEL.md) first |
+| learn why something is the way it is | [decisions](docs/decisions.md), then the archived change its *Made by* names |
+| check what a rule rests on | [principles](docs/principles.md) |

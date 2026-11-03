@@ -21,8 +21,8 @@ cut, built, checked and released as one OpenSpec change under `openspec/changes/
   `gpunit/runpod.py::RunPod.create`.
 - **Spec:** `openspec/specs/spec/spec.md`.
 - **Tests:** `tests/test_spec.py`: the key read, and each fault refused before any request, naming the field.
-- **Docs:** `docs/usage.md`'s *Use it from a project*; [the threat model](threat-model.md) when the key reaches the pod
-  or the API.
+- **Docs:** `docs/usage.md`'s *Use it from a project*; [the threat model](../THREAT_MODEL.md) when the key reaches
+  the pod or the API.
 - **Version:** a `vX.Y`.
 
 ## A serve row
@@ -66,7 +66,7 @@ does; the session tests stay on `FakeProvider`. Its proof is a live target again
   the serve image through `.github/workflows/build-serve-image.yml` into `gpunit/serve/models.toml`, and the live
   images from `live/Dockerfile` and `live/Dockerfile.dead` into `live/gpunit.toml`, `live/gpunit.volume.toml` and
   `live/gpunit.dead.toml`. A change to comments alone rebuilds nothing.
-- **Proof:** the live targets on the new images. [The threat model](threat-model.md) moves with any new line, env
+- **Proof:** the live targets on the new images. [The threat model](../THREAT_MODEL.md) moves with any new line, env
   name or network call.
 
 ## A pin bump
@@ -86,12 +86,4 @@ holds it, and runs the live proof that uses it.
 
 ## The rules
 
-- A refactor changes no spec scenario, message or exit code; tests change in names and imports alone
-  ([D51](decisions.md#d51--a-refactor-changes-no-scenario-message-or-exit-code)).
-- A new module edits `tests/test_layers.py::LAYERS` and [modules](modules.md) together
-  ([D49](decisions.md#d49--the-layers-held-by-teststest_layerspy)).
-- A decision made or overturned edits [decisions](decisions.md); the change's own `design.md` keeps the history.
-- A change that adds a flow, secret, file mode, network call or log line edits [the threat model](threat-model.md)
-  ([D9](decisions.md#d9--the-threat-model-lives-in-docs-and-moves-with-every-trust-boundary-change)).
-- A patch adds no verb, `gpunit.toml` key or exit code
-  ([D8](decisions.md#d8--a-patch-closes-cards-it-adds-no-verb-gpunittoml-key-or-exit-code)).
+The rules for a change are in [the contribution guide](../CONTRIBUTING.md#the-rules-for-a-change).

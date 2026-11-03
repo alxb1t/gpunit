@@ -11,10 +11,10 @@ GATE = WORKFLOWS / "gate.yml"
 
 
 def openspec_version() -> str:
-    """Return the OpenSpec CLI version `CLAUDE.md` records, e.g. "1.11.0"."""
+    """Return the OpenSpec CLI version `CONTRIBUTING.md` records, e.g. "1.11.0"."""
     found = re.search(
         r"@fission-ai/openspec@([\w.-]+)",
-        (ROOT / "CLAUDE.md").read_text(encoding="utf-8"),
+        (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8"),
     )
     assert found is not None
     return found[1]
