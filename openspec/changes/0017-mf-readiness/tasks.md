@@ -7,7 +7,7 @@ relative to the repository's root.
 
 - [x] 1 — The sandbox-safe gate
 - [x] 2 — The root documents
-- [ ] 3 — **HUMAN** — The ruleset and CI
+- [x] 3 — **HUMAN** — The ruleset and CI
 
 ## 1 — The sandbox-safe gate
 
@@ -79,7 +79,7 @@ relative to the repository's root.
 
 ## 3 — **HUMAN** — The ruleset and CI
 
-- [ ] 3.1 Create the ruleset of [D10](design.md#d10):
+- [x] 3.1 Create the ruleset of [D10](design.md#d10):
 
   ```sh
   gh api -X POST repos/alxb1t/gpunit/rulesets --input - <<'JSON'
@@ -90,7 +90,7 @@ relative to the repository's root.
   ```
 
   Verify: `gh api repos/alxb1t/gpunit/rulesets --jq '.[].name'` prints `protect main`.
-- [ ] 3.2 Push the version branch, so CI runs `make gate` and `make e2e`, and wait for it:
+- [x] 3.2 Push the version branch, so CI runs `make gate` and `make e2e`, and wait for it:
 
   ```sh
   git push origin 0017-mf-readiness
