@@ -87,7 +87,9 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
         try:
             volume = provider.volume(spec.volume)
         except (Unknown, Lost) as fault:
-            log.refuse(f"volume {spec.volume} could not be read: {fault}")
+            # The session never clears the record; `volume up` does: decision D55.
+            hint = "; run gpunit volume up" if spec.volume_gb is not None else ""
+            log.refuse(f"volume {spec.volume} could not be read: {fault}{hint}")
         if not spec.allows(volume.datacenter):
             log.refuse(
                 f"volume {spec.volume} is in {volume.datacenter}, "

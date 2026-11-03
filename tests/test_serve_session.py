@@ -10,7 +10,7 @@ from typing import NoReturn
 import pytest
 
 from gpunit import log
-from gpunit.provider import PodInfo, Provider, VolumeInfo
+from gpunit.provider import PodInfo, Provider, Unknown, VolumeInfo
 from gpunit.runpod import RunPod
 from gpunit.serve import session, table
 from gpunit.spec import Spec
@@ -590,6 +590,27 @@ def test_serve_sweeps_an_overdue_volume_before_the_price(
     assert provider.named("gpu") == []
     assert State(place).window() is None
     assert "run gpunit volume up" in capsys.readouterr().err
+
+
+@pytest.mark.spec("volume:gone:serve-recreates")
+def test_volume_up_serve_makes_a_gone_volume_anew(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    place = session.home("qwen3-4b")
+    place.mkdir(parents=True)
+    open_window(place, 3600, "v1")
+    provider = FakeProvider(
+        volumes={"v1": Unknown("RunPod does not know volume 'v1'")},
+        volume_creates=["v3"],
+    )
+    argv = ["volume", "up", "--serve", "qwen3-4b", "--ceiling", "1h", "--yes"]
+
+    assert gpunit(argv, provider=provider) == 0
+    assert "volume v1 is gone; creating a new one" in capsys.readouterr().err
+    assert len(provider.named("create_volume")) == 1
+    window = State(place).window()
+    assert window is not None
+    assert window.id == "v3"
 
 
 @pytest.mark.spec("serve:volume:never-created")

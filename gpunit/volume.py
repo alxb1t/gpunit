@@ -39,6 +39,15 @@ def up(
         log.refuse("the spec sets no 'volume_gb'; a window volume needs it")
     name = pod_name(spec.project)
     window = state.window()
+    if (
+        window is not None
+        and not window.ends_within(0)
+        and lifecycle.gone(provider, window.id)
+    ):
+        ledger.record_deleted(window.id)
+        state.clear_window()
+        log.say(f"volume {window.id} is gone; creating a new one")
+        window = None
     if window is not None:
         return _extend(spec.project, state, window, spec.volume_ceiling_s, yes)
 

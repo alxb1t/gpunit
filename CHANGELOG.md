@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `volume down` and the ceiling's sweep clear a window volume RunPod no longer knows: its delete and read answer
   `404` and the account's listing lacks it. A failed listing still keeps the record, so a wrong key never clears it.
   D55 records it (`0018`).
+- `volume up`, `--serve` too, makes a new window for a gone volume instead of extending its record; a session's
+  refusal of an unreadable window volume names `gpunit volume up` (`0018`).
 
 ## [0.11.2] - 2026-11-03
 

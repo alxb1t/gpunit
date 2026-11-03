@@ -6,7 +6,7 @@ carries `@pytest.mark.spec` with the key its task names.
 ## Progress
 
 - [x] 1 — Gone
-- [ ] 2 — Anew
+- [x] 2 — Anew
 
 ## 1 — Gone
 
@@ -28,12 +28,12 @@ carries `@pytest.mark.spec` with the key its task names.
 
 ## 2 — Anew
 
-- [ ] 2.1 Ask `lifecycle.gone` in `gpunit/volume.py::up` before `_extend`, per [D3](design.md#d3). Add the tests of
+- [x] 2.1 Ask `lifecycle.gone` in `gpunit/volume.py::up` before `_extend`, per [D3](design.md#d3). Add the tests of
   `volume:gone:up-recreates` and the `volume up` half of `volume:gone:listed-kept` and `volume:gone:listing-lost-kept`
   to `tests/test_volume.py`. Script `v1`'s read in `test_up_again_extends` and `test_up_again_never_pulls_the_end_in`.
   Verify: `grep -c 'is gone; creating a new one' gpunit/volume.py` prints `1`, `grep -c 'volume:gone:up-recreates' tests/test_volume.py` prints `1`, and `uv run pytest -q --no-cov tests/test_volume.py` exits 0.
-- [ ] 2.2 Add `; run gpunit volume up` to `gpunit/lifecycle.py::up`'s refusal of an unreadable window volume, per
+- [x] 2.2 Add `; run gpunit volume up` to `gpunit/lifecycle.py::up`'s refusal of an unreadable window volume, per
   [D5](design.md#d5), and the test of `session:volume:window-unreadable-names-up` to `tests/test_up.py`.
   Verify: `grep -c 'session:volume:window-unreadable-names-up' tests/test_up.py` prints `1`, and `uv run pytest -q --no-cov tests/test_up.py` exits 0.
-- [ ] 2.3 Add the test of `volume:gone:serve-recreates` to `tests/test_serve_session.py`.
+- [x] 2.3 Add the test of `volume:gone:serve-recreates` to `tests/test_serve_session.py`.
   Verify: `grep -c 'volume:gone:serve-recreates' tests/test_serve_session.py` prints `1`, and `uv run pytest -q --no-cov -m "not e2e" tests/test_serve_session.py` exits 0.
