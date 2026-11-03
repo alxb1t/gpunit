@@ -14,6 +14,11 @@ prose names `make gate` and never copies them. It syncs the locked environment, 
 and branch coverage, and validates the specs. A new command lands through a change whose cut names the gate recipe
 in a task.
 
+## The run's lines
+
+- **Worktrees:** `../` — each version's worktree sits beside the primary, named by its change id.
+- **Workspace setup:** `uv sync --locked` — restores the environment a fresh worktree lacks.
+
 ## How a change is cut here
 
 Each version is one change, cut, built, checked and released with the MinionsFactory `mf-*` skills. The OpenSpec
