@@ -34,9 +34,10 @@ read, naming `gpunit volume up`.
 - **WHEN** `v1` is recorded, its read answers `404`, and the account lists `v1`
 - **THEN** `volume up` extends `v1` and creates nothing, and `volume down` keeps the record and exits `1`
 
-#### Scenario: a listing that fails keeps the record
+#### Scenario: a listing or a read that fails keeps the record
 - **Key:** `volume:gone:listing-lost-kept`
-- **WHEN** `v1` is recorded, its read answers `404`, and the account's listing fails
+- **WHEN** `v1` is recorded, and its read answers `404` while the account's listing fails, or its read fails while the
+  account's listing answers without it
 - **THEN** `volume up` extends `v1` and creates nothing, and `volume down` keeps the record and exits `1`
 
 #### Scenario: serve's row volume is made anew

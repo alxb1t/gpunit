@@ -12,7 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `volume down` and the ceiling's sweep clear a window volume RunPod no longer knows: its delete and read answer
   `404` and the account's listing lacks it. A failed listing still keeps the record, so a wrong key never clears it.
   A gone volume gets no `deleted` ledger line, so `gpunit spend` still names one that another account's key misjudged
-  gone and that still bills. D55 records it (`0018`).
+  gone and that still bills; no checkout records it then, so *What it cost* and T48 say to delete it by hand in the
+  RunPod console. D55 records it (`0018`).
 - `volume up`, `--serve` too, makes a new window for a gone volume instead of extending its record; a session's
   refusal of an unreadable window volume names `gpunit volume up` (`0018`).
 

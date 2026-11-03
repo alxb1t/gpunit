@@ -398,17 +398,21 @@ def test_a_volume_the_listing_holds_is_kept(cwd: Path) -> None:
 
 @pytest.mark.spec("volume:gone:listing-lost-kept")
 @pytest.mark.parametrize(
-    "read",
-    [UNKNOWN["v1"], Lost("volume read returned HTTP 500")],
+    ("read", "listing"),
+    [
+        (UNKNOWN["v1"], Lost("volume listing returned HTTP 401")),
+        # The listing answers without `v1`: only the failed read keeps the record.
+        (Lost("volume read returned HTTP 500"), []),
+    ],
     ids=["listing-lost", "read-lost"],
 )
-def test_a_failed_read_keeps_the_record(read: Exception, cwd: Path) -> None:
+def test_a_failed_listing_or_read_keeps_the_record(
+    read: Exception, listing: Lost | list[str], cwd: Path
+) -> None:
     write_spec(cwd, WINDOW)
     state = open_window(cwd, 3600)
     provider = FakeProvider(
-        volumes={"v1": read},
-        volume_deletes={"v1": 404},
-        account_volumes=Lost("volume listing returned HTTP 401"),
+        volumes={"v1": read}, volume_deletes={"v1": 404}, account_volumes=listing
     )
 
     kept_by_up_and_down(state, provider)

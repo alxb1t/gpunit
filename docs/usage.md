@@ -295,7 +295,8 @@ total                                  $1.79
 - **`storage`** is one line per network volume the ledger does not name, billed whether or not a pod runs.
 - **A window volume bills under its project**, in its amount; a project with a volume and no pod shows `0 pods`. One
   whose end fell before today, that still bills today and that the ledger does not record as deleted is named on
-  stderr, with `gpunit volume down`.
+  stderr, with `gpunit volume down`. One that no checkout records, as when another RunPod account's key read it as
+  gone and cleared the record, `volume down` cannot reach: delete it by hand in the RunPod console.
 - **The current UTC day is still being billed**: its figures can change, and stderr says so.
 - **An unreadable billing exits `1`**, with no table: a table of zeros would read as a free week.
 

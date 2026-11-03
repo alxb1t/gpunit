@@ -38,8 +38,8 @@ answer keeps the record as today.
 | <a id="d6"></a>**D6** | D55 in `docs/decisions.md`, per [D55's text](#d55s-text). `docs/usage.md`'s `**A 404 is not "gone".**` line: before → after in [D55's text](#d55s-text). The comment `# A 404 is never gone: a wrong key gets one too.` in `gpunit/volume.py::down` → `# A 404 is gone only when the listing lacks it too: decision D55.` | the rule review reads | |
 
 The listing is the endpoint `RunPod.volumes` already calls, no secret moves, and each new line names a volume id, as
-the lines beside it do. `THREAT_MODEL.md`'s T48 names the second-account residual and `spend`'s warning as its control
-(decision D9).
+the lines beside it do. `THREAT_MODEL.md`'s T48 names the second-account residual, `spend`'s warning as its control and the
+console as its delete; F9 and T31 say a gone verdict clears the record without a delete (decision D9).
 
 ## D55's text
 
