@@ -88,7 +88,7 @@ def test_no_stock_within_the_allow_list_refuses(
         stocks={"NVIDIA A40": [("EU-RO-1", "HIGH")], "NVIDIA L40": []},
     )
 
-    assert gpunit(["volume", "up", "--yes"], provider=provider) == 1
+    assert gpunit(["volume", "up", "--yes"], provider=provider) == 4
     assert provider.named("create_volume") == []
     err = capsys.readouterr().err
     assert (
@@ -117,7 +117,7 @@ def test_no_stock_refuses_naming_the_cards(
         stocks={"NVIDIA A40": [], "NVIDIA L40": [("US-KS-2", "HIGH")]},
     )
 
-    assert gpunit(["volume", "up", "--yes"], provider=provider) == 1
+    assert gpunit(["volume", "up", "--yes"], provider=provider) == 4
     assert provider.named("create_volume") == []
     assert not State(cwd).volume_pending.exists()
     err = capsys.readouterr().err
@@ -145,7 +145,7 @@ def test_no_is_the_default(
     assert ("not created" in capsys.readouterr().err) is not created
 
 
-@pytest.mark.spec("volume:up:no-by-default")
+@pytest.mark.spec("volume:up:ctrl-c-at-price-exits-130")
 def test_an_interrupt_at_the_price_creates_nothing(
     cwd: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -153,7 +153,7 @@ def test_an_interrupt_at_the_price_creates_nothing(
     monkeypatch.setattr("builtins.input", interrupt)
     provider = FakeProvider()
 
-    assert gpunit(["volume", "up"], provider=provider) == 1
+    assert gpunit(["volume", "up"], provider=provider) == 130
     assert provider.named("create_volume") == []
     assert "not created" in capsys.readouterr().err
 

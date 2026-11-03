@@ -8,9 +8,17 @@ from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from typing import NoReturn
 
+NO_CAPACITY = 4
+NO_FIT = 5
+
 
 class Refusal(Exception):
-    """A verb refused; `cli` turns it into exit 1."""
+    """A verb refused; `cli` exits with its `code`."""
+
+    def __init__(self, text: str = "", code: int = 1) -> None:
+        """Hold the reason and the exit code it earns."""
+        super().__init__(text)
+        self.code = code
 
 
 def utc(after_s: int = 0) -> str:
@@ -74,7 +82,7 @@ def say(text: str) -> None:
     _sink(f"{utc()} {text}")
 
 
-def refuse(text: str) -> NoReturn:
-    """Write `<UTC> refused: <text>` to the sink and raise `Refusal`."""
+def refuse(text: str, code: int = 1) -> NoReturn:
+    """Write `<UTC> refused: <text>` to the sink and raise `Refusal` with `code`."""
     say(f"refused: {text}")
-    raise Refusal(text)
+    raise Refusal(text, code)

@@ -137,7 +137,7 @@ A network volume that outlives its sessions, to its own ceiling.
 
 ```
  body's code ─────────────────────────────▶ that code
- Refused ─────────────────────────────────▶ 1
+ Refused ─────────────────────────────────▶ its code: 1, 4 or 5
  Lost ────────────────────────────────────▶ 3
  TeardownFailed ──▶ caused by Lost? ──yes─▶ 3
                                     └─no──▶ 1
@@ -146,4 +146,4 @@ A network volume that outlives its sessions, to its own ceiling.
 ```
 
 `gpunit/run.py::outcome` maps the session's exceptions; `gpunit/cli.py::_run` adds the usage fault and runs the
-verb ([D32](decisions.md#d32--exit-codes-0-1-2-3-128n)).
+verb ([D32](decisions.md#d32--exit-codes-0-1-2-3-4-5-128n)).

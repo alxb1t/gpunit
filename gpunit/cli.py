@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import signal
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -131,7 +132,10 @@ def parse(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
 def main(
     argv: list[str] | None = None, *, provider: Provider | None = None
 ) -> NoReturn:
-    """Run one verb and exit: 0 done, 1 refused or failed, 2 usage, 3 lost."""
+    """Run one verb and exit: 0 done, 1 refused or failed, 2 usage, 3 lost.
+
+    4 no capacity, 5 no card that fits, 128 + n on signal n.
+    """
     sys.exit(_run(sys.argv[1:] if argv is None else argv, provider))
 
 
@@ -144,8 +148,8 @@ def _run(argv: list[str], provider: Provider | None) -> int:
         log.say(f"usage: {fault}")
         log.say(f"usage: {USAGE}")
         return USAGE_FAULT
-    except log.Refusal:
-        return FAILED
+    except log.Refusal as refused:
+        return refused.code
 
     # Built only when a verb asks: no key is needed to read a spec or no record.
     def lazy() -> Provider:
@@ -177,10 +181,12 @@ def _run(argv: list[str], provider: Provider | None) -> int:
                 return FAILED
             case _:
                 return run.run(spec, lazy(), state, command)
-    except log.Refusal:
-        return FAILED
+    except log.Refusal as refused:
+        return refused.code
     except Lost:
         return run.LOST_EXIT
+    except KeyboardInterrupt:
+        return 128 + signal.SIGINT
 
 
 def _serve(args: argparse.Namespace, provider: Callable[[], Provider]) -> int:

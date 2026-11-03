@@ -12,7 +12,8 @@ and where the code breaches it. **A rule claims no more than what holds it**: a 
 - **pending** — `.gpunit/pending`: a create was sent and no record names its pod yet; `.gpunit/volume.pending` is
   the same for a volume. **`began`** — `State.began`: this process wrote `pending` itself, so a teardown is its to
   do.
-- **refusal** — gpunit declined and left nothing it rented: a `refused:` line, `gpunit.Refused`, exit `1`.
+- **refusal** — gpunit declined and left nothing it rented: a `refused:` line, `gpunit.Refused`, exit `1`, or `4`
+  on no capacity and `5` on no card that fits.
   **lost** — a create's answer did not arrive, so a pod may exist: `gpunit.Lost`, exit `3`. **teardown failed** —
   a delete did not succeed and the record is kept: `gpunit.TeardownFailed`, exit `1`.
 - **the seam** — `gpunit/provider.py::Provider`, the protocol between the session and a GPU cloud.
@@ -50,10 +51,10 @@ and where the code breaches it. **A rule claims no more than what holds it**: a 
 | Teardown on every way out of the block; signals are ignored during it | [D29](decisions.md#d29--signals-raise-interrupted-once-are-ignored-during-teardown-restored-after), [D27](decisions.md#d27--session-is-a-context-manager-over-open_session-run-is-its-first-caller) | `test_the_blocks_end_tears_down`, `test_an_error_in_the_block_tears_down`, `test_sigterm_ends_the_block_and_tears_down`, `test_a_signal_during_the_teardown_is_ignored`, `test_the_deadline_tears_down`, `test_a_mismatch_tears_down` | — |
 | Nothing is torn down that this session did not make | [D20](decisions.md#d20--teardown-only-when-a-create-began-here-or-was-lost), [D23](decisions.md#d23--teardown-a-404-keeps-the-record-the-projects-pods-are-swept) | `test_an_interrupt_before_the_create_sweeps_nothing`, `test_an_interrupt_beside_an_earlier_record_deletes_nothing`, `test_a_look_alike_image_is_not_ours`, `test_down_leaves_a_volume_of_its_name_it_did_not_make` | — |
 | A 404 is never gone | [D23](decisions.md#d23--teardown-a-404-keeps-the-record-the-projects-pods-are-swept) | `test_a_404_keeps_the_record`, `test_a_refused_delete_keeps_the_record` | — |
-| A lost create exits `3`, keeps its mark, and the next `down` finds it | [D19](decisions.md#d19--placement-the-catalogue-floor-one-create-per-card-a-400-moves-on-the-rest-is-lost), [D32](decisions.md#d32--exit-codes-0-1-2-3-128n) | `test_a_5xx_create_is_lost`, `test_a_lost_create_tears_down_and_exits_3`, `test_a_lost_create_keeps_the_pending_mark`, `test_a_lost_create_is_swept` | — |
+| A lost create exits `3`, keeps its mark, and the next `down` finds it | [D19](decisions.md#d19--placement-the-catalogue-floor-one-create-per-card-a-400-moves-on-the-rest-is-lost), [D32](decisions.md#d32--exit-codes-0-1-2-3-4-5-128n) | `test_a_5xx_create_is_lost`, `test_a_lost_create_tears_down_and_exits_3`, `test_a_lost_create_keeps_the_pending_mark`, `test_a_lost_create_is_swept` | — |
 | A dead pod ends every wait | [D21](decisions.md#d21--the-wait-a-bounded-poll-a-failed-read-is-not-yet-two-dead-polls-end-any-wait) | `test_a_dead_pod_ends_the_wait`, `test_one_dead_poll_is_not_yet`, `test_a_dead_pod_ends_the_hold` | — |
 | A dead pipe on stderr ends no teardown | [D4](decisions.md#d4--gpunits-lines-utc-stamped-to-stderr-or-a-sink-refused-opens-a-refusal-a-dead-pipe-swallowed-sysexit-in-cli-alone) | `test_a_dead_pipe_on_stderr_ends_no_teardown`, `test_a_dead_pipe_on_stderr_leaves_the_process_exit_code` | — |
-| A signal exits `128+n` | [D32](decisions.md#d32--exit-codes-0-1-2-3-128n) | `test_a_signal_during_the_teardown_is_ignored` and the `run` tests | breached: `gpunit/volume.py::_agree` exits `1` on Ctrl-C at the price (`0015·F20`) |
+| A signal exits `128+n` | [D32](decisions.md#d32--exit-codes-0-1-2-3-4-5-128n) | `test_a_signal_during_the_teardown_is_ignored`, `test_an_interrupt_at_the_price_creates_nothing` and the `run` tests | — |
 
 ### Placement, cost and pins
 

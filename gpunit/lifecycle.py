@@ -104,7 +104,7 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
     pod_id = _create(spec, provider, cards, pubkey, nonce)
     if pod_id is None:
         state.clear_pending()
-        log.refuse("no card in 'gpus' was placed")
+        log.refuse("no card in 'gpus' was placed", log.NO_CAPACITY)
     record = Record(pod_id, spec.image, host=None, port=None, created=created)
     state.write(record)
     state.clear_pending()
@@ -334,7 +334,7 @@ def placeable(spec: Spec, provider: Provider) -> list[str]:
         else:
             cards.append(card)
     if not cards:
-        log.refuse("no card in 'gpus' meets vram_gb and max_hourly")
+        log.refuse("no card in 'gpus' meets vram_gb and max_hourly", log.NO_FIT)
     return cards
 
 

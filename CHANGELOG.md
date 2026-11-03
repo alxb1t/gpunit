@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking for a caller that reads `1` as "no card":** no capacity exits `4`, no card that fits `5`, so a caller
+  retries the one and edits the spec on the other. `gpunit.Refused` gains `.code`; Ctrl-C at `volume up`'s price
+  exits `130`. D32 is amended (`0019`).
+
 ## [0.11.2] - 2026-11-03
 
 Gate: local 0m13s · CI not read under mf-ship · 0.11.1: none

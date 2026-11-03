@@ -34,8 +34,8 @@ def outcome(body: Callable[[], int]) -> int:
     """Return `body`'s exit code, or the one the exception that ended it earned."""
     try:
         return body()
-    except log.Refusal:
-        return 1
+    except log.Refusal as refused:
+        return refused.code
     except Lost:
         return LOST_EXIT
     except library.TeardownFailed as failed:

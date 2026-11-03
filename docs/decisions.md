@@ -316,17 +316,16 @@ it still ends on a signal.**
 - **Why:** A reopen would send the traffic, and the vLLM key, to a squatter; a thread cannot raise in the main one.
 - **Made by:** `0013·D5`, `0013·D6`, `0013·S2`.
 
-### D32 · Exit codes: `0`, `1`, `2`, `3`, `128+n`
+### D32 · Exit codes: `0`, `1`, `2`, `3`, `4`, `5`, `128+n`
 
 **`gpunit` exits `0` on success, `1` on a refusal or a failed teardown, `2` on a usage error, `3` on a lost create,
-and `128+n` on signal `n`.**
+`4` on no capacity, `5` on no card that fits, and `128+n` on signal `n`.**
 
 `gpunit/cli.py::_run` and `gpunit/run.py::outcome` map outcomes to codes. Behaviour:
-[cli](../openspec/specs/cli/spec.md). Breached: `gpunit/volume.py::_agree` exits `1` on Ctrl-C at the price
-(`0015·F20`).
+[cli](../openspec/specs/cli/spec.md).
 
 - **Why:** A shell or an agent tells a refusal from a lost create by the code alone.
-- **Made by:** `0001·D10`, `0002·D7`, `0004·D6`, `0006·D3`.
+- **Made by:** `0001·D10`, `0002·D7`, `0004·D6`, `0006·D3`, `0019·D1`.
 
 ### D33 · `run`'s command gets the host, the ports and `GPUNIT_SSH`, never the account key
 

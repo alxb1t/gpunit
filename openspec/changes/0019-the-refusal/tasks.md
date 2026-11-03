@@ -5,27 +5,27 @@ key its task names.
 
 ## Progress
 
-- [ ] 1 — The codes
+- [x] 1 — The codes
 - [ ] 2 — The lines
 - [ ] 3 — The wait
 
 ## 1 — The codes
 
-- [ ] 1.1 Give `log.Refusal` its `code`, `log.refuse` its `code=` and `gpunit/log.py` `NO_CAPACITY` and `NO_FIT`;
+- [x] 1.1 Give `log.Refusal` its `code`, `log.refuse` its `code=` and `gpunit/log.py` `NO_CAPACITY` and `NO_FIT`;
   return `refused.code` in `gpunit/cli.py::_run` and `gpunit/run.py::outcome`, per [D2](design.md#d2).
   Verify: `grep -c 'NO_CAPACITY = 4' gpunit/log.py` prints `1`, `grep -c 'NO_FIT = 5' gpunit/log.py` prints `1`, and `uv run pytest -q --no-cov -m "not e2e"` exits 0.
-- [ ] 1.2 Refuse with `NO_CAPACITY` in `gpunit/volume.py::_datacenter` and `gpunit/lifecycle.py::up`'s none placed,
+- [x] 1.2 Refuse with `NO_CAPACITY` in `gpunit/volume.py::_datacenter` and `gpunit/lifecycle.py::up`'s none placed,
   and with `NO_FIT` in `gpunit/lifecycle.py::placeable`, per [D1](design.md#d1). Rename
   `test_none_placed_exits_1_with_no_record` to `test_none_placed_exits_4_with_no_record` in `tests/test_up.py`; assert
   `4` in `test_no_stock_refuses_naming_the_cards` and `test_no_stock_within_the_allow_list_refuses`
   (`tests/test_volume.py`). Add the tests of `cli:exits:no-capacity-exits-4` and `cli:exits:no-fit-exits-5` to
   `tests/test_up.py`.
   Verify: `grep -c 'cli:exits:no-fit-exits-5' tests/test_up.py` prints `1`, and `uv run pytest -q --no-cov tests/test_up.py tests/test_volume.py` exits 0.
-- [ ] 1.3 Re-raise Ctrl-C at `gpunit/volume.py::_agree` and return `130` for it in `gpunit/cli.py::_run`, per
+- [x] 1.3 Re-raise Ctrl-C at `gpunit/volume.py::_agree` and return `130` for it in `gpunit/cli.py::_run`, per
   [D3](design.md#d3). `test_an_interrupt_at_the_price_creates_nothing` binds `volume:up:ctrl-c-at-price-exits-130` and
   asserts `130`.
   Verify: `grep -c 'volume:up:ctrl-c-at-price-exits-130' tests/test_volume.py` prints `1`, and `uv run pytest -q --no-cov tests/test_volume.py` exits 0.
-- [ ] 1.4 Amend D32 in `docs/decisions.md` and add the `4` and `5` rows to `docs/usage.md`'s exit table, per
+- [x] 1.4 Amend D32 in `docs/decisions.md` and add the `4` and `5` rows to `docs/usage.md`'s exit table, per
   [The decisions' text](design.md#the-decisions-text).
   Verify: `grep -c '^### D32 · Exit codes: .0., .1., .2., .3., .4., .5., .128+n.$' docs/decisions.md` prints `1`, `grep -c '^| .4. | ' docs/usage.md` prints `1`, `grep -c '^| .5. | ' docs/usage.md` prints `1`, and `uv run pytest -q --no-cov tests/test_docs.py` exits 0.
 

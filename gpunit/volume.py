@@ -207,7 +207,8 @@ def _datacenter(spec: Spec, provider: Provider) -> str:
     )
     log.refuse(
         f"no card of gpus is in stock in a data centre with standard volumes{within}: "
-        + ", ".join(cards)
+        + ", ".join(cards),
+        log.NO_CAPACITY,
     )
 
 
@@ -218,14 +219,18 @@ def _agree(
     refused: str,
     yes: bool,
 ) -> None:
-    """Print the price and ask `question`; refuse anything but yes, unless `yes`."""
+    """Print the price and ask `question`; refuse anything but yes, unless `yes`.
+
+    Ctrl-C writes the refusal and re-raises `KeyboardInterrupt`: decision D32.
+    """
     most = most_cost(size_gb, ceiling_s)
     log.say(f"price: ${VOLUME_GB_MONTH}/GB a month")
     log.say(f"at most ${most} for {size_gb} GB over {_hours(ceiling_s)}")
     try:
         agreed = yes or _ask(f"{question} for at most ${most}?")
     except KeyboardInterrupt:
-        agreed = False
+        log.say(f"refused: {refused}")
+        raise
     if not agreed:
         log.refuse(refused)
 

@@ -86,7 +86,7 @@ with gpunit.session("gpunit.toml", environ={"RUNPOD_API_KEY": key}, say=my_log) 
 
 | raises | when | `gpunit run` exits |
 |---|---|---|
-| `gpunit.Refused` | it refused; nothing it rented is left | `1` |
+| `gpunit.Refused` | it refused; nothing it rented is left. Its `.code` is the exit code | `1`, `4` or `5` |
 | `gpunit.Lost` | a create's answer was lost; the sweep was attempted | `3` |
 | `gpunit.TeardownFailed` | the teardown failed; `.gpunit/pod` is kept, so run `gpunit down`. Its `__cause__` is the exception that ended the block, if one did, or the `Refused` whose own teardown failed while the session opened | `1` |
 | `gpunit.Interrupted` | `SIGINT`, `SIGTERM` or `SIGHUP` ended the block; a `KeyboardInterrupt` whose `.signal` names it | `128+n` |
@@ -378,7 +378,9 @@ billing and the ledger.
 | `1` | refused or failed; the teardown failed |
 | `2` | usage: an unknown verb, a missing command, an unreadable spec path, `serve` or `volume up --serve` without `--ceiling`, `--models` without a model, an unknown model, `spend --days` under 1 or over 3660, `volume` without `up` or `down` |
 | `3` | a create's answer was lost; a pod may exist and bill — run `gpunit down`; for a volume's create, `gpunit volume down` |
-| `128+n` | signal `n` stopped `run` or `serve`, or killed `run`'s command, and the teardown succeeded; a failed teardown is still `1`; Ctrl-C at `volume down`'s sweep question is `130` |
+| `4` | no capacity: every create of a session answered 400, or `volume up` found no card in stock; worth a retry |
+| `5` | no card of `gpus` meets `vram_gb` and `max_hourly`; edit the spec |
+| `128+n` | signal `n` stopped `run` or `serve`, or killed `run`'s command, and the teardown succeeded; a failed teardown is still `1`; Ctrl-C at `volume down`'s sweep question or `volume up`'s price question is `130` |
 
 gpunit's own lines go to stderr, each opening with the UTC time; stdout belongs to the command, or to `serve`'s
 chat and `--api`'s two lines, or to `spend`'s report.

@@ -107,13 +107,40 @@ def test_a_400_moves_on_to_the_next_card(cwd: Path) -> None:
 
 
 @pytest.mark.spec("session:place:none-placed")
-def test_none_placed_exits_1_with_no_record(cwd: Path) -> None:
+def test_none_placed_exits_4_with_no_record(cwd: Path) -> None:
     provider = FakeProvider(creates=[Unplaceable("no capacity")])
 
-    assert gpunit(["up"], provider=provider) == 1
+    assert gpunit(["up"], provider=provider) == 4
     assert creates(provider) == ["RTX 4090", "RTX A6000"]
     assert not (cwd / ".gpunit" / "pod").exists()
     assert not (cwd / ".gpunit" / "pending").exists()
+
+
+@pytest.mark.spec("cli:exits:no-capacity-exits-4")
+def test_no_capacity_exits_4_on_a_refused_line(
+    cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    provider = FakeProvider(creates=[Unplaceable("no capacity")])
+
+    assert gpunit(["up"], provider=provider) == 4
+    err = capsys.readouterr().err
+    assert re.search(r"^\S+Z refused: no card in 'gpus' was placed$", err, re.M)
+
+
+@pytest.mark.spec("cli:exits:no-fit-exits-5")
+def test_no_card_that_fits_exits_5(
+    cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_spec(cwd, VALID + "max_hourly = 0.9\n")
+    over = GpuInfo(vram_gb=48, hourly=2.59)
+    provider = FakeProvider(gpus={"RTX 4090": over, "RTX A6000": over})
+
+    assert gpunit(["up"], provider=provider) == 5
+    err = capsys.readouterr().err
+    assert "skipped: RTX 4090 costs" in err
+    assert "skipped: RTX A6000 costs" in err
+    assert err.index("skipped: RTX A6000") < err.index("refused: ")
+    assert creates(provider) == []
 
 
 @pytest.mark.spec("session:lost:5xx-exits-3")
