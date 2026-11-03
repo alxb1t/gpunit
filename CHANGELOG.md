@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Breaking for a caller that reads `1` as "no card":** no capacity exits `4`, no card that fits `5`, so a caller
   retries the one and edits the spec on the other. `gpunit.Refused` gains `.code`; Ctrl-C at `volume up`'s price
   exits `130`. D32 is amended (`0019`).
+- `docs/usage.md` states the lines a caller may parse: `refused:`, both `skipped:` forms and the attempt line, each
+  after the UTC time (`0019`).
 
 ## [0.11.2] - 2026-11-03
 

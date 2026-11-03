@@ -385,6 +385,20 @@ billing and the ledger.
 gpunit's own lines go to stderr, each opening with the UTC time; stdout belongs to the command, or to `serve`'s
 chat and `--api`'s two lines, or to `spend`'s report.
 
+## The lines a caller reads
+
+**These lines keep their form, so a caller may parse them** ([cli](../openspec/specs/cli/spec.md)). Each is one
+stderr line, after the UTC time.
+
+| line | when |
+|---|---|
+| `refused: <reason>` | a refusal; the exit code says its kind |
+| `skipped: <card> has <n> GB, under <vram_gb>` | a card of `gpus` under the floor |
+| `skipped: <card> costs $<hourly>/h, over <max_hourly>` | a card of `gpus` over the price |
+| `no capacity: attempt <n>; next in 60s, waiting until <UTC>` | each attempt of a wait for stock |
+
+e.g. `2026-11-03T09:14:02Z refused: no card in 'gpus' was placed`, then exit `4`.
+
 ## The spend rules
 
 - **The ceiling is required.** `boot.py` stops the pod at it, whatever happens to the laptop.

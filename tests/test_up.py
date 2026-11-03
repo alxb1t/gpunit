@@ -143,6 +143,26 @@ def test_no_card_that_fits_exits_5(
     assert creates(provider) == []
 
 
+@pytest.mark.spec("cli:lines:skipped-forms")
+def test_the_skipped_lines_name_the_card_and_the_figure(
+    cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_spec(
+        cwd, VALID.replace("vram_gb = 24", "vram_gb = 48") + "max_hourly = 0.9\n"
+    )
+    provider = FakeProvider(
+        gpus={
+            "RTX 4090": GpuInfo(vram_gb=24, hourly=0.4),
+            "RTX A6000": GpuInfo(vram_gb=48, hourly=2.59),
+        }
+    )
+
+    gpunit(["up"], provider=provider)
+    err = capsys.readouterr().err
+    assert re.search(r"^\S+Z skipped: RTX 4090 has 24 GB, under 48$", err, re.M)
+    assert re.search(r"^\S+Z skipped: RTX A6000 costs \$2\.59/h, over 0\.9$", err, re.M)
+
+
 @pytest.mark.spec("session:lost:5xx-exits-3")
 def test_a_5xx_create_is_lost(cwd: Path, capsys: pytest.CaptureFixture[str]) -> None:
     provider = FakeProvider(creates=[Lost("create returned HTTP 503: unavailable")])

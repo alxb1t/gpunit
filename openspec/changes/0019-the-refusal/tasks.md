@@ -6,7 +6,7 @@ key its task names.
 ## Progress
 
 - [x] 1 — The codes
-- [ ] 2 — The lines
+- [x] 2 — The lines
 - [ ] 3 — The wait
 
 ## 1 — The codes
@@ -31,7 +31,7 @@ key its task names.
 
 ## 2 — The lines
 
-- [ ] 2.1 Add `## The lines a caller reads` to `docs/usage.md`, per [D4](design.md#d4), and the test of
+- [x] 2.1 Add `## The lines a caller reads` to `docs/usage.md`, per [D4](design.md#d4), and the test of
   `cli:lines:skipped-forms` to `tests/test_up.py`, asserting both `skipped:` forms whole.
   Verify: `grep -c '^## The lines a caller reads$' docs/usage.md` prints `1`, `grep -c 'cli:lines:skipped-forms' tests/test_up.py` prints `1`, and `uv run pytest -q --no-cov tests/test_up.py tests/test_docs.py` exits 0.
 
