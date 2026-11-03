@@ -30,7 +30,7 @@ relative to the repository's root.
   Verify: `uv run pytest --collect-only -q -m e2e | grep -c '::'` prints `32`, and `uv run pytest --collect-only -q -m "not e2e" | grep -c '::'` prints `535`.
 - [ ] 1.6 In `Makefile`, the gate's `pytest` line takes `-m "not e2e"`, and the `e2e` target joins it and `.PHONY`,
   per [The tests moved](design.md#the-tests-moved).
-  Verify: `make -n e2e` prints `uv run pytest -m e2e`, `grep -c -F 'uv run pytest --cov -m "not e2e"' Makefile` prints `1`, and `make e2e` exits 0.
+  Verify: `make -n e2e` prints `uv run pytest -m e2e`, and `grep -c -F 'uv run pytest --cov -m "not e2e"' Makefile` prints `1`. `make e2e` binds loopback, so CI runs it, in 3.2.
   The `gate` recipe and `Makefile` change by exactly these lines:
   ```diff
   - .PHONY: gate live live-volume live-serve live-dead live-serve-dead
