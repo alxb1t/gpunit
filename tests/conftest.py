@@ -73,10 +73,13 @@ def drawn_nonce(monkeypatch: pytest.MonkeyPatch) -> Callable[[], str]:
 
 @pytest.fixture(autouse=True)
 def fixed_port(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
-    # Serve's probe binds loopback, which a sandboxed worker refuses; an `e2e` test
-    # keeps the real one (decision D54).
+    # Serve's port probe and the tunnel's loopback probes bind or connect loopback,
+    # which a sandboxed worker refuses and the host's own listeners would answer; an
+    # `e2e` test keeps the real ones (decision D54).
     if request.node.get_closest_marker("e2e") is None:
         monkeypatch.setattr(session, "_free_port", lambda: 18000)
+        monkeypatch.setattr(library, "_taken", lambda spec: None)
+        monkeypatch.setattr(library, "_binds_v6_loopback", lambda: True)
 
 
 @pytest.fixture

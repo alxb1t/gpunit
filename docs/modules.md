@@ -88,6 +88,8 @@ What the tests replace, and where it lives:
 | `gpunit/log.py::_sink` | where gpunit's lines go |
 | `gpunit/library.py::TUNNEL_POLL_S`, `gpunit/library.py::REOPEN_FIRST_S` | a fast tunnel watcher |
 | `gpunit/serve/table.py::load` | the bundled table |
+| `gpunit/serve/session.py::_free_port` | serve's port, 18000, outside `e2e`, by `tests/conftest.py`'s `fixed_port` (decision D54) |
+| `gpunit/library.py::_taken`, `gpunit/library.py::_binds_v6_loopback` | the tunnel's loopback probes, free and v6, outside `e2e`, by `fixed_port` |
 
 ## Known shape
 

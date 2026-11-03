@@ -25,10 +25,9 @@ in a task. `make e2e` runs the tests that need a real loopback socket, out of th
 
 A test is placed by its cost: every gate run pays for it again.
 
-- **The lowest layer that can fail for it** — unit, then integration, then end-to-end only for what a browser
-  alone shows.
+- **The lowest layer that can fail for it** — unit, then integration, then end-to-end only for what a real socket
+  or child process alone shows (decision D54).
 - **A step in an existing test before a new one** — one that already reaches the page, record or fixture.
-- **Engines only where they differ** — client behaviour on each engine; server-rendered output on one.
 - **Deleted or merged only as a change's `## Tests` table names it** — each removed test mapped to the test that
   carries its proofs, or to a decision in force at the base that retires it.
 

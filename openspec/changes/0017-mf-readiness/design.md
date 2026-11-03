@@ -32,7 +32,7 @@ both. Review finds the root documents. `main` refuses a force-push and a deletio
 
 | id | decision | because | rejected |
 |---|---|---|---|
-| <a id="d1"></a>**D1** | An autouse fixture `fixed_port` in `tests/conftest.py` sets `gpunit.serve.session._free_port` to return `18000`, except for a test marked `e2e` | the tests that reach it prove serve's flow, not the probe | marking all of `tests/test_serve_session.py` `e2e`: serve's suite would leave the gate |
+| <a id="d1"></a>**D1** | An autouse fixture `fixed_port` in `tests/conftest.py` sets `gpunit.serve.session._free_port` to return `18000`, `gpunit.library._taken` to return `None` and `gpunit.library._binds_v6_loopback` to return `True`, except for a test marked `e2e` | the tests that reach it prove serve's flow, not the probe | marking all of `tests/test_serve_session.py` `e2e`: serve's suite would leave the gate |
 | <a id="d2"></a>**D2** | A test whose proof is a real loopback socket carries `@pytest.mark.e2e`. `make gate` runs `pytest --cov -m "not e2e"`; `make e2e` runs `pytest -m e2e`. The marked tests are listed in [The tests moved](#the-tests-moved) | a worker may not bind loopback (MinionsFactory `0056-loopback-removal`), and the tunnel and the stream are proved by a real socket alone | faking the stream at `urllib`: the tests would no longer prove it |
 | <a id="d3"></a>**D3** | A fixture `no_proxy` in `tests/conftest.py` deletes `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `http_proxy`, `https_proxy` and `all_proxy`; `test_a_redirect_is_not_followed` and `test_a_redirect_is_a_failed_stop_never_followed` use it. gpunit itself keeps honouring a proxy | `urllib`'s opener reads them, so the sandbox's proxy took the faked request | ignoring proxies in gpunit: a user's proxy is legitimate |
 | <a id="d4"></a>**D4** | `.github/workflows/gate.yml` runs `make e2e` in a step after `make gate`; `tests/test_ci.py` holds it | every test still runs on every push | a second workflow |
@@ -45,15 +45,16 @@ both. Review finds the root documents. `main` refuses a force-push and a deletio
 
 ## The tests moved
 
-Each gets `@pytest.mark.e2e`; `tests/test_tool_call.py` gets `pytestmark = pytest.mark.e2e`, since each of its tests
-serves a `ModelServer`.
+Each gets `@pytest.mark.e2e`. In `tests/test_tool_call.py`, each test that serves a `ModelServer` gets it; the
+`serve:tools:key-from-the-environment` tests call `live/tool_call.py::main` on a faked `OPENER` and stay in the gate
+(converge S2).
 
 | file | tests |
 |---|---|
 | `tests/test_library.py` | `test_the_block_sees_the_session`, `test_a_dead_tunnel_is_reopened`, `test_a_taken_port_ends_the_block`, `test_a_port_taken_while_the_tunnel_waits_refuses`, `test_a_port_taken_while_the_pod_came_up_refuses`, `test_a_swallowed_refusal_leaves_the_signals_live`, `test_each_loopback_family_is_its_own_forward`, `test_a_host_without_v6_loopback_forwards_v4_alone`, `test_the_tunnels_connect_is_bounded` |
 | `tests/test_run.py` | `test_the_environment_names_the_session`, `test_a_dead_tunnel_is_reopened`, `test_a_busy_port_refuses_before_any_request`, `test_a_port_busy_on_v6_loopback_refuses`, `test_a_taken_port_ends_the_run` |
 | `tests/test_serve_chat.py` | `test_each_part_is_written_as_it_arrives_and_the_answer_is_kept`, `test_thinking_is_off_unless_asked_for`, `test_exit_or_the_end_of_input_ends_the_chat`, `test_streamed_text_is_cleaned_and_kept_as_streamed` |
-| `tests/test_tool_call.py` | every test |
+| `tests/test_tool_call.py` | `test_a_tool_call_passes`, `test_plain_text_fails`, `test_unparseable_arguments_fail`, `test_a_call_to_another_function_fails` |
 | `tests/test_serve_session.py` | `test_a_busy_local_port_is_skipped_before_the_price` |
 
 `pyproject.toml` registers the mark beside `spec(key)`:
@@ -156,8 +157,8 @@ that names a C rule replaces it.`
 | unit | none — `fixed_port` and `no_proxy` are fixtures | none |
 | end-to-end | none new; the tests in [The tests moved](#the-tests-moved) run in `make e2e` | none |
 
-The suite stands at 567 tests, by `uv run pytest --collect-only -q` at the base. `make gate` keeps 535 and `make e2e`
-runs 32: `tests/test_library.py` 9, `tests/test_run.py` 5, `tests/test_serve_chat.py` 8, `tests/test_tool_call.py` 9
+The suite stands at 567 tests, by `uv run pytest --collect-only -q` at the base. `make gate` keeps 539 and `make e2e`
+runs 28: `tests/test_library.py` 9, `tests/test_run.py` 5, `tests/test_serve_chat.py` 8, `tests/test_tool_call.py` 5
 and `tests/test_serve_session.py` 1, each by `uv run pytest --collect-only -q <file> -k <names>`. This change deletes
 and merges no test.
 

@@ -9,8 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- `make gate` binds no loopback socket, so it passes in a sandboxed worker: serve's port probe is faked, and the tests
-  whose proof is a real socket are marked `e2e` and run in `make e2e`, which CI runs after the gate. The redirect
+- `make gate` binds no loopback socket, so it passes in a sandboxed worker: serve's port probe and the tunnel's
+  loopback probes are faked, and the tests whose proof is a real socket are marked `e2e` and run in `make e2e`, which
+  CI runs after the gate; the tool-call check's key proofs stay in the gate on a faked opener. The redirect
   tests clear the proxy variables. D54 records it (`0017`).
 - The root documents MinionsFactory's review reads by name: `docs/threat-model.md` is `THREAT_MODEL.md`, with the
   worker and G17; `docs/README.md` is `ARCHITECTURE.md`; `CODING_STANDARDS.md` and `CONTRIBUTING.md` are new, and the
