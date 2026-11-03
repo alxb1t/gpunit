@@ -303,7 +303,8 @@ def test_up_makes_a_new_window_for_a_gone_volume(
     window = state.window()
     assert window is not None
     assert window.id == "v2"
-    assert ledger.deleted() == {"v1"}
+    # Gone is no delete: `spend` still names `v1` should it bill (decision D55).
+    assert ledger.deleted() == set()
 
 
 @pytest.mark.spec("volume:down:deletes")
@@ -368,7 +369,7 @@ def test_down_clears_a_gone_volume(
 
     assert gpunit(["volume", "down"], provider=provider) == 0
     assert not state.volume.exists()
-    assert ledger.deleted() == {"v1"}
+    assert ledger.deleted() == set()
     assert "volume v1 is gone; the record is cleared" in capsys.readouterr().err
 
 

@@ -44,7 +44,8 @@ def up(
         and not window.ends_within(0)
         and lifecycle.gone(provider, window.id)
     ):
-        ledger.record_deleted(window.id)
+        # No `deleted` line: a volume misjudged gone still bills, and `spend`
+        # names it. decision D55.
         state.clear_window()
         log.say(f"volume {window.id} is gone; creating a new one")
         window = None
@@ -93,7 +94,6 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
             state.clear_window()
             log.say(f"volume {window.id} deleted")
         elif code == 404 and lifecycle.gone(provider, window.id):
-            ledger.record_deleted(window.id)
             state.clear_window()
             log.say(f"volume {window.id} is gone; the record is cleared")
         else:

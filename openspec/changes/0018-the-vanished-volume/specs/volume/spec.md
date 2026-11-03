@@ -4,26 +4,30 @@
 
 A recorded volume is **gone** when its read answers `404` and the account's listing of its volumes, read with the same
 key, answers without it. A listing that fails, or that holds the volume, SHALL keep the record. A gone volume's record
-SHALL be removed, and the ledger SHALL record its end, by `gpunit volume up`, which SHALL then create a window as on a
-clean start, saying `volume <id> is gone; creating a new one`; by `gpunit volume down`, saying `volume <id> is gone; the
-record is cleared` and exiting `0`; and by the sweep of a volume past its ceiling, saying it is gone. A session SHALL
-remove no record: it SHALL refuse a window volume it cannot read, naming `gpunit volume up`.
+SHALL be removed by `gpunit volume up`, which SHALL then create a window as on a clean start, saying `volume <id> is
+gone; creating a new one`; by `gpunit volume down`, saying `volume <id> is gone; the record is cleared` and exiting `0`;
+and by the sweep of a volume past its ceiling, saying it is gone. Gone is no delete: the ledger SHALL record no
+`deleted` line for a gone volume, so `gpunit spend` still names one misjudged gone, as another RunPod account's key
+reads it, once it passes its end and bills. A session SHALL remove no record: it SHALL refuse a window volume it cannot
+read, naming `gpunit volume up`.
 
 #### Scenario: up makes a new window for a gone volume
 - **Key:** `volume:gone:up-recreates`
 - **WHEN** `v1` is recorded with its end an hour away, its read answers `404`, the account lists `v7` alone, and `volume up` runs with `--yes`
 - **THEN** stderr says `volume v1 is gone; creating a new one`, a volume is created, `.gpunit/volume` records it, and
-  the ledger records `v1` deleted
+  the ledger records no delete of `v1`
 
 #### Scenario: down clears a gone volume
 - **Key:** `volume:gone:down-clears`
 - **WHEN** `v1` is recorded, its delete and its read answer `404`, and the account lists no volume
-- **THEN** stderr says `volume v1 is gone; the record is cleared`, `.gpunit/volume` is gone, and the command exits `0`
+- **THEN** stderr says `volume v1 is gone; the record is cleared`, `.gpunit/volume` is gone, the ledger records no
+  delete of `v1`, and the command exits `0`
 
 #### Scenario: the ceiling's sweep clears a gone volume
 - **Key:** `volume:gone:sweep-clears`
 - **WHEN** `v1` is recorded with its end passed, its delete and its read answer `404`, the account lists no volume, and `status` runs
-- **THEN** stderr says `v1` is gone, and `.gpunit/volume` is gone
+- **THEN** stderr says `v1` is gone, `.gpunit/volume` is gone, the ledger records no delete of `v1`, and a `spend` the
+  next day that bills `v1` says it passed its ceiling and still bills
 
 #### Scenario: a volume the listing holds is kept
 - **Key:** `volume:gone:listed-kept`

@@ -266,7 +266,7 @@ def sweep_window(state: State, provider: Callable[[], Provider]) -> None:
         state.clear_volume_pending()
         log.say(f"volume {window.id} passed its ceiling at {window.ends}; deleted")
     elif code == 404 and gone(built, window.id):
-        ledger.record_deleted(window.id)
+        # No `deleted` line: one misjudged gone bills, and `spend` names it. D55.
         state.clear_window()
         state.clear_volume_pending()
         log.say(
