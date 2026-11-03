@@ -78,6 +78,7 @@ def reader(*said: str) -> Callable[[str], str]:
 
 @pytest.mark.spec("serve:chat:streams")
 @pytest.mark.parametrize("streamed", [True, False], ids=["streamed", "twin-buffered"])
+@pytest.mark.e2e
 def test_each_part_is_written_as_it_arrives_and_the_answer_is_kept(
     streamed: bool, model: ModelServer
 ) -> None:
@@ -116,6 +117,7 @@ def test_each_part_is_written_as_it_arrives_and_the_answer_is_kept(
 
 @pytest.mark.spec("serve:chat:thinking-off")
 @pytest.mark.parametrize("think", [False, True], ids=["default", "twin-think"])
+@pytest.mark.e2e
 def test_thinking_is_off_unless_asked_for(think: bool, model: ModelServer) -> None:
     def write(text: str) -> None:
         if text in model.parts:
@@ -131,6 +133,7 @@ def test_thinking_is_off_unless_asked_for(think: bool, model: ModelServer) -> No
 
 @pytest.mark.spec("serve:chat:eof-ends")
 @pytest.mark.parametrize("said", [("/exit", "never read"), ()], ids=["exit", "eof"])
+@pytest.mark.e2e
 def test_exit_or_the_end_of_input_ends_the_chat(
     said: tuple[str, ...], model: ModelServer
 ) -> None:
@@ -235,6 +238,7 @@ def test_a_server_error_drops_the_turn_and_the_chat_goes_on(
 
 @pytest.mark.spec("serve:chat:streamed-text-cleaned")
 @pytest.mark.parametrize("guarded", [True, False], ids=["cleaned", "twin-uncleaned"])
+@pytest.mark.e2e
 def test_streamed_text_is_cleaned_and_kept_as_streamed(
     guarded: bool, model: ModelServer, monkeypatch: pytest.MonkeyPatch
 ) -> None:

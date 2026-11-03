@@ -499,6 +499,7 @@ def test_a_stopped_server_ends_the_chat_and_closes_the_session(
 
 
 @pytest.mark.spec("serve:wait:busy-local-port-is-skipped")
+@pytest.mark.e2e
 def test_a_busy_local_port_is_skipped_before_the_price(
     home: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

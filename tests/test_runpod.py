@@ -331,7 +331,9 @@ class Redirecting(urllib.request.BaseHandler):
 
 
 @pytest.mark.spec("spec:secrets:redirect-not-followed")
-def test_a_redirect_is_not_followed(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_redirect_is_not_followed(
+    monkeypatch: pytest.MonkeyPatch, no_proxy: None
+) -> None:
     # The baseline: an opener without `_NoRedirect` sends the key to the new host.
     unguarded = Redirecting()
     exposed = RunPod(

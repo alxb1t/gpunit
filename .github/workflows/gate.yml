@@ -19,3 +19,4 @@ jobs:
       - name: Install the OpenSpec CLI at the version CLAUDE.md records
         run: npm install -g @fission-ai/openspec@1.11.0
       - run: make gate
+      - run: make e2e

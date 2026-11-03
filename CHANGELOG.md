@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `make gate` binds no loopback socket, so it passes in a sandboxed worker: serve's port probe is faked, and the tests
+  whose proof is a real socket are marked `e2e` and run in `make e2e`, which CI runs after the gate. The redirect
+  tests clear the proxy variables. D54 records it (`0017`).
+
 ## [0.11.1] - 2026-10-19
 
 ### Added

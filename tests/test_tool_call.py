@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 
+pytestmark = pytest.mark.e2e
+
 CHECK = Path(__file__).parent.parent / "live" / "tool_call.py"
 KEY = "k" * 43
 

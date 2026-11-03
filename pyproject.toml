@@ -51,10 +51,11 @@ testpaths = ["tests"]
 addopts = ["--strict-markers"]
 markers = [
     "spec(key): binds this test to a keyed scenario in openspec/",
+    "e2e: needs a real loopback socket; runs in make e2e, out of the gate (decision D54)",
 ]
 
-# The unit tests alone hold boot.py at 100 %: the end-to-end tests run it in a child
-# process, which coverage does not follow (decision D5).
+# The unit tests alone hold boot.py at 100 %: the child-process tests run it, which
+# coverage does not follow (decision D5).
 [tool.coverage.run]
 source = ["boot"]
 branch = true
