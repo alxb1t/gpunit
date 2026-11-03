@@ -1,9 +1,11 @@
 import json
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
 
-from gpunit import log
+from gpunit import ledger, log, spend
+from gpunit.provider import Unknown, VolumeCost
 from gpunit.state import State, Window
 from tests.fakes import RECORD, FakeProvider
 from tests.helpers import IMAGE, NO_REQUESTS, gpunit
@@ -81,3 +83,43 @@ def test_an_overdue_volume_is_deleted_first(
     else:
         assert state.window() is not None
         assert "ends=overdue" in captured.out
+
+
+@pytest.mark.spec("volume:gone:sweep-clears")
+@pytest.mark.parametrize(
+    ("listed", "cleared"), [([], True), (["v1"], False)], ids=["gone", "twin-listed"]
+)
+def test_the_sweep_clears_a_gone_volume(
+    listed: list[str],
+    cleared: bool,
+    cwd: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    state = State(cwd)
+    ends = log.utc(-60)
+    state.write_window(Window("v1", "EU-RO-1", 60, ends))
+    ledger.record_volume("isekai", "v1", ends)
+    state.mark_volume_pending()
+    provider = FakeProvider(
+        volumes={"v1": Unknown("RunPod does not know volume 'v1'")},
+        volume_deletes={"v1": 404},
+        account_volumes=listed,
+    )
+
+    assert gpunit(["status"], provider=provider) == 0
+    assert (state.window() is None) is cleared
+    assert (not state.volume_pending.exists()) is cleared
+    err = capsys.readouterr().err
+    assert ("and is gone; the record is cleared" in err) is cleared
+    # Gone is the key's account's view: another account's key misjudges a volume
+    # that still bills, so the ledger records no delete and `spend` names it.
+    assert ledger.deleted() == set()
+    tomorrow = datetime.now(UTC) + timedelta(days=1)
+    monkeypatch.setattr(spend, "utc_now", lambda: tomorrow)
+    billed = VolumeCost("v1", f"{tomorrow.date().isoformat()}T00:00:00Z", 0.01)
+    assert gpunit(["spend"], provider=FakeProvider(volume_costs=[billed])) == 0
+    assert (
+        "volume v1 (isekai) passed its ceiling and still bills"
+        in capsys.readouterr().err
+    )

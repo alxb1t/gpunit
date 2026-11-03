@@ -235,6 +235,15 @@ class RunPod:
             lambda volume: str(volume["id"]) if volume["name"] == name else None,
         )
 
+    def volume_ids(self) -> list[str]:
+        """Return the id of every volume of the key's account; raise `Lost`."""
+        return self._walk(
+            "/network-volumes",
+            "networkVolumes",
+            "volume listing",
+            lambda volume: str(volume["id"]),
+        )
+
     def _walk(
         self,
         path: str,

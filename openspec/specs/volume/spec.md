@@ -71,7 +71,7 @@ cards, and `datacenters` when set. A create whose answer did not arrive SHALL ke
 
 ### Requirement: A live window volume is extended
 
-`gpunit volume up` on a recorded volume whose end has not passed SHALL create nothing, SHALL ask the price of the new
+`gpunit volume up` on a recorded volume whose end has not passed, and which is not **gone**, SHALL create nothing, SHALL ask the price of the new
 window, and on `y` SHALL set the volume's end to the later of its recorded end and now plus `volume_ceiling`, in
 `.gpunit/volume` and the ledger. It SHALL never move the end earlier: `gpunit volume down` ends a window early.
 
@@ -96,7 +96,8 @@ alone; it SHALL remove `.gpunit/volume.pending` only when every such volume was 
 `204`. A stdin that is not a terminal SHALL be no answer, and SHALL be asked nothing. No answer SHALL keep the volume
 and the mark, name `gpunit volume down`, and exit `1`. Ctrl-C at the question SHALL end the sweep: it SHALL keep that
 volume, every volume not yet asked about and the mark, name `gpunit volume down`, and exit `130`. Any other delete
-answer, a `404` among them, SHALL keep the record or the mark it concerns, say so, and exit `1`.
+answer SHALL keep the record or the mark it concerns, say so, and exit `1`; a `404` SHALL do so too, unless the
+recorded volume is gone.
 
 #### Scenario: down deletes the volume
 - **Key:** `volume:down:deletes`
@@ -110,7 +111,7 @@ answer, a `404` among them, SHALL keep the record or the mark it concerns, say s
 
 #### Scenario: a refused delete keeps the record
 - **Key:** `volume:down:refused-delete-kept`
-- **WHEN** the delete answers `409`, or `404`
+- **WHEN** the delete answers `409`, or `404` while the account's listing holds the volume
 - **THEN** `.gpunit/volume` remains, stderr names the answer, and the command exits `1`
 
 #### Scenario: no pending mark, no sweep
@@ -151,7 +152,7 @@ answer, a `404` among them, SHALL keep the record or the mark it concerns, say s
 `up`, `run`, `status`, `volume up`, `volume down` and `serve` SHALL, before anything else, delete a recorded volume
 whose end has passed, saying so, `serve` before its price; `down` SHALL do so after it deletes its pods, which may hold
 the volume. A delete that answers `204` beside `.gpunit/volume.pending` SHALL remove the mark too: the create came
-back. A delete that fails SHALL keep the record and warn. `up`, `run` and `serve` SHALL then refuse, naming
+back. A delete that fails SHALL keep the record and warn, unless it answers `404` and the volume is gone. `up`, `run` and `serve` SHALL then refuse, naming
 `gpunit volume up`, `serve` before its price.
 
 #### Scenario: an overdue volume is deleted first
@@ -188,3 +189,48 @@ end, or `overdue` past it; `status --json` SHALL be unchanged.
 - **Key:** `volume:status:named`
 - **WHEN** a volume `v1` in `EU-RO-1` is recorded with its end at `14:30Z`
 - **THEN** stdout holds a line naming `v1`, `EU-RO-1` and `14:30Z`
+
+### Requirement: A volume RunPod no longer knows is cleared
+
+A recorded volume is **gone** when its read answers `404` and the account's listing of its volumes, read with the same
+key, answers without it. A listing that fails, or that holds the volume, SHALL keep the record. A gone volume's record
+SHALL be removed by `gpunit volume up`, which SHALL then create a window as on a clean start, saying `volume <id> is
+gone; creating a new one`; by `gpunit volume down`, saying `volume <id> is gone; the record is cleared` and exiting `0`;
+and by the sweep of a volume past its ceiling, saying it is gone. Gone is no delete: the ledger SHALL record no
+`deleted` line for a gone volume, so `gpunit spend` still names one misjudged gone, as another RunPod account's key
+reads it, once it passes its end and bills. A session SHALL remove no record: it SHALL refuse a window volume it cannot
+read, naming `gpunit volume up`.
+
+#### Scenario: up makes a new window for a gone volume
+- **Key:** `volume:gone:up-recreates`
+- **WHEN** `v1` is recorded with its end an hour away, its read answers `404`, the account lists `v7` alone, and `volume up` runs with `--yes`
+- **THEN** stderr says `volume v1 is gone; creating a new one`, a volume is created, `.gpunit/volume` records it, and
+  the ledger records no delete of `v1`
+
+#### Scenario: down clears a gone volume
+- **Key:** `volume:gone:down-clears`
+- **WHEN** `v1` is recorded, its delete and its read answer `404`, and the account lists no volume
+- **THEN** stderr says `volume v1 is gone; the record is cleared`, `.gpunit/volume` is gone, the ledger records no
+  delete of `v1`, and the command exits `0`
+
+#### Scenario: the ceiling's sweep clears a gone volume
+- **Key:** `volume:gone:sweep-clears`
+- **WHEN** `v1` is recorded with its end passed, its delete and its read answer `404`, the account lists no volume, and `status` runs
+- **THEN** stderr says `v1` is gone, `.gpunit/volume` is gone, the ledger records no delete of `v1`, and a `spend` the
+  next day that bills `v1` says it passed its ceiling and still bills
+
+#### Scenario: a volume the listing holds is kept
+- **Key:** `volume:gone:listed-kept`
+- **WHEN** `v1` is recorded, its read answers `404`, and the account lists `v1`
+- **THEN** `volume up` extends `v1` and creates nothing, and `volume down` keeps the record and exits `1`
+
+#### Scenario: a listing or a read that fails keeps the record
+- **Key:** `volume:gone:listing-lost-kept`
+- **WHEN** `v1` is recorded, and its read answers `404` while the account's listing fails, or its read fails while the
+  account's listing answers without it
+- **THEN** `volume up` extends `v1` and creates nothing, and `volume down` keeps the record and exits `1`
+
+#### Scenario: serve's row volume is made anew
+- **Key:** `volume:gone:serve-recreates`
+- **WHEN** a row's window records `v1`, its read answers `404`, the account lists no volume, and `volume up --serve` runs with `--ceiling` and `--yes`
+- **THEN** stderr says `volume v1 is gone; creating a new one`, and a volume is created

@@ -39,6 +39,16 @@ def up(
         log.refuse("the spec sets no 'volume_gb'; a window volume needs it")
     name = pod_name(spec.project)
     window = state.window()
+    if (
+        window is not None
+        and not window.ends_within(0)
+        and lifecycle.gone(provider, window.id)
+    ):
+        # No `deleted` line: a volume misjudged gone still bills, and `spend`
+        # names it. decision D55.
+        state.clear_window()
+        log.say(f"volume {window.id} is gone; creating a new one")
+        window = None
     if window is not None:
         return _extend(spec.project, state, window, spec.volume_ceiling_s, yes)
 
@@ -83,8 +93,11 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
         if code == 204:
             state.clear_window()
             log.say(f"volume {window.id} deleted")
+        elif code == 404 and lifecycle.gone(provider, window.id):
+            state.clear_window()
+            log.say(f"volume {window.id} is gone; the record is cleared")
         else:
-            # A 404 is never gone: a wrong key gets one too.
+            # A 404 is gone only when the listing lacks it too: decision D55.
             log.say(
                 f"delete of volume {window.id} answered HTTP {code}; the record is kept"
             )

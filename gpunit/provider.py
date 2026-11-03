@@ -142,6 +142,10 @@ class Provider(Protocol):
         """Return the ids of the volumes named `name`; raise `Lost`."""
         ...
 
+    def volume_ids(self) -> list[str]:
+        """Return the id of every volume of the key's account; raise `Lost`."""
+        ...
+
     def delete_volume(self, volume_id: str) -> int:
         """Delete the volume and return the HTTP status; 0 when no answer came."""
         ...

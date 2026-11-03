@@ -25,7 +25,7 @@ all open, use and close, from the CLI or from Python.
 |---|---|
 | the host key is proven over the provider's log, with a session nonce, before anything connects | [D22](docs/decisions.md#d22--the-host-key-is-proven-over-the-log) |
 | the pod enforces its own spend ceiling, with the laptop asleep | [D25](docs/decisions.md#d25--the-pod-stops-at-its-ceiling-and-on-any-end-down-deletes), [D46](docs/decisions.md#d46--the-ceiling-in-a-forked-watchdog-the-stop-in-a-finally-retried) |
-| teardown on every way out; a 404 is never "gone" | [D20](docs/decisions.md#d20--teardown-only-when-a-create-began-here-or-was-lost), [D23](docs/decisions.md#d23--teardown-a-404-keeps-the-record-the-projects-pods-are-swept) |
+| teardown on every way out; a pod's 404 is never "gone", a window volume's only when the account's listing lacks it too | [D20](docs/decisions.md#d20--teardown-only-when-a-create-began-here-or-was-lost), [D23](docs/decisions.md#d23--teardown-a-404-keeps-the-record-the-projects-pods-are-swept), [D55](docs/decisions.md#d55--a-volume-is-gone-when-its-read-and-the-accounts-listing-both-lack-it) |
 | nothing is rented without the price and a `y` | [D35](docs/decisions.md#d35--the-price-first-yn---yes-skips-it) |
 | the standard library alone; `boot.py` at 100 % coverage | [D1](docs/decisions.md#d1--a-flat-stdlib-package-python-311-no-runtime-dependency), [D5](docs/decisions.md#d5--the-gate-fakes-every-provider-answer-bootpy-at-100-) |
 | the layers and the docs held by tests | [D49](docs/decisions.md#d49--the-layers-held-by-teststest_layerspy), [D50](docs/decisions.md#d50--the-guide-why-flow-and-where-never-a-value-symbols-and-decision-ids-cited-held-by-teststest_docspy) |
@@ -45,7 +45,7 @@ disk_gb = 20
 ```
 
 ```sh
-uv add --dev git+https://github.com/alxb1t/gpunit@v0.11.2
+uv add --dev git+https://github.com/alxb1t/gpunit@v0.11.3
 export RUNPOD_API_KEY=...
 uv run gpunit run -- sh -c '$GPUNIT_SSH nvidia-smi'
 ```
