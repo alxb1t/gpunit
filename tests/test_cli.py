@@ -100,7 +100,7 @@ def test_serve_without_a_ceiling_exits_2_naming_it(
     assert "--ceiling" in capsys.readouterr().err
 
 
-@pytest.mark.spec("spec:file:stock-wait-duration")
+@pytest.mark.spec("cli:verbs:stock-wait-not-a-duration-exits-2")
 @pytest.mark.parametrize(
     "argv",
     [

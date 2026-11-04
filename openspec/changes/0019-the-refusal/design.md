@@ -73,7 +73,7 @@ pod another session made during the wait refuses, and so does a window volume th
 
 | layer | adds | removes |
 |---|---|---|
-| unit | `tests/test_up.py`: `cli:exits:no-capacity-exits-4`, `cli:exits:no-fit-exits-5`, `cli:lines:skipped-forms`, `session:stock:placed-later`, `session:stock:gives-up`, `session:stock:no-fit-never-waits`, `session:stock:guards-rechecked`, `session:stock:window-rechecked`; `tests/test_serve_session.py`: `cli:exits:serve-no-fit-exits-5`; `tests/test_library.py`: `session:stock:signal-ends-the-wait`; `tests/test_volume.py`: `volume:stock:found-later`, `volume:stock:ctrl-c-exits-130`, `cli:lines:attempt-form`; `tests/test_spec.py`: `spec:file:stock-wait-duration`; `tests/test_cli.py`: a `--stock-wait` usage case | none |
+| unit | `tests/test_up.py`: `cli:exits:no-capacity-exits-4`, `cli:exits:no-fit-exits-5`, `cli:lines:skipped-forms`, `session:stock:placed-later`, `session:stock:gives-up`, `session:stock:no-fit-never-waits`, `session:stock:guards-rechecked`, `session:stock:window-rechecked`; `tests/test_serve_session.py`: `cli:exits:serve-no-fit-exits-5`; `tests/test_library.py`: `session:stock:signal-ends-the-wait`; `tests/test_volume.py`: `volume:stock:found-later`, `volume:stock:ctrl-c-exits-130`, `cli:lines:attempt-form`; `tests/test_spec.py`: `spec:file:stock-wait-duration`; `tests/test_cli.py`: `cli:verbs:stock-wait-not-a-duration-exits-2` | none |
 | end-to-end | none | none |
 
 The suite stands at 567 tests, by `uv run pytest --collect-only -q` at the base. Changed, not removed:

@@ -74,6 +74,12 @@ source, `bundled` or the user file's path, before any network call.
 - **WHEN** `gpunit down --models rows.toml` or `gpunit volume up --models rows.toml` runs with no `--serve`
 - **THEN** it exits `2`, names `--serve`, and makes no request
 
+#### Scenario: a --stock-wait that is no duration exits 2
+- **Key:** `cli:verbs:stock-wait-not-a-duration-exits-2`
+- **WHEN** `gpunit up`, `gpunit run`, `gpunit serve qwen3-4b --ceiling 1h` or `gpunit volume up` runs with
+  `--stock-wait soon`
+- **THEN** it exits `2`, names `--stock-wait`, and makes no request
+
 #### Scenario: each verb that names a model reads the given file
 - **Key:** `cli:verbs:models-on-each-serve-verb`
 - **WHEN** `rows.toml` holds the row `granite-4.0-micro`, and `serve`, `down --serve`, `volume up --serve` and
