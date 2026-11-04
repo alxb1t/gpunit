@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Breaking for a row that holds such a flag:** a row's flag is read as vLLM reads it, `_` as `-` and cut short as
+  the flag it starts, so `--revisio`, `--enable_log_requests`, `--log-level`, `--config` and a dotted flag are refused,
+  `--tokenizer` too. `serve/launch.py` refuses the same rows on the pod. T13, T30 and T55 read `mitigated` (`0020`).
+
 ## [0.12.0] - 2026-11-04
 
 Gate: local 0m18s · CI not read under mf-ship · 0.11.3: local 0m18s · CI not read under mf-ship

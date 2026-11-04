@@ -396,11 +396,11 @@ Behaviour: [serve](../openspec/specs/serve/spec.md).
 **`serve/Dockerfile` builds on vLLM by digest; `serve/launch.py` turns request logging and telemetry off, then
 starts vLLM.**
 
-`gpunit/serve/models.toml` pins the image. Breached: `gpunit/serve/table.py::_args` refuses `--enable-log-requests` by
-its exact name, while vLLM takes abbreviations (`0015·F23`).
+`gpunit/serve/models.toml` pins the image. `gpunit/serve/table.py::_args` and `serve/launch.py` hold one flag rule:
+each flag read as vLLM reads it, the launcher's and the logging flags refused whole or cut short.
 
 - **Why:** One image serves every row; only gpunit's launcher sees every row, so it holds the quiet flags.
-- **Made by:** `0005·D7`, `0012·D9`, `0014·D4`, `0014·D6`.
+- **Made by:** `0005·D7`, `0012·D9`, `0014·D4`, `0014·D6`, `0020·D1`, `0020·D2`.
 
 ## The window volume
 
