@@ -1,3 +1,4 @@
+import os
 import re
 from pathlib import Path
 
@@ -67,6 +68,53 @@ def test_up_lists_by_the_specs_project_and_image(cwd: Path) -> None:
 
     assert gpunit(["up"], provider=provider) == 0
     assert provider.named("list") == [("isekai", IMAGE)]
+
+
+def _mark_waiting(cwd: Path, held: str) -> None:
+    (cwd / ".gpunit").mkdir()
+    (cwd / ".gpunit" / "waiting").write_text(held, encoding="utf-8")
+
+
+@pytest.mark.spec("session:one:waiting-refuses")
+@pytest.mark.parametrize("own", [False, True], ids=["other", "twin-own"])
+def test_a_wait_in_the_checkout_refuses_up(
+    own: bool, cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # The test's parent process is alive, and not this one.
+    pid = os.getpid() if own else os.getppid()
+    _mark_waiting(cwd, f"{pid}\n")
+
+    if own:
+        provider = FakeProvider()
+        assert gpunit(["up"], provider=provider) == 0
+        assert creates(provider) == ["RTX 4090"]
+        return
+    assert gpunit(["up"], provider=NO_REQUESTS) == 1
+    err = capsys.readouterr().err
+    assert f"a session is waiting for stock in this checkout (pid {pid})" in err
+    assert State(cwd).waiting.read_text(encoding="utf-8") == f"{pid}\n"
+
+
+# Past the largest pid Linux or macOS hands out, so no process holds it.
+DEAD_PID = 4_194_305
+
+
+@pytest.mark.spec("session:one:stale-waiting-removed")
+@pytest.mark.parametrize(
+    ("held", "named"),
+    [(f"{DEAD_PID}\n", f"pid {DEAD_PID}"), ("", "pid unreadable")],
+    ids=["dead", "unreadable"],
+)
+def test_a_stale_wait_mark_is_removed(
+    held: str, named: str, cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _mark_waiting(cwd, held)
+    provider = FakeProvider()
+
+    assert gpunit(["up"], provider=provider) == 0
+    assert f"removed a stale wait mark ({named})" in capsys.readouterr().err
+    assert not State(cwd).waiting.exists()
+    assert creates(provider) == ["RTX 4090"]
 
 
 @pytest.mark.spec("session:place:unknown-card-refuses")
@@ -282,6 +330,42 @@ def test_a_round_after_the_wait_refuses_past_the_volumes_end(
     assert recorded is not None
     assert f"the volume ends at {recorded.ends}" in capsys.readouterr().err
     assert not (cwd / ".gpunit" / "pod").exists()
+
+
+@pytest.mark.spec("session:stock:waiting-marked")
+@pytest.mark.parametrize(
+    ("creates_", "wait", "code"),
+    [
+        ([NO_CAPACITY, NO_CAPACITY, "pod-2"], "10m", 0),
+        ([NO_CAPACITY], "2m", 4),
+        ([NO_CAPACITY], "signal", 130),
+    ],
+    ids=["placed", "gives-up", "signal"],
+)
+def test_the_wait_marks_the_checkout(
+    creates_: list[str | Exception],
+    wait: str,
+    code: int,
+    cwd: Path,
+    clock: FakeClock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    held: list[str] = []
+    waiting = State(cwd).waiting
+
+    def sleep(seconds: float) -> None:
+        held.append(waiting.read_text(encoding="utf-8"))
+        if wait == "signal":
+            raise KeyboardInterrupt
+        clock.sleep(seconds)
+
+    monkeypatch.setattr(lifecycle, "CLOCK", lifecycle.Clock(clock.monotonic, sleep))
+    stock_wait = "10m" if wait == "signal" else wait
+    provider = FakeProvider(creates=creates_)
+
+    assert gpunit(["up", "--stock-wait", stock_wait], provider=provider) == code
+    assert held and set(held) == {f"{os.getpid()}\n"}
+    assert not waiting.exists()
 
 
 @pytest.mark.spec("session:lost:5xx-exits-3")

@@ -35,6 +35,7 @@ def up(
             f"a create may have left a volume ({state.volume_pending}); "
             "run gpunit volume down"
         )
+    lifecycle.refuse_waiting(state)
     if spec.volume_gb is None or spec.volume_ceiling_s is None:
         log.refuse("the spec sets no 'volume_gb'; a window volume needs it")
     name = pod_name(spec.project)
@@ -52,7 +53,10 @@ def up(
     if window is not None:
         return _extend(spec.project, state, window, spec.volume_ceiling_s, yes)
 
-    datacenter = _datacenter(spec, provider)
+    try:
+        datacenter = _datacenter(spec, provider, state)
+    finally:
+        state.clear_waiting()
     log.say(f"data centre: {datacenter}")
     _agree(
         spec.volume_gb,
@@ -195,7 +199,7 @@ def _extend(
     return 0
 
 
-def _datacenter(spec: Spec, provider: Provider) -> str:
+def _datacenter(spec: Spec, provider: Provider, state: State) -> str:
     if spec.volume_datacenter is not None:
         return spec.volume_datacenter
     try:
@@ -207,7 +211,7 @@ def _datacenter(spec: Spec, provider: Provider) -> str:
     deadline, until = lifecycle.stock_deadline(spec)
     attempt = 1
     while (found := _stocked(cards, standard, provider)) is None:
-        if not lifecycle.stock_round(attempt, deadline, until):
+        if not lifecycle.stock_round(state, attempt, deadline, until):
             within = (
                 f" within datacenters {', '.join(spec.datacenters)}"
                 if spec.datacenters

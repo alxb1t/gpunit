@@ -7,7 +7,7 @@ The row arguments' rule, the threat model's worker rows, the wait mark, then the
 
 - [x] 1 — The rows
 - [x] 2 — The threat model
-- [ ] 3 — The wait mark
+- [x] 3 — The wait mark
 - [ ] 4 — **HUMAN** — The serve image
 
 ## 1 — The rows
@@ -32,10 +32,10 @@ The row arguments' rule, the threat model's worker rows, the wait mark, then the
 
 ## 3 — The wait mark
 
-- [ ] 3.1 Add `State.waiting`, `State.mark_waiting` and `State.clear_waiting` to `gpunit/state.py`, per
+- [x] 3.1 Add `State.waiting`, `State.mark_waiting` and `State.clear_waiting` to `gpunit/state.py`, per
   [D5](design.md#d5), with their test in `tests/test_state.py`.
   Verify: `grep -c 'def mark_waiting' gpunit/state.py` prints `1`, and `uv run pytest -q --no-cov tests/test_state.py` exits 0.
-- [ ] 3.2 Mark in `gpunit/lifecycle.py::stock_round`, clear in `lifecycle.up`'s and `gpunit/volume.py::up`'s wait,
+- [x] 3.2 Mark in `gpunit/lifecycle.py::stock_round`, clear in `lifecycle.up`'s and `gpunit/volume.py::up`'s wait,
   and add `lifecycle.refuse_waiting`, asked by `_guarded` and `volume.up`, per [D5](design.md#d5). Add the tests of
   `session:one:waiting-refuses`, `session:one:stale-waiting-removed` and `session:stock:waiting-marked` to
   `tests/test_up.py`, and of `volume:stock:waiting-marked` to `tests/test_volume.py`.

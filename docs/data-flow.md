@@ -68,6 +68,8 @@ In `.gpunit/` beside the spec, each written whole, the directory `0700`
             └──lost──▶ kept; the next down sweeps by name and image
 
  window:  volume.pending ──created──▶ volume ──volume down / past its end──▶ (gone)
+
+ wait:    waiting ──placed / found / gave up / signal──▶ (gone)
 ```
 
 - `pending` marks a create that may have made a pod no record names; `State.began` says this process wrote it.
@@ -76,6 +78,9 @@ In `.gpunit/` beside the spec, each written whole, the directory `0700`
 - `key` and `key.pub` are the session's keypair, deleted with the pod
   ([D16](decisions.md#d16--a-keypair-per-session-deleted-at-teardown)).
 - `volume` and `volume.pending` are the window's record and mark, beside the pod's.
+- `waiting` holds the id of a process waiting for stock, from its first wait to its way out. Another live process's
+  mark refuses `up` and `volume up`; a dead one's is removed
+  ([D56](decisions.md#d56--a-stall-in-stock-is-waited-out-on-request)).
 - `serve` keeps the same files under the home directory, one directory per model
   ([D18](decisions.md#d18--serves-state-under-the-home-directory-one-session-per-model)).
 

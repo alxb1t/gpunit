@@ -154,10 +154,11 @@ Behaviour: [spec](../openspec/specs/spec/spec.md).
 
 **A session's state lives in `.gpunit/` beside the spec, each file replaced whole, the directory `0700`.**
 
-`gpunit/state.py::State` holds `pod`, `pending`, `known_hosts`, `key`, `key.pub`, `volume` and `volume.pending`.
+`gpunit/state.py::State` holds `pod`, `pending`, `known_hosts`, `key`, `key.pub`, `volume`, `volume.pending` and
+`waiting`.
 
 - **Why:** One session per working directory, as isekai's dotfiles; a found directory may carry a loose mode.
-- **Made by:** `0001·D5`, `0010·D4`, `0013·D3`.
+- **Made by:** `0001·D5`, `0010·D4`, `0013·D3`, `0020·D5`.
 
 ### D16 · A keypair per session, deleted at teardown
 
@@ -556,6 +557,10 @@ refuses with `4`; no other refusal waits, and a signal ends the wait with nothin
 round of 400s leaves no pending mark and no create begun (`gpunit/state.py::State.clear_round`), and `lifecycle.up`
 runs its guards again before each later round (`gpunit/lifecycle.py::_guarded`): a record, a pending mark or a listed
 pod another session made during the wait refuses, and so does a window volume the session would now outlive.
+`.gpunit/waiting` holds the waiting process's id from the first wait, removed on every way out
+(`gpunit/state.py::State.mark_waiting`); `gpunit/lifecycle.py::refuse_waiting` refuses `up` and `volume up` beside
+another live process's mark, and removes a dead one's.
 
-- **Why:** A data centre's stock runs out for hours, and every caller would write the same retry loop.
-- **Made by:** `0019·D6`.
+- **Why:** A data centre's stock runs out for hours, and every caller would write the same retry loop. A mark the
+  process owns guards the checkout while it sleeps, and one `kill -9` cannot leave it stuck.
+- **Made by:** `0019·D6`, `0020·D5`.

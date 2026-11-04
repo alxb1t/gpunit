@@ -84,21 +84,24 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
     nonce = NONCE()
     deadline, until = stock_deadline(spec)
     attempt = 1
-    while True:
-        # Before the create, so a log read `since` it misses none of the pod's lines
-        # within the provider's tail (decision D22).
-        created = log.utc()
-        state.mark_pending()
-        pod_id = _create(spec, provider, cards, pubkey, nonce)
-        if pod_id is not None:
-            break
-        # No pending mark outlives a round of 400s, so no create began: decision D56.
-        state.clear_round()
-        if not stock_round(attempt, deadline, until):
-            log.refuse("no card in 'gpus' was placed", log.NO_CAPACITY)
-        attempt += 1
-        # Another session, or the window's end, may have come during the wait.
-        spec = _guarded(spec, provider, state)
+    try:
+        while True:
+            # Before the create, so a log read `since` it misses none of the pod's
+            # lines within the provider's tail (decision D22).
+            created = log.utc()
+            state.mark_pending()
+            pod_id = _create(spec, provider, cards, pubkey, nonce)
+            if pod_id is not None:
+                break
+            # No pending mark outlives a round of 400s, so no create began: D56.
+            state.clear_round()
+            if not stock_round(state, attempt, deadline, until):
+                log.refuse("no card in 'gpus' was placed", log.NO_CAPACITY)
+            attempt += 1
+            # Another session, or the window's end, may have come during the wait.
+            spec = _guarded(spec, provider, state)
+    finally:
+        state.clear_waiting()
     record = Record(pod_id, spec.image, host=None, port=None, created=created)
     state.write(record)
     state.clear_pending()
@@ -304,6 +307,7 @@ def _guarded(spec: Spec, provider: Provider, state: State) -> Spec:
         log.refuse(f"a pod is already recorded in {state.pod}; run gpunit down")
     if state.pending.exists():
         log.refuse(f"a create may have left a pod ({state.pending}); run gpunit down")
+    refuse_waiting(state)
     if spec.volume_gb is not None:
         spec = _in_window(spec, state)
     _refuse_listed(spec, provider)
@@ -390,19 +394,47 @@ def stock_deadline(spec: Spec) -> tuple[float, str]:
     return CLOCK.monotonic() + spec.stock_wait_s, log.utc(spec.stock_wait_s)
 
 
-def stock_round(attempt: int, deadline: float, until: str) -> bool:
-    """Write the attempt line and sleep a round, unless it would pass `deadline`.
+def stock_round(state: State, attempt: int, deadline: float, until: str) -> bool:
+    """Mark the wait, write the attempt line and sleep, unless it would pass `deadline`.
 
     Return whether it slept, e.g. attempt 2 → "no capacity: attempt 2; next in 60s,
-    waiting until 2026-11-03T10:14:02Z", then True.
+    waiting until 2026-11-03T10:14:02Z", then True. The caller clears the mark.
     """
     if CLOCK.monotonic() + STOCK_ROUND_S > deadline:
         return False
+    state.mark_waiting()
     log.say(
         f"no capacity: attempt {attempt}; next in {STOCK_ROUND_S}s, "
         f"waiting until {until}"
     )
     CLOCK.sleep(STOCK_ROUND_S)
+    return True
+
+
+def refuse_waiting(state: State) -> None:
+    """Refuse beside another live process's wait mark; remove a stale one."""
+    if not state.waiting.exists():
+        return
+    try:
+        pid = int(state.waiting.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, ValueError):
+        pid = 0
+    if pid == os.getpid():
+        return
+    if pid > 0 and _alive(pid):
+        log.refuse(f"a session is waiting for stock in this checkout (pid {pid})")
+    state.clear_waiting()
+    log.say(f"removed a stale wait mark (pid {pid if pid > 0 else 'unreadable'})")
+
+
+def _alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except PermissionError:
+        # Another user's process: alive, and not ours to signal.
+        return True
+    except (OSError, OverflowError):
+        return False
     return True
 
 

@@ -11,7 +11,7 @@ and where the code breaches it. **A rule claims no more than what holds it**: a 
 - **record** — `.gpunit/pod`: the pod a session made, its address and the time of its create.
 - **pending** — `.gpunit/pending`: a create was sent and no record names its pod yet; `.gpunit/volume.pending` is
   the same for a volume. **`began`** — `State.began`: this process wrote `pending` itself, so a teardown is its to
-  do.
+  do. **waiting** — `.gpunit/waiting`: the id of a process waiting for stock in the checkout.
 - **refusal** — gpunit declined and left nothing it rented: a `refused:` line, `gpunit.Refused`, exit `1`, or `4`
   on no capacity and `5` on no card that fits.
   **lost** — a create's answer did not arrive, so a pod may exist: `gpunit.Lost`, exit `3`. **teardown failed** —
@@ -60,7 +60,7 @@ and where the code breaches it. **A rule claims no more than what holds it**: a 
 
 | rule | from | held by | breach |
 |---|---|---|---|
-| One live session per project | [D15](decisions.md#d15--gpunit-in-the-working-directory-each-record-written-whole-the-directory-0700) | `test_a_recorded_pod_refuses_up`, `test_a_pending_create_refuses_up`, `test_a_listed_pod_refuses_up`, `test_a_round_after_the_wait_refuses_beside_another_session` | — |
+| One live session per project | [D15](decisions.md#d15--gpunit-in-the-working-directory-each-record-written-whole-the-directory-0700) | `test_a_recorded_pod_refuses_up`, `test_a_pending_create_refuses_up`, `test_a_listed_pod_refuses_up`, `test_a_round_after_the_wait_refuses_beside_another_session`, `test_a_wait_in_the_checkout_refuses_up`, `test_a_second_volume_up_refuses_during_the_wait` | — |
 | The ceiling is required, and the pod enforces it | [D11](decisions.md#d11--spec-from-gpunittoml-strict-keys-a-digest-a-required-ceiling-checked-ports), [D25](decisions.md#d25--the-pod-stops-at-its-ceiling-and-on-any-end-down-deletes) | `test_no_ceiling_no_pod`, `test_the_ceiling_reaches_the_pod_in_seconds`, `test_the_watchdog_stops_the_pod_at_the_ceiling` | — |
 | Nothing is rented or created without the price and a `y` (`serve`, `volume up`) | [D35](decisions.md#d35--the-price-first-yn---yes-skips-it) | `test_nothing_is_rented_unless_the_operator_says_y`, `test_no_is_the_default`, `test_an_interrupt_at_the_price_creates_nothing` | — |
 | Every input that shapes a pod is pinned | [D11](decisions.md#d11--spec-from-gpunittoml-strict-keys-a-digest-a-required-ceiling-checked-ports), [D40](decisions.md#d40--the-serve-image-vllm-by-digest-the-launcher-turns-logging-and-telemetry-off) | `test_an_image_without_a_digest_is_refused`, `test_a_moving_revision_is_refused_naming_the_row`, `test_the_image_is_built_from_pinned_inputs`, `test_each_action_is_pinned_by_commit`, `test_no_row_resets_a_launcher_flag` | — |
