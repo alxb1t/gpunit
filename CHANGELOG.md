@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-04
+
+Gate: local 0m18s · CI not read under mf-ship · 0.11.3: local 0m18s · CI not read under mf-ship
+
 ### Changed
 
 - **Breaking for a caller that reads `1` as "no card":** no capacity exits `4`, no card that fits `5`, so a caller

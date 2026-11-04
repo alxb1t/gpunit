@@ -9,12 +9,12 @@ where secrets come from — so a session cannot be opened without an end, a pin,
 
 The system SHALL read the session's spec from `gpunit.toml`: `project`, `image`, `gpus` (a preference list),
 `vram_gb`, `ceiling`, `disk_gb`, and optionally `volume`, `volume_gb`, `volume_ceiling`, `volume_datacenter`,
-`datacenters`, `ports`, `ram_gb`, `cuda`, `max_hourly`, `timeout` and an `[env]` table; and SHALL refuse, naming the
+`datacenters`, `ports`, `ram_gb`, `cuda`, `max_hourly`, `timeout`, `stock_wait` and an `[env]` table; and SHALL refuse, naming the
 field, when a required field is missing, a value has the wrong type, a key is unknown, a port, remote or local, lies
 outside 1–65535, or `[env]` names a variable beginning `GPUNIT_` or `RUNPOD_`. An `[env]` value SHALL reach the pod as
 written, a RunPod secret reference `{{ RUNPOD_SECRET_<name> }}` among them. `volume_gb` SHALL be from 10 to 4000 and
 SHALL come with `volume_ceiling`, a duration as `ceiling` is; `volume_ceiling` and `volume_datacenter` SHALL come with
-`volume_gb`; and `volume` and `volume_gb` SHALL NOT both be set. `datacenters` SHALL be a non-empty list of data-centre
+`volume_gb`; and `volume` and `volume_gb` SHALL NOT both be set. `stock_wait` SHALL be a duration as `ceiling` is. `datacenters` SHALL be a non-empty list of data-centre
 ids, kept in its order; a `volume_datacenter` it does not name SHALL be refused, naming
 `volume_datacenter` and `datacenters`.
 
@@ -92,6 +92,11 @@ ids, kept in its order; a `volume_datacenter` it does not name SHALL be refused,
 - **Key:** `spec:file:volume-datacenter-outside-refused`
 - **WHEN** `datacenters = ["EU-RO-1"]`, `volume_gb = 60`, `volume_ceiling = "4h"` and `volume_datacenter = "CA-MTL-4"`
 - **THEN** `up` and `volume up` refuse naming `volume_datacenter` and `datacenters`, exit `1`, and make no request
+
+#### Scenario: stock_wait is a duration
+- **Key:** `spec:file:stock-wait-duration`
+- **WHEN** `gpunit.toml` holds `stock_wait = "2h"`, or `stock_wait = "soon"`
+- **THEN** the first loads as 7200 seconds, and the second is refused naming `stock_wait`
 
 ### Requirement: An image without a digest is refused
 
