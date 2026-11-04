@@ -119,7 +119,16 @@ class State:
         os.replace(partial, self.waiting)
 
     def clear_waiting(self) -> None:
-        """Remove `waiting`."""
+        """Remove `waiting` if it holds this process's id: another's mark is its own."""
+        try:
+            held = self.waiting.read_bytes()
+        except FileNotFoundError:
+            return
+        if held == f"{os.getpid()}\n".encode():
+            self.clear_stale_waiting()
+
+    def clear_stale_waiting(self) -> None:
+        """Remove `waiting`, whatever it holds: its process is not alive."""
         self.waiting.unlink(missing_ok=True)
 
     def write_known_hosts(self, line: str) -> None:

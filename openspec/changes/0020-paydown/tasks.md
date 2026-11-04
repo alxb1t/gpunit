@@ -16,7 +16,7 @@ The row arguments' rule, the threat model's worker rows, the wait mark, then the
   `_LAUNCHERS`. Add the tests of `serve:table:launcher-flags-refused` and `serve:table:logging-families-refused`, and
   the argparse replay of [Tests](design.md#tests), to `tests/test_serve_table.py`; the `--enable-log-requests=yes`
   case of the `serve:rows:logging-on-refused` test now expects a refusal.
-  Verify: `grep -c 'serve:table:launcher-flags-refused' tests/test_serve_table.py` prints `1`, `grep -c 'serve:table:logging-families-refused' tests/test_serve_table.py` prints `1`, and `uv run pytest -q --no-cov tests/test_serve_table.py` exits 0.
+  Verify: `grep -c 'serve:table:launcher-flags-refused' tests/test_serve_table.py` prints `2`, `grep -c 'serve:table:logging-families-refused' tests/test_serve_table.py` prints `1`, and `uv run pytest -q --no-cov tests/test_serve_table.py` exits 0.
 - [x] 1.2 Give `serve/launch.py` the same rule, per [D2](design.md#d2). Add the test of
   `serve:image:launcher-refuses-a-row` to `tests/test_serve_image.py`; `SERVE_ARGS` in
   `test_the_launcher_keeps_logging_and_telemetry_off` becomes `--max-model-len 16384 --max-num-seqs 8`.

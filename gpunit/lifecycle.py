@@ -423,7 +423,7 @@ def refuse_waiting(state: State) -> None:
         return
     if pid > 0 and _alive(pid):
         log.refuse(f"a session is waiting for stock in this checkout (pid {pid})")
-    state.clear_waiting()
+    state.clear_stale_waiting()
     log.say(f"removed a stale wait mark (pid {pid if pid > 0 else 'unreadable'})")
 
 

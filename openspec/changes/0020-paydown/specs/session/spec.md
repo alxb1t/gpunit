@@ -38,7 +38,7 @@ The system SHALL, when `stock_wait` or `--stock-wait` sets a duration, and every
 the attempt line, wait 60 seconds and try the cards again, in order, until one is placed or the duration has passed;
 then it SHALL refuse as when none was placed and exit `4`. No pending mark SHALL remain between rounds, and no create
 SHALL count as begun; `.gpunit/waiting`, holding the process's id, SHALL guard the checkout from the first wait, and
-SHALL be removed on every way out. Before each later round it SHALL check again what it checks before the first, refusing as
+SHALL be removed on every way out by that process alone. Before each later round it SHALL check again what it checks before the first, refusing as
 there: a record, a pending mark, a listed pod, and a window volume the session's ceiling plus its wait for SSH would
 outlast. A refusal of any other kind SHALL NOT wait. A signal during the wait SHALL end it, rent nothing, tear nothing
 down, and exit `128 + n`; inside `gpunit.session()` it SHALL raise `Interrupted`.

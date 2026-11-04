@@ -44,9 +44,10 @@ a digest.
 - **WHEN** the bundled table is read
 - **THEN** no row's arguments hold `--enable-log-requests` or `--enable-log-outputs`
 
-#### Scenario: a row's abbreviation of a launcher flag is refused
+#### Scenario: a row's launcher flag, whole or cut short, is refused
 - **Key:** `serve:table:launcher-flags-refused`
-- **WHEN** a row's arguments hold `--revisio main`, `--por=8001`, `--api-k k` or `--code_rev main`
+- **WHEN** a row's arguments hold `--revision main`, `--port=8001`, `--revisio main`, `--por=8001`, `--api-k k` or
+  `--code_rev main`
 - **THEN** the row is refused naming the flag, and `--max-num-seqs 8` passes
 
 #### Scenario: a row's rewritten logging flag is refused

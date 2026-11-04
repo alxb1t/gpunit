@@ -80,3 +80,7 @@ def test_the_wait_mark_holds_this_process(tmp_path: Path) -> None:
     state.clear_waiting()
     assert not state.waiting.exists()
     state.clear_waiting()
+    # A process refused beside another's wait leaves that process's mark.
+    state.waiting.write_text(f"{os.getppid()}\n", encoding="utf-8")
+    state.clear_waiting()
+    assert state.waiting.read_text(encoding="utf-8") == f"{os.getppid()}\n"

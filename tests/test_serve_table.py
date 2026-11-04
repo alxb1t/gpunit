@@ -309,7 +309,7 @@ def test_a_user_row_is_checked_as_a_bundled_row_is(
     assert ("models.granite-4.0-micro" in err) is row
 
 
-@pytest.mark.spec("serve:rows:checked-as-bundled")
+@pytest.mark.spec("serve:table:launcher-flags-refused")
 @pytest.mark.parametrize(
     ("args", "named"),
     [

@@ -557,9 +557,9 @@ refuses with `4`; no other refusal waits, and a signal ends the wait with nothin
 round of 400s leaves no pending mark and no create begun (`gpunit/state.py::State.clear_round`), and `lifecycle.up`
 runs its guards again before each later round (`gpunit/lifecycle.py::_guarded`): a record, a pending mark or a listed
 pod another session made during the wait refuses, and so does a window volume the session would now outlive.
-`.gpunit/waiting` holds the waiting process's id from the first wait, removed on every way out
-(`gpunit/state.py::State.mark_waiting`); `gpunit/lifecycle.py::refuse_waiting` refuses `up` and `volume up` beside
-another live process's mark, and removes a dead one's.
+`.gpunit/waiting` holds the waiting process's id from the first wait, removed on every way out by that process alone
+(`gpunit/state.py::State.mark_waiting`, `State.clear_waiting`); `gpunit/lifecycle.py::refuse_waiting` refuses `up`
+and `volume up` beside another live process's mark, and removes a dead one's.
 
 - **Why:** A data centre's stock runs out for hours, and every caller would write the same retry loop. A mark the
   process owns guards the checkout while it sleeps, and one `kill -9` cannot leave it stuck.
