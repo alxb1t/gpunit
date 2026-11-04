@@ -532,3 +532,13 @@ socket is marked `e2e` and runs in `make e2e`, which `.github/workflows/gate.yml
 
 - **Why:** MinionsFactory runs each phase's gate in an OS sandbox that refuses a loopback bind.
 - **Made by:** `0017·D2`.
+
+### D56 · A stall in stock is waited out on request
+
+**`stock_wait`, or `--stock-wait`, retries a round that found no capacity every 60 s until the duration passes, then
+refuses with `4`; no other refusal waits, and a signal ends the wait with nothing rented.**
+
+`gpunit/lifecycle.py::stock_round` holds the round; `lifecycle.up` and `gpunit/volume.py::_datacenter` ask it.
+
+- **Why:** A data centre's stock runs out for hours, and every caller would write the same retry loop.
+- **Made by:** `0019·D6`.

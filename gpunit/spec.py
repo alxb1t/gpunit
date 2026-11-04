@@ -36,6 +36,7 @@ _OPTIONAL: dict[str, tuple[type, ...]] = {
     "cuda": (str,),
     "max_hourly": (int, float),
     "timeout": (int,),
+    "stock_wait": (str,),
     "env": (dict,),
 }
 _TYPES = _REQUIRED | _OPTIONAL
@@ -69,6 +70,7 @@ class Spec:
     cuda: str | None = None
     max_hourly: float | None = None
     timeout_s: int = DEFAULT_TIMEOUT_S
+    stock_wait_s: int | None = None
     env: Mapping[str, str] = field(default_factory=dict)
 
     def allows(self, datacenter: str | None) -> bool:
@@ -131,6 +133,7 @@ def load_spec(path: Path) -> Spec:
         cuda=raw.get("cuda"),
         max_hourly=raw.get("max_hourly"),
         timeout_s=raw.get("timeout", DEFAULT_TIMEOUT_S),
+        stock_wait_s=_optional_duration(path, raw, "stock_wait"),
         env=_env(path, raw.get("env", {})),
     )
 
@@ -166,6 +169,10 @@ def _duration(path: Path, key: str, text: str) -> int:
         log.refuse(
             f"{path}: {key!r} must be a duration with a unit, as 600s, 45m or 4h"
         )
+
+
+def _optional_duration(path: Path, raw: dict[str, Any], key: str) -> int | None:
+    return _duration(path, key, raw[key]) if key in raw else None
 
 
 def strings(where: str | Path, key: str, items: list[object]) -> tuple[str, ...]:

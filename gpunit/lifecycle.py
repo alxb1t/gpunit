@@ -26,6 +26,7 @@ from gpunit.spec import Spec
 from gpunit.state import Record, State, Window
 
 POLL_S = 5
+STOCK_ROUND_S = 60
 # The statuses of a container that is not running; two polls in a row end the wait.
 DEAD = ("EXITED", "ERROR", "TERMINATED")
 # Checked before the create: a tool missing after it leaves a pod rented.
@@ -97,14 +98,21 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
 
     pubkey = state.keygen(pod_name(spec.project))
     nonce = NONCE()
-    # Before the create, so a log read `since` it misses none of the pod's lines
-    # within the provider's tail (decision D22).
-    created = log.utc()
-    state.mark_pending()
-    pod_id = _create(spec, provider, cards, pubkey, nonce)
-    if pod_id is None:
+    deadline, until = stock_deadline(spec)
+    attempt = 1
+    while True:
+        # Before the create, so a log read `since` it misses none of the pod's lines
+        # within the provider's tail (decision D22).
+        created = log.utc()
+        state.mark_pending()
+        pod_id = _create(spec, provider, cards, pubkey, nonce)
+        if pod_id is not None:
+            break
+        # No pending mark outlives a round of 400s: decision D56.
         state.clear_pending()
-        log.refuse("no card in 'gpus' was placed", log.NO_CAPACITY)
+        if not stock_round(attempt, deadline, until):
+            log.refuse("no card in 'gpus' was placed", log.NO_CAPACITY)
+        attempt += 1
     record = Record(pod_id, spec.image, host=None, port=None, created=created)
     state.write(record)
     state.clear_pending()
@@ -336,6 +344,29 @@ def placeable(spec: Spec, provider: Provider) -> list[str]:
     if not cards:
         log.refuse("no card in 'gpus' meets vram_gb and max_hourly", log.NO_FIT)
     return cards
+
+
+def stock_deadline(spec: Spec) -> tuple[float, str]:
+    """Return when a wait for stock ends, on `CLOCK` and in UTC; now without one."""
+    if spec.stock_wait_s is None:
+        return CLOCK.monotonic(), ""
+    return CLOCK.monotonic() + spec.stock_wait_s, log.utc(spec.stock_wait_s)
+
+
+def stock_round(attempt: int, deadline: float, until: str) -> bool:
+    """Write the attempt line and sleep a round, unless it would pass `deadline`.
+
+    Return whether it slept, e.g. attempt 2 → "no capacity: attempt 2; next in 60s,
+    waiting until 2026-11-03T10:14:02Z", then True.
+    """
+    if CLOCK.monotonic() + STOCK_ROUND_S > deadline:
+        return False
+    log.say(
+        f"no capacity: attempt {attempt}; next in {STOCK_ROUND_S}s, "
+        f"waiting until {until}"
+    )
+    CLOCK.sleep(STOCK_ROUND_S)
+    return True
 
 
 def _create(

@@ -1,15 +1,17 @@
 import io
+import re
+from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import NoReturn
 
 import pytest
 
-from gpunit import ledger, log
+from gpunit import ledger, lifecycle, log
 from gpunit.provider import GpuInfo, Lost, Unplaceable
 from gpunit.state import State
 from gpunit.volume import most_cost
-from tests.fakes import FakeProvider, TtyInput
+from tests.fakes import FakeClock, FakeProvider, TtyInput
 from tests.helpers import NO_REQUESTS, WINDOW, gpunit, open_window, write_spec
 
 CARDS = WINDOW.replace('["RTX 4090", "RTX A6000"]', '["NVIDIA A40", "NVIDIA L40"]')
@@ -123,6 +125,63 @@ def test_no_stock_refuses_naming_the_cards(
     err = capsys.readouterr().err
     assert "no card of gpus is in stock in a data centre with standard volumes" in err
     assert "NVIDIA A40, NVIDIA L40" in err
+
+
+@pytest.mark.spec("volume:stock:found-later")
+def test_a_later_read_finds_stock(
+    cwd: Path,
+    clock: FakeClock,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_spec(cwd, CARDS + 'stock_wait = "10m"\n')
+    provider = FakeProvider(stocks={"NVIDIA A40": [], "NVIDIA L40": []})
+
+    def restock(seconds: float) -> None:
+        provider.stocks["NVIDIA A40"] = [("EU-RO-1", "HIGH")]
+        clock.sleep(seconds)
+
+    monkeypatch.setattr(lifecycle, "CLOCK", lifecycle.Clock(clock.monotonic, restock))
+
+    assert gpunit(["volume", "up", "--yes"], provider=provider) == 0
+    assert provider.named("create_volume") == [("gpunit-isekai", 60, "EU-RO-1")]
+    assert capsys.readouterr().err.count("no capacity: attempt") == 1
+
+
+@pytest.mark.spec("cli:lines:attempt-form")
+def test_each_attempt_is_one_line(
+    cwd: Path, clock: FakeClock, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_spec(cwd, CARDS + 'stock_wait = "10m"\n')
+    provider = FakeProvider(stocks={"NVIDIA A40": [], "NVIDIA L40": []})
+
+    assert gpunit(["volume", "up", "--yes"], provider=provider) == 4
+    line = re.search(
+        r"^(\S+Z) no capacity: attempt 2; next in 60s, waiting until (\S+Z)$",
+        capsys.readouterr().err,
+        re.M,
+    )
+    assert line is not None
+    stamp, until = (datetime.strptime(t, "%Y-%m-%dT%H:%M:%SZ") for t in line.groups())
+    assert 599 <= (until - stamp).total_seconds() <= 600
+    assert provider.named("create_volume") == []
+
+
+@pytest.mark.spec("volume:stock:ctrl-c-exits-130")
+def test_ctrl_c_ends_the_wait_for_stock(
+    cwd: Path, clock: FakeClock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    write_spec(cwd, CARDS + 'stock_wait = "10m"\n')
+    provider = FakeProvider(stocks={"NVIDIA A40": [], "NVIDIA L40": []})
+
+    def sleep(seconds: float) -> NoReturn:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(lifecycle, "CLOCK", lifecycle.Clock(clock.monotonic, sleep))
+
+    assert gpunit(["volume", "up", "--yes"], provider=provider) == 130
+    assert provider.named("create_volume") == []
+    assert not State(cwd).volume_pending.exists()
 
 
 @pytest.mark.spec("volume:up:no-by-default")

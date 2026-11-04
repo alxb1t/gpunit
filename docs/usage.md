@@ -25,6 +25,7 @@ How to use gpunit: from a project, from Python, and through `serve`.
    cuda = "12.8"
    max_hourly = 0.80
    timeout = 420                               # seconds to wait for SSH
+   stock_wait = "1h"                           # on no capacity, try again every 60s for this long
    [env]
    MODE = "render"                             # GPUNIT_* and RUNPOD_* names are refused here
    ```
@@ -376,9 +377,9 @@ billing and the ledger.
 |---|---|
 | `0` | done; for `run`, the command's own code passes through |
 | `1` | refused or failed; the teardown failed |
-| `2` | usage: an unknown verb, a missing command, an unreadable spec path, `serve` or `volume up --serve` without `--ceiling`, `--models` without a model, an unknown model, `spend --days` under 1 or over 3660, `volume` without `up` or `down` |
+| `2` | usage: an unknown verb, a missing command, an unreadable spec path, `serve` or `volume up --serve` without `--ceiling`, `--models` without a model, an unknown model, `spend --days` under 1 or over 3660, `volume` without `up` or `down`, a `--stock-wait` that is no duration |
 | `3` | a create's answer was lost; a pod may exist and bill — run `gpunit down`; for a volume's create, `gpunit volume down` |
-| `4` | no capacity: every create of a session answered 400, or `volume up` found no card in stock; worth a retry |
+| `4` | no capacity: every create of a session answered 400, or `volume up` found no card in stock; worth a retry, which `stock_wait` or `--stock-wait` on `up`, `run`, `serve` and `volume up` makes every 60s until it passes |
 | `5` | no card of `gpus` meets `vram_gb` and `max_hourly`; edit the spec |
 | `128+n` | signal `n` stopped `run` or `serve`, or killed `run`'s command, and the teardown succeeded; a failed teardown is still `1`; Ctrl-C at `volume down`'s sweep question or `volume up`'s price question is `130` |
 

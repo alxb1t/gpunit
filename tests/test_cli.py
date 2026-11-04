@@ -100,6 +100,31 @@ def test_serve_without_a_ceiling_exits_2_naming_it(
     assert "--ceiling" in capsys.readouterr().err
 
 
+@pytest.mark.spec("spec:file:stock-wait-duration")
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["up", "--stock-wait", "soon"],
+        ["run", "--stock-wait", "soon", "--", "true"],
+        ["serve", "qwen3-4b", "--ceiling", "1h", "--stock-wait", "soon"],
+        ["volume", "up", "--stock-wait", "soon"],
+    ],
+    ids=["up", "run", "serve", "volume-up"],
+)
+def test_a_stock_wait_that_is_no_duration_exits_2(
+    argv: list[str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    write_spec(tmp_path)
+
+    assert gpunit(argv, provider=NO_REQUESTS) == 2
+    err = capsys.readouterr().err
+    assert "argument --stock-wait: 'soon' is not a duration" in err
+
+
 @pytest.mark.spec("cli:verbs:spend-bad-days-exits-2")
 @pytest.mark.parametrize(
     ("days", "code"),

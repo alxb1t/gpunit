@@ -283,3 +283,19 @@ def test_a_window_volume_outside_the_allow_list_is_refused(
         assert "'volume_datacenter' 'CA-MTL-4' is not in 'datacenters'" in err
     else:
         assert load_spec(path).volume_datacenter == datacenter
+
+
+@pytest.mark.spec("spec:file:stock-wait-duration")
+def test_stock_wait_is_a_duration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert load_spec(write_spec(tmp_path, VALID)).stock_wait_s is None
+    assert (
+        load_spec(write_spec(tmp_path, VALID + 'stock_wait = "2h"\n')).stock_wait_s
+        == 7200
+    )
+    monkeypatch.chdir(tmp_path)
+    write_spec(tmp_path, VALID + 'stock_wait = "soon"\n')
+
+    assert gpunit(["up"], provider=NO_REQUESTS) == 1
+    assert "'stock_wait' must be a duration" in capsys.readouterr().err

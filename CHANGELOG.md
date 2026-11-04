@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/usage.md` states the lines a caller may parse: `refused:`, both `skipped:` forms and the attempt line, each
   after the UTC time (`0019`).
 
+### Added
+
+- `stock_wait` in `gpunit.toml`, or `--stock-wait` on `up`, `run`, `serve` and `volume up`, retries a round that found
+  no capacity every 60 s until the duration passes, then exits `4`; no fit never waits, and a signal ends the wait
+  with nothing rented. D56 records it (`0019`).
+
 ## [0.11.2] - 2026-11-03
 
 Gate: local 0m13s · CI not read under mf-ship · 0.11.1: none

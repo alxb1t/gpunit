@@ -7,7 +7,7 @@ key its task names.
 
 - [x] 1 — The codes
 - [x] 2 — The lines
-- [ ] 3 — The wait
+- [x] 3 — The wait
 
 ## 1 — The codes
 
@@ -37,21 +37,21 @@ key its task names.
 
 ## 3 — The wait
 
-- [ ] 3.1 Add `stock_wait` to `gpunit/spec.py` as `Spec.stock_wait_s`, per [D5](design.md#d5), and the test of
+- [x] 3.1 Add `stock_wait` to `gpunit/spec.py` as `Spec.stock_wait_s`, per [D5](design.md#d5), and the test of
   `spec:file:stock-wait-duration` to `tests/test_spec.py`.
   Verify: `grep -c '"stock_wait"' gpunit/spec.py` prints `2`, the allowed key and its read, and `uv run pytest -q --no-cov tests/test_spec.py` exits 0.
-- [ ] 3.2 Add `--stock-wait` to `up`, `run`, `serve` and `volume up` in `gpunit/cli.py`, named in `USAGE`, and set it
+- [x] 3.2 Add `--stock-wait` to `up`, `run`, `serve` and `volume up` in `gpunit/cli.py`, named in `USAGE`, and set it
   on the row's spec in `gpunit/serve/session.py`, per [D5](design.md#d5). Add a `--stock-wait soon` usage case to
   `tests/test_cli.py`.
   Verify: `grep -c 'stock-wait' gpunit/cli.py` prints a number of at least `2`, and `uv run pytest -q --no-cov -m "not e2e" tests/test_cli.py` exits 0.
-- [ ] 3.3 Add `gpunit/lifecycle.py::stock_round` and ask it in `lifecycle.up` and `gpunit/volume.py::_datacenter`, per
+- [x] 3.3 Add `gpunit/lifecycle.py::stock_round` and ask it in `lifecycle.up` and `gpunit/volume.py::_datacenter`, per
   [D6](design.md#d6). Add the tests of `session:stock:placed-later`, `session:stock:gives-up` and
   `session:stock:no-fit-never-waits` to `tests/test_up.py`, and of `volume:stock:found-later` and
   `cli:lines:attempt-form` to `tests/test_volume.py`.
   Verify: `grep -c '^def stock_round' gpunit/lifecycle.py` prints `1`, `grep -c 'session:stock:gives-up' tests/test_up.py` prints `1`, and `uv run pytest -q --no-cov tests/test_up.py tests/test_volume.py` exits 0.
-- [ ] 3.4 Add the tests of `session:stock:signal-ends-the-wait` to `tests/test_library.py` and
+- [x] 3.4 Add the tests of `session:stock:signal-ends-the-wait` to `tests/test_library.py` and
   `volume:stock:ctrl-c-exits-130` to `tests/test_volume.py`, per [D7](design.md#d7): the clock's sleep raises.
   Verify: `grep -c 'session:stock:signal-ends-the-wait' tests/test_library.py` prints `1`, and `uv run pytest -q --no-cov -m "not e2e" tests/test_library.py tests/test_volume.py` exits 0.
-- [ ] 3.5 Add D56 to the end of `docs/decisions.md`, per [The decisions' text](design.md#the-decisions-text), and
+- [x] 3.5 Add D56 to the end of `docs/decisions.md`, per [The decisions' text](design.md#the-decisions-text), and
   `stock_wait` to `docs/usage.md`'s keys.
   Verify: `grep -c '^### D56 · A stall in stock is waited out on request$' docs/decisions.md` prints `1`, `grep -c 'stock_wait' docs/usage.md` prints a number of at least `1`, and `uv run pytest -q --no-cov tests/test_docs.py` exits 0.
