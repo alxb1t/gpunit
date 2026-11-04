@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-11-04
+
+Gate: local 0m17s · CI not read under mf-ship · 0.12.0: local 0m18s · CI not read under mf-ship
+
 ### Fixed
 
 - **Breaking for a row that holds such a flag:** a row's flag is read as vLLM reads it, `_` as `-` and cut short as
