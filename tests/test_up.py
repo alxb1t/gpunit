@@ -3,13 +3,14 @@ from pathlib import Path
 
 import pytest
 
-from gpunit import lifecycle
+from gpunit import lifecycle, log
 from gpunit.provider import GpuInfo, Lost, PodInfo, Unknown, Unplaceable, VolumeInfo
 from gpunit.runpod import RunPod
 from gpunit.spec import Spec
 from gpunit.state import State
 from tests.fakes import (
     BOOT_LOG,
+    RECORD,
     RUNNING,
     FakeClock,
     FakeOpener,
@@ -223,6 +224,64 @@ def test_a_card_that_does_not_fit_never_waits(
     assert gpunit(["up"], provider=provider) == 5
     assert "no capacity: attempt" not in capsys.readouterr().err
     assert clock.now == 0
+
+
+@pytest.mark.spec("session:stock:guards-rechecked")
+@pytest.mark.parametrize("other", ["record", "pending", "listed"])
+def test_a_round_after_the_wait_refuses_beside_another_session(
+    other: str,
+    cwd: Path,
+    clock: FakeClock,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_spec(cwd, VALID + 'stock_wait = "10m"\n')
+
+    def sleep(seconds: float) -> None:
+        # Another `up` in this checkout, during the wait.
+        if other == "record":
+            State(cwd).write(RECORD)
+        elif other == "pending":
+            State(cwd).mark_pending()
+        clock.sleep(seconds)
+
+    monkeypatch.setattr(lifecycle, "CLOCK", lifecycle.Clock(clock.monotonic, sleep))
+    listings = [[], [("pod-9", "RUNNING")]] if other == "listed" else [[]]
+    provider = FakeProvider(
+        creates=[NO_CAPACITY, NO_CAPACITY, "pod-2"], listings=listings
+    )
+
+    assert gpunit(["up"], provider=provider) == 1
+    assert creates(provider) == ["RTX 4090", "RTX A6000"]
+    assert "run gpunit down" in capsys.readouterr().err
+    if other == "record":
+        assert State(cwd).read() == RECORD
+
+
+@pytest.mark.spec("session:stock:window-rechecked")
+def test_a_round_after_the_wait_refuses_past_the_volumes_end(
+    cwd: Path,
+    clock: FakeClock,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_spec(cwd, WINDOW + 'stock_wait = "10m"\n')
+    # The wall clock moves with the fake one, so the window's end draws nearer.
+    utc = log.utc
+    monkeypatch.setattr(log, "utc", lambda after_s=0: utc(after_s + int(clock.now)))
+    # The ceiling, 45m, and the wait for SSH, 420s, fit now, and not a round later.
+    state = open_window(cwd, 2700 + 420 + 30, "v2", "CA-MTL-4")
+    provider = FakeProvider(
+        creates=[NO_CAPACITY, NO_CAPACITY, "pod-2"],
+        volumes={"v2": VolumeInfo("CA-MTL-4", 60)},
+    )
+
+    assert gpunit(["up"], provider=provider) == 1
+    assert creates(provider) == ["RTX 4090", "RTX A6000"]
+    recorded = state.window()
+    assert recorded is not None
+    assert f"the volume ends at {recorded.ends}" in capsys.readouterr().err
+    assert not (cwd / ".gpunit" / "pod").exists()
 
 
 @pytest.mark.spec("session:lost:5xx-exits-3")

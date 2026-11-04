@@ -536,9 +536,12 @@ socket is marked `e2e` and runs in `make e2e`, which `.github/workflows/gate.yml
 ### D56 · A stall in stock is waited out on request
 
 **`stock_wait`, or `--stock-wait`, retries a round that found no capacity every 60 s until the duration passes, then
-refuses with `4`; no other refusal waits, and a signal ends the wait with nothing rented.**
+refuses with `4`; no other refusal waits, and a signal ends the wait with nothing rented and nothing torn down.**
 
-`gpunit/lifecycle.py::stock_round` holds the round; `lifecycle.up` and `gpunit/volume.py::_datacenter` ask it.
+`gpunit/lifecycle.py::stock_round` holds the round; `lifecycle.up` and `gpunit/volume.py::_datacenter` ask it. A
+round of 400s leaves no pending mark and no create begun (`gpunit/state.py::State.clear_round`), and `lifecycle.up`
+runs its guards again before each later round (`gpunit/lifecycle.py::_guarded`): a record, a pending mark or a listed
+pod another session made during the wait refuses, and so does a window volume the session would now outlive.
 
 - **Why:** A data centre's stock runs out for hours, and every caller would write the same retry loop.
 - **Made by:** `0019·D6`.

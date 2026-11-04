@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `stock_wait` in `gpunit.toml`, or `--stock-wait` on `up`, `run`, `serve` and `volume up`, retries a round that found
   no capacity every 60 s until the duration passes, then exits `4`; no fit never waits, and a signal ends the wait
   with nothing rented. D56 records it (`0019`).
+- A wait for stock checks again, before each later round, what `up` checks before its first: a record, a pending mark
+  or a listed pod another session made during the wait refuses, and so does a window volume the session would now
+  outlive; a signal during the wait sweeps no pod. `serve` with no card that fits exits `5` (`0019`).
 
 ## [0.11.2] - 2026-11-03
 

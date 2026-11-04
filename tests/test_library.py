@@ -207,7 +207,10 @@ def test_a_signal_ends_the_wait_for_stock(
         signal.raise_signal(signal.SIGTERM)
 
     monkeypatch.setattr(lifecycle, "CLOCK", lifecycle.Clock(clock.monotonic, sleep))
-    provider = FakeProvider(creates=[Unplaceable("no capacity")])
+    # After `up`'s guard, another session's pod is listed: not this session's to sweep.
+    provider = FakeProvider(
+        creates=[Unplaceable("no capacity")], listings=[[], [("pod-9", "RUNNING")]]
+    )
 
     with pytest.raises(Interrupted) as interrupted, opened(cwd, provider):
         pass
@@ -216,6 +219,8 @@ def test_a_signal_ends_the_wait_for_stock(
     assert len(provider.named("create")) == 2
     assert not (cwd / ".gpunit" / "pod").exists()
     assert not (cwd / ".gpunit" / "pending").exists()
+    assert len(provider.named("list")) == 1
+    assert provider.named("delete") == []
 
 
 @pytest.mark.spec("library:signals:teardown-shielded")

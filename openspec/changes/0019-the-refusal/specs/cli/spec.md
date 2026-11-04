@@ -84,10 +84,10 @@ source, `bundled` or the user file's path, before any network call.
 
 The system SHALL exit `0` when the verb did its work, `1` when it refused or failed for any reason below, `2` on usage,
 `3` when a create's outcome is unknown, `4` when no card had capacity — none in stock for `volume up`, every create
-refused for a session — `5` when no card of `gpus` meets `vram_gb` and `max_hourly`, and `128 + n` when signal `n`
-ended a `run`, a `serve` or a wait for stock, `130` when Ctrl-C ended `volume down`'s sweep or `volume up`'s price
-question; and SHALL print every line it writes on its own behalf to stderr, each opening with the UTC time, so stdout
-belongs to the command `run` executes.
+refused for a session — `5` when no card of `gpus`, or of `serve`'s row, meets `vram_gb` and `max_hourly`, and
+`128 + n` when signal `n` ended a `run`, a `serve` or a wait for stock, `130` when Ctrl-C ended `volume down`'s sweep or
+`volume up`'s price question; and SHALL print every line it writes on its own behalf to stderr, each opening with the
+UTC time, so stdout belongs to the command `run` executes.
 
 #### Scenario: a refusal exits 1 on stderr
 - **Key:** `cli:exits:refusal-exits-1`
@@ -113,3 +113,8 @@ belongs to the command `run` executes.
 - **Key:** `cli:exits:no-fit-exits-5`
 - **WHEN** every card of `gpus` costs more than `max_hourly`
 - **THEN** `gpunit up` exits `5` after a `skipped:` line per card, and makes no create
+
+#### Scenario: serve with no card that fits exits 5
+- **Key:** `cli:exits:serve-no-fit-exits-5`
+- **WHEN** `gpunit serve qwen3-4b --ceiling 1h --max-hourly 0.01` runs, and every card of the row costs more
+- **THEN** it exits `5` on a `refused:` line, asks no price, and makes no create

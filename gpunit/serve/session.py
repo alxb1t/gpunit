@@ -171,7 +171,7 @@ def _agree(
         log.say(f"price: {card} ${info.hourly}/h")
         prices.append(Decimal(str(info.hourly)))
     if not prices:
-        log.refuse("no card in the table meets its vram_gb and max_hourly")
+        log.refuse("no card in the table meets its vram_gb and max_hourly", log.NO_FIT)
     most = most_cost(max(prices), spec)
     log.say(
         f"at most ${most} for {spec.ceiling_s}s and a {spec.timeout_s}s wait for SSH"

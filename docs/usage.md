@@ -254,7 +254,7 @@ uv run gpunit volume down --serve qwen3-4b
 - **The price comes first:** $0.07 per GB a month, over the whole hours of `volume_ceiling`, and nothing is created
   without `y`. `--yes` skips the question.
 - **No session outlives its volume.** `up`, `run` and `serve` refuse when no volume is recorded, or when the session's
-  ceiling plus its wait for SSH would end after the volume.
+  ceiling plus its wait for SSH would end after the volume, checked again before each round of a wait for stock.
 - **`volume up` again extends** a live volume to now plus `volume_ceiling`, never earlier than its end, after the price.
 - **The ceiling:** `up`, `run`, `serve`, `down`, `status`, `volume up` and `volume down` each delete a volume past its
   end before anything else, `down` after its pods, which may hold it. `status` names the volume and its end.
@@ -380,7 +380,7 @@ billing and the ledger.
 | `2` | usage: an unknown verb, a missing command, an unreadable spec path, `serve` or `volume up --serve` without `--ceiling`, `--models` without a model, an unknown model, `spend --days` under 1 or over 3660, `volume` without `up` or `down`, a `--stock-wait` that is no duration |
 | `3` | a create's answer was lost; a pod may exist and bill — run `gpunit down`; for a volume's create, `gpunit volume down` |
 | `4` | no capacity: every create of a session answered 400, or `volume up` found no card in stock; worth a retry, which `stock_wait` or `--stock-wait` on `up`, `run`, `serve` and `volume up` makes every 60s until it passes |
-| `5` | no card of `gpus` meets `vram_gb` and `max_hourly`; edit the spec |
+| `5` | no card of `gpus`, or of `serve`'s row, meets `vram_gb` and `max_hourly`; edit the spec, or `--max-hourly` |
 | `128+n` | signal `n` stopped `run` or `serve`, or killed `run`'s command, and the teardown succeeded; a failed teardown is still `1`; Ctrl-C at `volume down`'s sweep question or `volume up`'s price question is `130` |
 
 gpunit's own lines go to stderr, each opening with the UTC time; stdout belongs to the command, or to `serve`'s

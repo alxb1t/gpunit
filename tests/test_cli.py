@@ -221,7 +221,7 @@ def test_a_user_row_replaces_the_bundled_row_of_its_name(
 
     # No card is cheap enough: `serve` asks the prices of its row's cards, then refuses.
     argv = ["serve", "qwen3-4b", "--ceiling", "1h", "--max-hourly", "0.0001"]
-    assert gpunit(argv, provider=provider) == 1
+    assert gpunit(argv, provider=provider) == 5
     replaced = [
         line
         for line in capsys.readouterr().err.splitlines()
@@ -301,7 +301,7 @@ def test_each_verb_naming_a_model_reads_the_given_file(
         assert provider.calls == []
         return
     # `serve` refuses at the price: no card is that cheap.
-    assert codes == [1, 0, 0, 0]
+    assert codes == [5, 0, 0, 0]
     assert set(provider.named("gpu")) == {("NVIDIA L4",)}
     assert [project for project, _ in provider.named("list")] == [f"serve-{name}"]
     assert [size for _, size, _ in provider.named("create_volume")] == [33]

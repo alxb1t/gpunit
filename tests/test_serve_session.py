@@ -169,6 +169,30 @@ def test_the_agreed_price_covers_the_ceiling_and_the_ssh_wait(
     assert "at most $0.58 for 1800s and a 1200s wait for SSH" in capsys.readouterr().err
 
 
+@pytest.mark.spec("cli:exits:serve-no-fit-exits-5")
+def test_serve_with_no_card_that_fits_exits_5(
+    home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    provider = FakeProvider()
+
+    code = session.serve(
+        "qwen3-4b",
+        3600,
+        api=False,
+        volume=None,
+        max_hourly=0.01,
+        yes=False,
+        think=False,
+        provider=provider,
+        ask=no_question,
+        opener=FakeOpener(MODELS),
+    )
+
+    assert code == 5
+    assert provider.named("create") == []
+    assert "refused: no card in the table meets" in capsys.readouterr().err
+
+
 @pytest.mark.spec("serve:wait:awaited")
 def test_the_model_is_awaited_through_the_tunnel_with_the_key(
     home: Path, capsys: pytest.CaptureFixture[str]
