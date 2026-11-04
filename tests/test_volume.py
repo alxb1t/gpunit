@@ -1,4 +1,5 @@
 import io
+import os
 import re
 from datetime import datetime
 from decimal import Decimal
@@ -185,6 +186,38 @@ def test_ctrl_c_ends_the_wait_for_stock(
     assert gpunit(["volume", "up", "--yes"], provider=provider) == 130
     assert provider.named("create_volume") == []
     assert not State(cwd).volume_pending.exists()
+
+
+@pytest.mark.spec("volume:stock:waiting-marked")
+def test_a_second_volume_up_refuses_during_the_wait(
+    cwd: Path,
+    clock: FakeClock,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_spec(cwd, CARDS + 'stock_wait = "10m"\n')
+    provider = FakeProvider(stocks={"NVIDIA A40": [], "NVIDIA L40": []})
+    waiting = State(cwd).waiting
+    second: list[int | str | None] = []
+
+    def restock(seconds: float) -> None:
+        with monkeypatch.context() as other:
+            # The second `volume up` runs as another process: this one's pid is not its.
+            other.setattr(os, "getpid", lambda: 1)
+            second.append(gpunit(["volume", "up", "--yes"], provider=NO_REQUESTS))
+        assert waiting.read_text(encoding="utf-8") == f"{os.getpid()}\n"
+        provider.stocks["NVIDIA A40"] = [("EU-RO-1", "HIGH")]
+        clock.sleep(seconds)
+
+    monkeypatch.setattr(lifecycle, "CLOCK", lifecycle.Clock(clock.monotonic, restock))
+
+    assert gpunit(["volume", "up", "--yes"], provider=provider) == 0
+    assert second == [1]
+    pid = os.getpid()
+    err = capsys.readouterr().err
+    assert f"a session is waiting for stock in this checkout (pid {pid})" in err
+    assert provider.named("create_volume") == [("gpunit-isekai", 60, "EU-RO-1")]
+    assert not waiting.exists()
 
 
 @pytest.mark.spec("volume:up:no-by-default")

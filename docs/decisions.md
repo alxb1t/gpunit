@@ -154,10 +154,11 @@ Behaviour: [spec](../openspec/specs/spec/spec.md).
 
 **A session's state lives in `.gpunit/` beside the spec, each file replaced whole, the directory `0700`.**
 
-`gpunit/state.py::State` holds `pod`, `pending`, `known_hosts`, `key`, `key.pub`, `volume` and `volume.pending`.
+`gpunit/state.py::State` holds `pod`, `pending`, `known_hosts`, `key`, `key.pub`, `volume`, `volume.pending` and
+`waiting`.
 
 - **Why:** One session per working directory, as isekai's dotfiles; a found directory may carry a loose mode.
-- **Made by:** `0001·D5`, `0010·D4`, `0013·D3`.
+- **Made by:** `0001·D5`, `0010·D4`, `0013·D3`, `0020·D5`.
 
 ### D16 · A keypair per session, deleted at teardown
 
@@ -396,11 +397,12 @@ Behaviour: [serve](../openspec/specs/serve/spec.md).
 **`serve/Dockerfile` builds on vLLM by digest; `serve/launch.py` turns request logging and telemetry off, then
 starts vLLM.**
 
-`gpunit/serve/models.toml` pins the image. Breached: `gpunit/serve/table.py::_args` refuses `--enable-log-requests` by
-its exact name, while vLLM takes abbreviations (`0015·F23`).
+`gpunit/serve/models.toml` pins the image. `gpunit/serve/table.py::_args` and `serve/launch.py` hold one flag rule:
+each flag read as vLLM reads it, the launcher's and the logging flags refused whole or cut short. `_args` refuses an
+argument holding whitespace too, so it reads the arguments the launcher's `split()` does.
 
 - **Why:** One image serves every row; only gpunit's launcher sees every row, so it holds the quiet flags.
-- **Made by:** `0005·D7`, `0012·D9`, `0014·D4`, `0014·D6`.
+- **Made by:** `0005·D7`, `0012·D9`, `0014·D4`, `0014·D6`, `0020·D1`, `0020·D2`.
 
 ## The window volume
 
@@ -556,6 +558,10 @@ refuses with `4`; no other refusal waits, and a signal ends the wait with nothin
 round of 400s leaves no pending mark and no create begun (`gpunit/state.py::State.clear_round`), and `lifecycle.up`
 runs its guards again before each later round (`gpunit/lifecycle.py::_guarded`): a record, a pending mark or a listed
 pod another session made during the wait refuses, and so does a window volume the session would now outlive.
+`.gpunit/waiting` holds the waiting process's id from the first wait, removed on every way out by that process alone
+(`gpunit/state.py::State.mark_waiting`, `State.clear_waiting`); `gpunit/lifecycle.py::refuse_waiting` refuses `up`
+and `volume up` beside another live process's mark, and removes a dead one's.
 
-- **Why:** A data centre's stock runs out for hours, and every caller would write the same retry loop.
-- **Made by:** `0019·D6`.
+- **Why:** A data centre's stock runs out for hours, and every caller would write the same retry loop. A mark the
+  process owns guards the checkout while it sleeps, and one `kill -9` cannot leave it stuck.
+- **Made by:** `0019·D6`, `0020·D5`.

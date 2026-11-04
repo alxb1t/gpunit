@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 import pytest
@@ -5,6 +6,7 @@ import pytest
 from gpunit import log
 from gpunit.serve import table
 from gpunit.spec import DIGEST, Port
+from serve import launch
 from tests.fakes import FakeProvider
 from tests.helpers import NO_REQUESTS, gpunit
 
@@ -308,7 +310,7 @@ def test_a_user_row_is_checked_as_a_bundled_row_is(
     assert ("models.granite-4.0-micro" in err) is row
 
 
-@pytest.mark.spec("serve:rows:checked-as-bundled")
+@pytest.mark.spec("serve:table:launcher-flags-refused")
 @pytest.mark.parametrize(
     ("args", "named"),
     [
@@ -356,9 +358,9 @@ def test_a_row_resetting_the_launchers_flags_is_refused(
     [
         ("--enable-log-requests", True),
         ("--no-enable-log-requests", False),
-        ("--enable-log-requests=yes", False),
+        ("--enable-log-requests=yes", True),
     ],
-    ids=["on", "twin-off", "twin-not-the-flag"],
+    ids=["on", "twin-off", "joined"],
 )
 def test_a_row_turning_request_logging_on_is_refused(
     flag: str, refused: bool, tmp_path: Path, capsys: pytest.CaptureFixture[str]
@@ -389,3 +391,112 @@ def test_a_bundled_row_turning_request_logging_on_is_refused(
     assert (
         "models.qwen3-4b: 'args' holds --enable-log-requests" in capsys.readouterr().err
     )
+
+
+WHERE = "models.row"
+
+
+def _checked(args: list[str]) -> tuple[str, ...]:
+    """Return `args` as the table's check passes them, or refuse as it does."""
+    items: list[object] = [*args]
+    return table._args(WHERE, items)
+
+
+def _replayed(args: list[str]) -> dict[str, str | None]:
+    """Return the launcher's flags as vLLM `v0.31.0` parses them, `args` after them.
+
+    e.g. ["--revisio", "main"] → {"--revision": "main", "--port": "8000", …}; {} when
+    vLLM's parser itself refuses the line.
+    """
+    parser = argparse.ArgumentParser(allow_abbrev=True, add_help=False)
+    for flag in (*sorted(table._LAUNCHERS), "--tokenizer", "--max-num-seqs"):
+        parser.add_argument(flag)
+    launched = ["--revision", PINNED, "--served-model-name", "m", "--port", "8000"]
+    # vLLM's FlexibleArgumentParser reads each flag's `_` as `-` before argparse does,
+    # on the arguments `serve/launch.py` splits out of the row's joined ones.
+    dashed = [
+        arg.partition("=")[0].replace("_", "-") + "".join(arg.partition("=")[1:])
+        if arg.startswith("--")
+        else arg
+        for arg in " ".join(args).split()
+    ]
+    try:
+        parsed = vars(parser.parse_known_args([*launched, *dashed])[0])
+    except SystemExit:
+        return {}
+    return {flag: parsed[flag[2:].replace("-", "_")] for flag in table._LAUNCHERS}
+
+
+def _cut_launcher_flags() -> list[list[str]]:
+    """Return each launcher flag cut short, `-` and `_` spelt, spaced and joined."""
+    cuts = {
+        spelt
+        for name in table._LAUNCHERS
+        for end in range(3, len(name) + 1)
+        for spelt in (name[:end], "--" + name[2:end].replace("-", "_"))
+    }
+    return [form for cut in sorted(cuts) for form in ([cut, "x"], [f"{cut}=x"])]
+
+
+@pytest.mark.spec("serve:table:launcher-flags-refused")
+def test_no_row_resets_a_launcher_flag(capsys: pytest.CaptureFixture[str]) -> None:
+    for args, named in [
+        (["--revisio", "main"], "--revisio"),
+        (["--por=8001"], "--por"),
+        (["--api-k", "k"], "--api-k"),
+        (["--code_rev", "main"], "--code-rev"),
+    ]:
+        with pytest.raises(log.Refusal):
+            _checked(args)
+        err = capsys.readouterr().err
+        assert f"{WHERE}: 'args' holds {named}; the launcher sets it" in err
+        # `serve/launch.py`'s copy of the rule names the same flag on the pod.
+        assert launch._refused(args) == named
+    assert _checked(["--max-num-seqs", "8"]) == ("--max-num-seqs", "8")
+    assert launch._refused(["--max-num-seqs", "8"]) is None
+
+    # The replay's twin: vLLM's parser reads a cut flag as the launcher's.
+    assert _replayed(["--revisio", "main"])["--revision"] == "main"
+    # A tab hides a flag from the flag check, not from the launcher's split().
+    tabbed = ["--max-num-seqs", "8\t--revisio", "main"]
+    assert _replayed(tabbed)["--revision"] == "main"
+    with pytest.raises(log.Refusal):
+        _checked(tabbed)
+    assert f"{WHERE}: 'args' holds '8\\t--revisio'" in capsys.readouterr().err
+    launched = _replayed([])
+    passing = [["--max-num-seqs", "8"], ["--hostname", "x"], ["--port8001"]]
+    for args in [*_cut_launcher_flags(), *passing]:
+        try:
+            _checked(args)
+        except log.Refusal:
+            assert launch._refused(args) is not None, args
+            continue
+        assert launch._refused(args) is None, args
+        assert _replayed(args) in (launched, {}), args
+
+
+@pytest.mark.spec("serve:table:logging-families-refused")
+@pytest.mark.parametrize(
+    ("args", "named"),
+    [
+        (["--enable_log_requests"], "--enable-log-requests"),
+        (["--enable-log-o"], "--enable-log-o"),
+        (["--log-level=debug"], "--log-level"),
+        (["--hf-overrides.x", "1"], "--hf-overrides.x"),
+        (["--config", "c.yaml"], "--config"),
+        (["--no-enable-log-requests"], None),
+    ],
+    ids=["underscored", "cut-short", "joined", "dotted", "config", "twin-off"],
+)
+def test_a_row_turning_logging_on_by_another_name_is_refused(
+    args: list[str], named: str | None, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # `serve/launch.py`'s copy of the rule names the same flag on the pod.
+    assert launch._refused(args) == named
+    if named is None:
+        assert _checked(args) == tuple(args)
+        return
+    with pytest.raises(log.Refusal):
+        _checked(args)
+    err = capsys.readouterr().err
+    assert f"{WHERE}: 'args' holds {named}; request logging stays off" in err

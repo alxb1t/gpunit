@@ -19,11 +19,12 @@ The values live in the files named here, never on this page
 
 ## What the threat model relies on in vLLM
 
-[The threat model](../THREAT_MODEL.md) holds two vLLM behaviours at the serve image's base: request logging is off by
-default, and `--no-enable-log-requests` is its explicit off; output logging needs request logging. `serve/launch.py`
-passes the off flag after every row's arguments, but vLLM rewrites argv and takes abbreviations, so a row's
-arguments can still turn request logging on (`0015·F23`). A bump of the vLLM base re-reads both in the new version's source
-and updates the threat model's *Sources*.
+[The threat model](../THREAT_MODEL.md) holds these vLLM behaviours at the serve image's base: request logging is off
+by default, and `--no-enable-log-requests` is its explicit off; output logging needs request logging; its parser reads
+`_` as `-` and a flag cut short as the flag it starts. `serve/launch.py` passes the off flag after every row's
+arguments, and `gpunit/serve/table.py::_args` and `serve/launch.py` read each flag as that parser does, refusing the
+launcher's and the logging flags. A bump of the vLLM base re-reads each in the new version's source and updates the
+threat model's *Sources*.
 
 ## How a pin moves
 

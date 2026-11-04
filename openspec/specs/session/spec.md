@@ -8,8 +8,9 @@ torn down on every way out — with the spend rules that keep a pod from billing
 ### Requirement: One live session per project
 
 The system SHALL name the pod `gpunit-<project>` and SHALL refuse `up` when `.gpunit/pod` exists, when
-`.gpunit/pending` exists, or when the provider lists a live pod of that name whose image matches the spec's;
-and SHALL fail the listing, not pass it, when a pod of that name carries no image.
+`.gpunit/pending` exists, when `.gpunit/waiting` names a live process other than its own, or when the provider lists a live pod of that name whose image matches the spec's;
+and SHALL fail the listing, not pass it, when a pod of that name carries no image. A `.gpunit/waiting` whose process is
+not alive SHALL be removed, saying so.
 
 #### Scenario: a recorded pod refuses up
 - **Key:** `session:one:recorded-refuses`
@@ -25,6 +26,16 @@ and SHALL fail the listing, not pass it, when a pod of that name carries no imag
 - **Key:** `session:one:look-alike-image-ignored`
 - **WHEN** the provider lists a live `gpunit-isekai` pod on an image that only begins with the spec's
 - **THEN** the listing does not count it
+
+#### Scenario: a wait in the checkout refuses up
+- **Key:** `session:one:waiting-refuses`
+- **WHEN** `.gpunit/waiting` names a live process other than this one
+- **THEN** `up` refuses saying a session is waiting for stock in this checkout, and makes no create
+
+#### Scenario: a stale wait mark is removed
+- **Key:** `session:one:stale-waiting-removed`
+- **WHEN** `.gpunit/waiting` names a process that is not alive
+- **THEN** `up` removes the mark, says so, and goes on
 
 ### Requirement: A GPU is placed from the preference list
 
@@ -351,7 +362,8 @@ naming the data centre, when it reads another. Without `datacenters`, placement 
 The system SHALL, when `stock_wait` or `--stock-wait` sets a duration, and every create of a round answers 400, write
 the attempt line, wait 60 seconds and try the cards again, in order, until one is placed or the duration has passed;
 then it SHALL refuse as when none was placed and exit `4`. No pending mark SHALL remain between rounds, and no create
-SHALL count as begun. Before each later round it SHALL check again what it checks before the first, refusing as
+SHALL count as begun; `.gpunit/waiting`, holding the process's id, SHALL guard the checkout from the first wait, and
+SHALL be removed on every way out by that process alone. Before each later round it SHALL check again what it checks before the first, refusing as
 there: a record, a pending mark, a listed pod, and a window volume the session's ceiling plus its wait for SSH would
 outlast. A refusal of any other kind SHALL NOT wait. A signal during the wait SHALL end it, rent nothing, tear nothing
 down, and exit `128 + n`; inside `gpunit.session()` it SHALL raise `Interrupted`.
@@ -389,3 +401,9 @@ down, and exit `128 + n`; inside `gpunit.session()` it SHALL raise `Interrupted`
 - **WHEN** a window volume ends 30 seconds after the session's ceiling plus its wait for SSH would, `stock_wait =
   "10m"`, and every create of the first round answers 400
 - **THEN** `up` exits `1` naming the volume's end, makes no create in the second round, and writes no record
+
+#### Scenario: the wait marks the checkout
+- **Key:** `session:stock:waiting-marked`
+- **WHEN** `stock_wait = "10m"`, every create of the first round answers 400, and the second round places a pod
+- **THEN** `.gpunit/waiting` holds the process's id during the wait, and is gone once the pod is placed, and after a
+  give-up or a signal

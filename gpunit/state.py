@@ -46,7 +46,7 @@ class Window:
 
 
 class State:
-    """The `.gpunit/` files: the pod's, the keypair's and the window volume's."""
+    """The `.gpunit/` files: the pod's, the keypair's, the window's and the wait's."""
 
     def __init__(self, cwd: Path) -> None:
         """Point at `<cwd>/.gpunit/`; nothing is created until written."""
@@ -58,6 +58,7 @@ class State:
         self.key_pub = self.dir / "key.pub"
         self.volume = self.dir / "volume"
         self.volume_pending = self.dir / "volume.pending"
+        self.waiting = self.dir / "waiting"
         # Set by this process's own `mark_pending`: a create began here, whatever
         # files an earlier session left.
         self.began = False
@@ -109,6 +110,26 @@ class State:
         """Remove `pending` after a round no create placed: no create began here."""
         self.clear_pending()
         self.began = False
+
+    def mark_waiting(self) -> None:
+        """Write `waiting`, this process's id: a wait for stock holds the checkout."""
+        self._mkdir()
+        partial = self.waiting.with_name(f"{self.waiting.name}.partial")
+        partial.write_text(f"{os.getpid()}\n", encoding="utf-8")
+        os.replace(partial, self.waiting)
+
+    def clear_waiting(self) -> None:
+        """Remove `waiting` if it holds this process's id: another's mark is its own."""
+        try:
+            held = self.waiting.read_bytes()
+        except FileNotFoundError:
+            return
+        if held == f"{os.getpid()}\n".encode():
+            self.clear_stale_waiting()
+
+    def clear_stale_waiting(self) -> None:
+        """Remove `waiting`, whatever it holds: its process is not alive."""
+        self.waiting.unlink(missing_ok=True)
 
     def write_known_hosts(self, line: str) -> None:
         """Write the verified host key line."""

@@ -1,3 +1,4 @@
+import os
 import re
 from pathlib import Path
 
@@ -67,6 +68,56 @@ def test_up_lists_by_the_specs_project_and_image(cwd: Path) -> None:
 
     assert gpunit(["up"], provider=provider) == 0
     assert provider.named("list") == [("isekai", IMAGE)]
+
+
+def _mark_waiting(cwd: Path, held: str) -> None:
+    (cwd / ".gpunit").mkdir()
+    (cwd / ".gpunit" / "waiting").write_text(held, encoding="utf-8")
+
+
+@pytest.mark.spec("session:one:waiting-refuses")
+@pytest.mark.parametrize("own", [False, True], ids=["other", "twin-own"])
+def test_a_wait_in_the_checkout_refuses_up(
+    own: bool, cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # The test's parent process is alive, and not this one.
+    pid = os.getpid() if own else os.getppid()
+    _mark_waiting(cwd, f"{pid}\n")
+
+    if own:
+        provider = FakeProvider()
+        assert gpunit(["up"], provider=provider) == 0
+        assert creates(provider) == ["RTX 4090"]
+        return
+    assert gpunit(["up"], provider=NO_REQUESTS) == 1
+    err = capsys.readouterr().err
+    assert (
+        f"a session is waiting for stock in this checkout (pid {pid});"
+        " if no gpunit waits there, remove .gpunit/waiting\n"
+    ) in err
+    assert State(cwd).waiting.read_text(encoding="utf-8") == f"{pid}\n"
+
+
+# Past the largest pid Linux or macOS hands out, so no process holds it.
+DEAD_PID = 4_194_305
+
+
+@pytest.mark.spec("session:one:stale-waiting-removed")
+@pytest.mark.parametrize(
+    ("held", "named"),
+    [(f"{DEAD_PID}\n", f"pid {DEAD_PID}"), ("", "pid unreadable")],
+    ids=["dead", "unreadable"],
+)
+def test_a_stale_wait_mark_is_removed(
+    held: str, named: str, cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _mark_waiting(cwd, held)
+    provider = FakeProvider()
+
+    assert gpunit(["up"], provider=provider) == 0
+    assert f"removed a stale wait mark ({named})" in capsys.readouterr().err
+    assert not State(cwd).waiting.exists()
+    assert creates(provider) == ["RTX 4090"]
 
 
 @pytest.mark.spec("session:place:unknown-card-refuses")
@@ -169,10 +220,22 @@ NO_CAPACITY = Unplaceable("no capacity")
 
 
 @pytest.mark.spec("session:stock:placed-later")
+@pytest.mark.spec("session:stock:waiting-marked")
 def test_the_wait_places_a_pod_on_a_later_round(
-    cwd: Path, clock: FakeClock, capsys: pytest.CaptureFixture[str]
+    cwd: Path,
+    clock: FakeClock,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     write_spec(cwd, VALID + 'stock_wait = "10m"\n')
+    waiting = State(cwd).waiting
+    held: list[str] = []
+
+    def sleep(seconds: float) -> None:
+        held.append(waiting.read_text(encoding="utf-8"))
+        clock.sleep(seconds)
+
+    monkeypatch.setattr(lifecycle, "CLOCK", lifecycle.Clock(clock.monotonic, sleep))
     provider = FakeProvider(creates=[NO_CAPACITY, NO_CAPACITY, "pod-2"])
 
     assert gpunit(["up"], provider=provider) == 0
@@ -181,9 +244,12 @@ def test_the_wait_places_a_pod_on_a_later_round(
     assert record is not None and record.id == "pod-2"
     assert capsys.readouterr().err.count("no capacity: attempt") == 1
     assert clock.now == 60
+    assert held == [f"{os.getpid()}\n"]
+    assert not waiting.exists()
 
 
 @pytest.mark.spec("session:stock:gives-up")
+@pytest.mark.spec("session:stock:waiting-marked")
 @pytest.mark.parametrize(
     ("wait", "rounds"), [("2m", 3), ("3m", 4)], ids=["two-minutes", "twin-three"]
 )
@@ -196,9 +262,12 @@ def test_the_wait_gives_up_with_the_refusal(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     pending: list[bool] = []
+    waiting = State(cwd).waiting
+    held: list[str] = []
 
     def sleep(seconds: float) -> None:
         pending.append((cwd / ".gpunit" / "pending").exists())
+        held.append(waiting.read_text(encoding="utf-8"))
         clock.sleep(seconds)
 
     monkeypatch.setattr(lifecycle, "CLOCK", lifecycle.Clock(clock.monotonic, sleep))
@@ -207,9 +276,11 @@ def test_the_wait_gives_up_with_the_refusal(
     assert gpunit(["up", "--stock-wait", wait], provider=provider) == 4
     assert creates(provider) == ["RTX 4090", "RTX A6000"] * rounds
     assert pending == [False] * (rounds - 1)
+    assert held == [f"{os.getpid()}\n"] * (rounds - 1)
     assert clock.now == 60 * (rounds - 1)
     assert not (cwd / ".gpunit" / "pod").exists()
     assert not (cwd / ".gpunit" / "pending").exists()
+    assert not waiting.exists()
     assert "refused: no card in 'gpus' was placed" in capsys.readouterr().err
 
 
@@ -282,6 +353,26 @@ def test_a_round_after_the_wait_refuses_past_the_volumes_end(
     assert recorded is not None
     assert f"the volume ends at {recorded.ends}" in capsys.readouterr().err
     assert not (cwd / ".gpunit" / "pod").exists()
+
+
+@pytest.mark.spec("session:stock:waiting-marked")
+def test_the_wait_marks_the_checkout(
+    cwd: Path, clock: FakeClock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Ctrl-C's way out; the placed-later and gives-up tests read the mark on theirs.
+    held: list[str] = []
+    waiting = State(cwd).waiting
+
+    def sleep(seconds: float) -> None:
+        held.append(waiting.read_text(encoding="utf-8"))
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(lifecycle, "CLOCK", lifecycle.Clock(clock.monotonic, sleep))
+    provider = FakeProvider(creates=[NO_CAPACITY])
+
+    assert gpunit(["up", "--stock-wait", "10m"], provider=provider) == 130
+    assert held == [f"{os.getpid()}\n"]
+    assert not waiting.exists()
 
 
 @pytest.mark.spec("session:lost:5xx-exits-3")

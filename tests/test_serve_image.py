@@ -201,10 +201,31 @@ def test_the_launcher_keeps_logging_and_telemetry_off(
         "DO_NOT_TRACK": "0",
         "HF_HUB_DISABLE_TELEMETRY": "0",
         "VLLM_NO_USAGE_STATS": "0",
-        "SERVE_ARGS": "--max-model-len 16384 --enable-log-requests",
+        "SERVE_ARGS": "--max-model-len 16384 --max-num-seqs 8",
     }
 
     done = started(bin_dir, None, loud, launch)
 
     assert done.returncode == 0, done.stderr
     assert (done.stdout.splitlines() == QUIET) is guarded
+
+
+@pytest.mark.spec("serve:image:launcher-refuses-a-row")
+@pytest.mark.parametrize("guarded", [True, False], ids=["launcher", "twin-unguarded"])
+def test_the_launcher_refuses_a_row_the_table_refuses(
+    guarded: bool, tmp_path: Path
+) -> None:
+    bin_dir = install_stubs(tmp_path / "bin", {"vllm": VLLM})
+    launch = LAUNCH
+    if not guarded:
+        # The twin: the launcher that names the flag and goes on starts vLLM.
+        text = LAUNCH.read_text(encoding="utf-8")
+        assert text.count("sys.exit(1)") == 1
+        launch = tmp_path / "launch.py"
+        launch.write_text(text.replace("sys.exit(1)", "pass"), encoding="utf-8")
+
+    done = started(bin_dir, None, {"SERVE_ARGS": "--revisio main"}, launch)
+
+    assert "launch: SERVE_ARGS holds --revisio; refused" in done.stderr
+    assert done.returncode == (1 if guarded else 0)
+    assert (done.stdout == "") is guarded

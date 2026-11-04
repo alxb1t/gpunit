@@ -68,7 +68,7 @@ class Row:
                 "SERVE_REPO": self.repo,
                 "SERVE_REVISION": self.revision,
                 "SERVE_NAME": self.served,
-                # `serve/launch.py` splits it on spaces; `load` refuses a space inside.
+                # `serve/launch.py` splits it on whitespace; `load` refuses any inside.
                 "SERVE_ARGS": " ".join(self.args),
                 "VLLM_API_KEY": key,
             },
@@ -176,6 +176,9 @@ def _row(path: Path, name: str, image: str, raw: object) -> Row:
     )
 
 
+# A flag's closed name form: a `.` takes the next argument as its value. Decision D40.
+_FLAG = re.compile(r"--[a-z0-9-]+")
+
 # The flags `serve/launch.py` and the pod's environment set: the pin, the name, the
 # loopback bind and the key. 0014·S2.
 _LAUNCHERS = frozenset(
@@ -190,19 +193,44 @@ _LAUNCHERS = frozenset(
     }
 )
 
+# The flags that turn vLLM's request logging on or move its log.
+_LOGGING = frozenset(
+    {
+        "--enable-log-requests",
+        "--enable-log-outputs",
+        "--log-level",
+        "--logging-config",
+    }
+)
+
 
 def _args(where: str, items: list[object]) -> tuple[str, ...]:
     args = strings(where, "args", items)
-    if any(" " in arg for arg in args):
-        log.refuse(f"{where}: 'args' holds an argument with a space, which sh splits")
-    # Refused before a pod is rented, whatever the launcher does: decision D40.
-    if "--enable-log-requests" in args:
-        log.refuse(
-            f"{where}: 'args' holds --enable-log-requests; request logging stays off"
-        )
-    # vLLM reads `_` as `-` and keeps a flag's last value, so a row's own would win.
+    # `serve/launch.py`'s split() breaks on a tab or any other whitespace, not a space
+    # alone, and would find a flag inside the argument.
     for arg in args:
+        if any(char.isspace() for char in arg):
+            log.refuse(
+                f"{where}: 'args' holds {arg!r}, with a space or other whitespace,"
+                " which the launcher splits"
+            )
+    # Refused before a pod is rented, whatever the launcher does: decision D40. vLLM
+    # reads `_` as `-` and a prefix as its flag, so a row's own would win.
+    for arg in args:
+        if not arg.startswith("-"):
+            continue
         flag = arg.split("=", 1)[0].replace("_", "-")
-        if flag in _LAUNCHERS:
+        if _FLAG.fullmatch(flag) and _abbreviates(flag, _LAUNCHERS):
             log.refuse(f"{where}: 'args' holds {flag}; the launcher sets it")
+        if (
+            not _FLAG.fullmatch(flag)
+            or flag == "--config"
+            or _abbreviates(flag, _LOGGING)
+        ):
+            log.refuse(f"{where}: 'args' holds {flag}; request logging stays off")
     return args
+
+
+def _abbreviates(flag: str, names: frozenset[str]) -> bool:
+    """Return whether argparse reads `flag` as one of `names`, whole or cut short."""
+    return any(name.startswith(flag) for name in names)

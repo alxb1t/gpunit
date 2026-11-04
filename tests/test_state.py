@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -66,3 +67,20 @@ def test_the_volume_pending_mark_is_its_own(tmp_path: Path) -> None:
     assert not state.pending.exists()
     state.clear_volume_pending()
     assert not state.volume_pending.exists()
+
+
+@pytest.mark.spec("session:stock:waiting-marked")
+def test_the_wait_mark_holds_this_process(tmp_path: Path) -> None:
+    state = State(tmp_path)
+
+    state.mark_waiting()
+    assert state.waiting == tmp_path / ".gpunit" / "waiting"
+    assert state.waiting.read_text(encoding="utf-8") == f"{os.getpid()}\n"
+    assert sorted(path.name for path in state.dir.iterdir()) == ["waiting"]
+    state.clear_waiting()
+    assert not state.waiting.exists()
+    state.clear_waiting()
+    # A process refused beside another's wait leaves that process's mark.
+    state.waiting.write_text(f"{os.getppid()}\n", encoding="utf-8")
+    state.clear_waiting()
+    assert state.waiting.read_text(encoding="utf-8") == f"{os.getppid()}\n"
