@@ -11,18 +11,26 @@ from types import FrameType
 
 import pytest
 
-from gpunit import library
+from gpunit import library, lifecycle
 from gpunit.library import Interrupted, Refused, Session, TeardownFailed
-from gpunit.provider import Lost, Provider
+from gpunit.provider import Lost, Provider, Unplaceable
 from gpunit.runpod import RunPod
 from gpunit.spec import Spec, load_spec
 from gpunit.state import State
 from tests.fakes import (
     RECORD,
+    FakeClock,
     FakeProvider,
     session_opener,
 )
-from tests.helpers import IMAGE, NO_REQUESTS, install_stubs, with_port
+from tests.helpers import (
+    IMAGE,
+    NO_REQUESTS,
+    VALID,
+    install_stubs,
+    with_port,
+    write_spec,
+)
 
 KEY = "rpa_mapping_key"
 
@@ -187,6 +195,32 @@ def test_sigterm_ends_the_block_and_tears_down(cwd: Path, saved_handlers: None) 
     assert isinstance(interrupted.value, KeyboardInterrupt)
     assert provider.named("delete") == [("pod-1",)]
     assert not (cwd / ".gpunit" / "pod").exists()
+
+
+@pytest.mark.spec("session:stock:signal-ends-the-wait")
+def test_a_signal_ends_the_wait_for_stock(
+    cwd: Path, clock: FakeClock, monkeypatch: pytest.MonkeyPatch, saved_handlers: None
+) -> None:
+    write_spec(cwd, VALID + 'stock_wait = "10m"\n')
+
+    def sleep(seconds: float) -> None:
+        signal.raise_signal(signal.SIGTERM)
+
+    monkeypatch.setattr(lifecycle, "CLOCK", lifecycle.Clock(clock.monotonic, sleep))
+    # After `up`'s guard, another session's pod is listed: not this session's to sweep.
+    provider = FakeProvider(
+        creates=[Unplaceable("no capacity")], listings=[[], [("pod-9", "RUNNING")]]
+    )
+
+    with pytest.raises(Interrupted) as interrupted, opened(cwd, provider):
+        pass
+
+    assert interrupted.value.signal == 15
+    assert len(provider.named("create")) == 2
+    assert not (cwd / ".gpunit" / "pod").exists()
+    assert not (cwd / ".gpunit" / "pending").exists()
+    assert len(provider.named("list")) == 1
+    assert provider.named("delete") == []
 
 
 @pytest.mark.spec("library:signals:teardown-shielded")

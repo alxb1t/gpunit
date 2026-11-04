@@ -316,17 +316,16 @@ it still ends on a signal.**
 - **Why:** A reopen would send the traffic, and the vLLM key, to a squatter; a thread cannot raise in the main one.
 - **Made by:** `0013·D5`, `0013·D6`, `0013·S2`.
 
-### D32 · Exit codes: `0`, `1`, `2`, `3`, `128+n`
+### D32 · Exit codes: `0`, `1`, `2`, `3`, `4`, `5`, `128+n`
 
 **`gpunit` exits `0` on success, `1` on a refusal or a failed teardown, `2` on a usage error, `3` on a lost create,
-and `128+n` on signal `n`.**
+`4` on no capacity, `5` on no card that fits, and `128+n` on signal `n`.**
 
 `gpunit/cli.py::_run` and `gpunit/run.py::outcome` map outcomes to codes. Behaviour:
-[cli](../openspec/specs/cli/spec.md). Breached: `gpunit/volume.py::_agree` exits `1` on Ctrl-C at the price
-(`0015·F20`).
+[cli](../openspec/specs/cli/spec.md).
 
 - **Why:** A shell or an agent tells a refusal from a lost create by the code alone.
-- **Made by:** `0001·D10`, `0002·D7`, `0004·D6`, `0006·D3`.
+- **Made by:** `0001·D10`, `0002·D7`, `0004·D6`, `0006·D3`, `0019·D1`.
 
 ### D33 · `run`'s command gets the host, the ports and `GPUNIT_SSH`, never the account key
 
@@ -547,3 +546,16 @@ ledger records no `deleted` line for it, so `gpunit spend` still names it once i
   nothing cleared. A valid key of another RunPod account reads the volume as gone too, its listing being its own
   account's; a volume truly gone never bills again, so `spend`'s warning names only one misjudged so.
 - **Made by:** `0018·D1`.
+
+### D56 · A stall in stock is waited out on request
+
+**`stock_wait`, or `--stock-wait`, retries a round that found no capacity every 60 s until the duration passes, then
+refuses with `4`; no other refusal waits, and a signal ends the wait with nothing rented and nothing torn down.**
+
+`gpunit/lifecycle.py::stock_round` holds the round; `lifecycle.up` and `gpunit/volume.py::_datacenter` ask it. A
+round of 400s leaves no pending mark and no create begun (`gpunit/state.py::State.clear_round`), and `lifecycle.up`
+runs its guards again before each later round (`gpunit/lifecycle.py::_guarded`): a record, a pending mark or a listed
+pod another session made during the wait refuses, and so does a window volume the session would now outlive.
+
+- **Why:** A data centre's stock runs out for hours, and every caller would write the same retry loop.
+- **Made by:** `0019·D6`.

@@ -26,6 +26,7 @@ from gpunit.spec import Spec
 from gpunit.state import Record, State, Window
 
 POLL_S = 5
+STOCK_ROUND_S = 60
 # The statuses of a container that is not running; two polls in a row end the wait.
 DEAD = ("EXITED", "ERROR", "TERMINATED")
 # Checked before the create: a tool missing after it leaves a pod rented.
@@ -76,37 +77,28 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
     if missing:
         log.refuse(f"not on PATH: {', '.join(missing)}; install OpenSSH")
     _warn_unignored(state)
-    if state.pod.exists():
-        log.refuse(f"a pod is already recorded in {state.pod}; run gpunit down")
-    if state.pending.exists():
-        log.refuse(f"a create may have left a pod ({state.pending}); run gpunit down")
-    if spec.volume_gb is not None:
-        spec = _in_window(spec, state)
-    _refuse_listed(spec, provider)
-    if spec.volume is not None:
-        try:
-            volume = provider.volume(spec.volume)
-        except (Unknown, Lost) as fault:
-            # The session never clears the record; `volume up` does: decision D55.
-            hint = "; run gpunit volume up" if spec.volume_gb is not None else ""
-            log.refuse(f"volume {spec.volume} could not be read: {fault}{hint}")
-        if not spec.allows(volume.datacenter):
-            log.refuse(
-                f"volume {spec.volume} is in {volume.datacenter}, "
-                f"outside datacenters {', '.join(spec.datacenters)}"
-            )
+    spec = _guarded(spec, provider, state)
     cards = placeable(spec, provider)
 
     pubkey = state.keygen(pod_name(spec.project))
     nonce = NONCE()
-    # Before the create, so a log read `since` it misses none of the pod's lines
-    # within the provider's tail (decision D22).
-    created = log.utc()
-    state.mark_pending()
-    pod_id = _create(spec, provider, cards, pubkey, nonce)
-    if pod_id is None:
-        state.clear_pending()
-        log.refuse("no card in 'gpus' was placed")
+    deadline, until = stock_deadline(spec)
+    attempt = 1
+    while True:
+        # Before the create, so a log read `since` it misses none of the pod's lines
+        # within the provider's tail (decision D22).
+        created = log.utc()
+        state.mark_pending()
+        pod_id = _create(spec, provider, cards, pubkey, nonce)
+        if pod_id is not None:
+            break
+        # No pending mark outlives a round of 400s, so no create began: decision D56.
+        state.clear_round()
+        if not stock_round(attempt, deadline, until):
+            log.refuse("no card in 'gpus' was placed", log.NO_CAPACITY)
+        attempt += 1
+        # Another session, or the window's end, may have come during the wait.
+        spec = _guarded(spec, provider, state)
     record = Record(pod_id, spec.image, host=None, port=None, created=created)
     state.write(record)
     state.clear_pending()
@@ -303,6 +295,33 @@ def live_window(state: State) -> Window:
     return window
 
 
+def _guarded(spec: Spec, provider: Provider, state: State) -> Spec:
+    """Return `spec`, mounting the window volume; refuse beside another session.
+
+    Refuse too a session that outlives the window, or a volume outside `datacenters`.
+    """
+    if state.pod.exists():
+        log.refuse(f"a pod is already recorded in {state.pod}; run gpunit down")
+    if state.pending.exists():
+        log.refuse(f"a create may have left a pod ({state.pending}); run gpunit down")
+    if spec.volume_gb is not None:
+        spec = _in_window(spec, state)
+    _refuse_listed(spec, provider)
+    if spec.volume is not None:
+        try:
+            volume = provider.volume(spec.volume)
+        except (Unknown, Lost) as fault:
+            # The session never clears the record; `volume up` does: decision D55.
+            hint = "; run gpunit volume up" if spec.volume_gb is not None else ""
+            log.refuse(f"volume {spec.volume} could not be read: {fault}{hint}")
+        if not spec.allows(volume.datacenter):
+            log.refuse(
+                f"volume {spec.volume} is in {volume.datacenter}, "
+                f"outside datacenters {', '.join(spec.datacenters)}"
+            )
+    return spec
+
+
 def _in_window(spec: Spec, state: State) -> Spec:
     """Return `spec` mounting the window volume; refuse a session that outlives it."""
     window = live_window(state)
@@ -360,8 +379,31 @@ def placeable(spec: Spec, provider: Provider) -> list[str]:
         else:
             cards.append(card)
     if not cards:
-        log.refuse("no card in 'gpus' meets vram_gb and max_hourly")
+        log.refuse("no card in 'gpus' meets vram_gb and max_hourly", log.NO_FIT)
     return cards
+
+
+def stock_deadline(spec: Spec) -> tuple[float, str]:
+    """Return when a wait for stock ends, on `CLOCK` and in UTC; now without one."""
+    if spec.stock_wait_s is None:
+        return CLOCK.monotonic(), ""
+    return CLOCK.monotonic() + spec.stock_wait_s, log.utc(spec.stock_wait_s)
+
+
+def stock_round(attempt: int, deadline: float, until: str) -> bool:
+    """Write the attempt line and sleep a round, unless it would pass `deadline`.
+
+    Return whether it slept, e.g. attempt 2 → "no capacity: attempt 2; next in 60s,
+    waiting until 2026-11-03T10:14:02Z", then True.
+    """
+    if CLOCK.monotonic() + STOCK_ROUND_S > deadline:
+        return False
+    log.say(
+        f"no capacity: attempt {attempt}; next in {STOCK_ROUND_S}s, "
+        f"waiting until {until}"
+    )
+    CLOCK.sleep(STOCK_ROUND_S)
+    return True
 
 
 def _create(

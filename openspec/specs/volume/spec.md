@@ -15,7 +15,7 @@ price of $0.07 per GB a month and the most the window can cost, and create nothi
 SHALL mark `.gpunit/volume.pending` before the create and write `.gpunit/volume` — the id, the data centre, the size and
 the UTC end, now plus `volume_ceiling` — once the create answers; and SHALL append the volume to the ledger. A spec
 without `volume_gb` SHALL be refused naming `volume_gb`. No card in stock in such a data centre SHALL refuse naming the
-cards, and `datacenters` when set. A create whose answer did not arrive SHALL keep the pending mark and exit `3`, naming
+cards, and `datacenters` when set, and exit `4`. Ctrl-C at the price question SHALL create nothing and exit `130`. A create whose answer did not arrive SHALL keep the pending mark and exit `3`, naming
 `gpunit volume down`.
 
 #### Scenario: the volume is made where the first card is in stock
@@ -31,7 +31,7 @@ cards, and `datacenters` when set. A create whose answer did not arrive SHALL ke
 #### Scenario: no stock refuses
 - **Key:** `volume:up:no-stock-refuses`
 - **WHEN** no card of `gpus` is in stock in a data centre offering standard volumes
-- **THEN** `volume up` refuses naming the cards, exits `1`, and creates nothing
+- **THEN** `volume up` refuses naming the cards, exits `4`, and creates nothing
 
 #### Scenario: no is the default
 - **Key:** `volume:up:no-by-default`
@@ -67,7 +67,12 @@ cards, and `datacenters` when set. A create whose answer did not arrive SHALL ke
 #### Scenario: no stock within the allow-list refuses
 - **Key:** `volume:up:no-stock-in-allow-list-refuses`
 - **WHEN** `datacenters = ["EU-SE-1"]`, and no card of `gpus` is in stock in `EU-SE-1`
-- **THEN** `volume up` refuses naming the cards and `datacenters`, exits `1`, and creates nothing
+- **THEN** `volume up` refuses naming the cards and `datacenters`, exits `4`, and creates nothing
+
+#### Scenario: Ctrl-C at the price exits 130
+- **Key:** `volume:up:ctrl-c-at-price-exits-130`
+- **WHEN** `volume up` asks the price and Ctrl-C answers
+- **THEN** nothing is created, stderr says `not created`, and the command exits `130`
 
 ### Requirement: A live window volume is extended
 
@@ -234,3 +239,20 @@ read, naming `gpunit volume up`.
 - **Key:** `volume:gone:serve-recreates`
 - **WHEN** a row's window records `v1`, its read answers `404`, the account lists no volume, and `volume up --serve` runs with `--ceiling` and `--yes`
 - **THEN** stderr says `volume v1 is gone; creating a new one`, and a volume is created
+
+### Requirement: Volume up waits out a stall in stock when asked
+
+`gpunit volume up` SHALL, when `stock_wait` or `--stock-wait` sets a duration and no card is in stock in a data centre
+it may use, write the attempt line, wait 60 seconds and read the stock again, until a data centre is found or the
+duration has passed; then it SHALL refuse as without a wait and exit `4`. Ctrl-C during the wait SHALL create nothing
+and exit `130`.
+
+#### Scenario: a later read finds stock
+- **Key:** `volume:stock:found-later`
+- **WHEN** `stock_wait = "10m"`, the first stock read finds no card, and the second finds one in `EU-RO-1`
+- **THEN** the volume is created in `EU-RO-1`, and stderr holds one attempt line
+
+#### Scenario: Ctrl-C ends the wait
+- **Key:** `volume:stock:ctrl-c-exits-130`
+- **WHEN** `volume up` waits for stock and Ctrl-C arrives during the wait
+- **THEN** nothing is created, no pending mark exists, and the command exits `130`

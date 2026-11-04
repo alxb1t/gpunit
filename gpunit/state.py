@@ -105,6 +105,11 @@ class State:
         """Remove `pending`."""
         self.pending.unlink(missing_ok=True)
 
+    def clear_round(self) -> None:
+        """Remove `pending` after a round no create placed: no create began here."""
+        self.clear_pending()
+        self.began = False
+
     def write_known_hosts(self, line: str) -> None:
         """Write the verified host key line."""
         self._mkdir()

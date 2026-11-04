@@ -25,6 +25,7 @@ How to use gpunit: from a project, from Python, and through `serve`.
    cuda = "12.8"
    max_hourly = 0.80
    timeout = 420                               # seconds to wait for SSH
+   stock_wait = "1h"                           # on no capacity, try again every 60s for this long
    [env]
    MODE = "render"                             # GPUNIT_* and RUNPOD_* names are refused here
    ```
@@ -34,7 +35,7 @@ How to use gpunit: from a project, from Python, and through `serve`.
    the file in. `python3-minimal` is not enough: it lacks the modules the stop's request needs.
 
    ```dockerfile
-   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.11.3/boot/boot.py /opt/gpunit/boot.py
+   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.12.0/boot/boot.py /opt/gpunit/boot.py
    ENTRYPOINT ["python3", "/opt/gpunit/boot.py", "--"]
    CMD ["python3", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
    ```
@@ -52,7 +53,7 @@ How to use gpunit: from a project, from Python, and through `serve`.
    key.
 
    ```sh
-   uv add --dev git+https://github.com/alxb1t/gpunit@v0.11.3
+   uv add --dev git+https://github.com/alxb1t/gpunit@v0.12.0
    echo .gpunit/ >> .gitignore
    export RUNPOD_API_KEY=...
    uv run gpunit run -- python3 render.py
@@ -86,7 +87,7 @@ with gpunit.session("gpunit.toml", environ={"RUNPOD_API_KEY": key}, say=my_log) 
 
 | raises | when | `gpunit run` exits |
 |---|---|---|
-| `gpunit.Refused` | it refused; nothing it rented is left | `1` |
+| `gpunit.Refused` | it refused; nothing it rented is left. Its `.code` is the exit code | `1`, `4` or `5` |
 | `gpunit.Lost` | a create's answer was lost; the sweep was attempted | `3` |
 | `gpunit.TeardownFailed` | the teardown failed; `.gpunit/pod` is kept, so run `gpunit down`. Its `__cause__` is the exception that ended the block, if one did, or the `Refused` whose own teardown failed while the session opened | `1` |
 | `gpunit.Interrupted` | `SIGINT`, `SIGTERM` or `SIGHUP` ended the block; a `KeyboardInterrupt` whose `.signal` names it | `128+n` |
@@ -253,7 +254,7 @@ uv run gpunit volume down --serve qwen3-4b
 - **The price comes first:** $0.07 per GB a month, over the whole hours of `volume_ceiling`, and nothing is created
   without `y`. `--yes` skips the question.
 - **No session outlives its volume.** `up`, `run` and `serve` refuse when no volume is recorded, or when the session's
-  ceiling plus its wait for SSH would end after the volume.
+  ceiling plus its wait for SSH would end after the volume, checked again before each round of a wait for stock.
 - **`volume up` again extends** a live volume to now plus `volume_ceiling`, never earlier than its end, after the price.
 - **The ceiling:** `up`, `run`, `serve`, `down`, `status`, `volume up` and `volume down` each delete a volume past its
   end before anything else, `down` after its pods, which may hold it. `status` names the volume and its end.
@@ -377,12 +378,28 @@ billing and the ledger.
 |---|---|
 | `0` | done; for `run`, the command's own code passes through |
 | `1` | refused or failed; the teardown failed |
-| `2` | usage: an unknown verb, a missing command, an unreadable spec path, `serve` or `volume up --serve` without `--ceiling`, `--models` without a model, an unknown model, `spend --days` under 1 or over 3660, `volume` without `up` or `down` |
+| `2` | usage: an unknown verb, a missing command, an unreadable spec path, `serve` or `volume up --serve` without `--ceiling`, `--models` without a model, an unknown model, `spend --days` under 1 or over 3660, `volume` without `up` or `down`, a `--stock-wait` that is no duration |
 | `3` | a create's answer was lost; a pod may exist and bill — run `gpunit down`; for a volume's create, `gpunit volume down` |
-| `128+n` | signal `n` stopped `run` or `serve`, or killed `run`'s command, and the teardown succeeded; a failed teardown is still `1`; Ctrl-C at `volume down`'s sweep question is `130` |
+| `4` | no capacity: every create of a session answered 400, or `volume up` found no card in stock; worth a retry, which `stock_wait` or `--stock-wait` on `up`, `run`, `serve` and `volume up` makes every 60s until it passes |
+| `5` | no card of `gpus`, or of `serve`'s row, meets `vram_gb` and `max_hourly`; edit the spec, or `--max-hourly` |
+| `128+n` | signal `n` stopped `run` or `serve`, or killed `run`'s command, and the teardown succeeded; a failed teardown is still `1`; Ctrl-C at `volume down`'s sweep question or `volume up`'s price question is `130` |
 
 gpunit's own lines go to stderr, each opening with the UTC time; stdout belongs to the command, or to `serve`'s
 chat and `--api`'s two lines, or to `spend`'s report.
+
+## The lines a caller reads
+
+**These lines keep their form, so a caller may parse them** ([cli](../openspec/specs/cli/spec.md)). Each is one
+stderr line, after the UTC time.
+
+| line | when |
+|---|---|
+| `refused: <reason>` | a refusal; the exit code says its kind |
+| `skipped: <card> has <n> GB, under <vram_gb>` | a card of `gpus` under the floor |
+| `skipped: <card> costs $<hourly>/h, over <max_hourly>` | a card of `gpus` over the price |
+| `no capacity: attempt <n>; next in 60s, waiting until <UTC>` | each attempt of a wait for stock |
+
+e.g. `2026-11-03T09:14:02Z refused: no card in 'gpus' was placed`, then exit `4`.
 
 ## The spend rules
 

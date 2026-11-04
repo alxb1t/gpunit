@@ -100,6 +100,31 @@ def test_serve_without_a_ceiling_exits_2_naming_it(
     assert "--ceiling" in capsys.readouterr().err
 
 
+@pytest.mark.spec("cli:verbs:stock-wait-not-a-duration-exits-2")
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["up", "--stock-wait", "soon"],
+        ["run", "--stock-wait", "soon", "--", "true"],
+        ["serve", "qwen3-4b", "--ceiling", "1h", "--stock-wait", "soon"],
+        ["volume", "up", "--stock-wait", "soon"],
+    ],
+    ids=["up", "run", "serve", "volume-up"],
+)
+def test_a_stock_wait_that_is_no_duration_exits_2(
+    argv: list[str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    write_spec(tmp_path)
+
+    assert gpunit(argv, provider=NO_REQUESTS) == 2
+    err = capsys.readouterr().err
+    assert "argument --stock-wait: 'soon' is not a duration" in err
+
+
 @pytest.mark.spec("cli:verbs:spend-bad-days-exits-2")
 @pytest.mark.parametrize(
     ("days", "code"),
@@ -196,7 +221,7 @@ def test_a_user_row_replaces_the_bundled_row_of_its_name(
 
     # No card is cheap enough: `serve` asks the prices of its row's cards, then refuses.
     argv = ["serve", "qwen3-4b", "--ceiling", "1h", "--max-hourly", "0.0001"]
-    assert gpunit(argv, provider=provider) == 1
+    assert gpunit(argv, provider=provider) == 5
     replaced = [
         line
         for line in capsys.readouterr().err.splitlines()
@@ -276,7 +301,7 @@ def test_each_verb_naming_a_model_reads_the_given_file(
         assert provider.calls == []
         return
     # `serve` refuses at the price: no card is that cheap.
-    assert codes == [1, 0, 0, 0]
+    assert codes == [5, 0, 0, 0]
     assert set(provider.named("gpu")) == {("NVIDIA L4",)}
     assert [project for project, _ in provider.named("list")] == [f"serve-{name}"]
     assert [size for _, size, _ in provider.named("create_volume")] == [33]

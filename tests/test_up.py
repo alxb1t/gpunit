@@ -3,12 +3,14 @@ from pathlib import Path
 
 import pytest
 
+from gpunit import lifecycle, log
 from gpunit.provider import GpuInfo, Lost, PodInfo, Unknown, Unplaceable, VolumeInfo
 from gpunit.runpod import RunPod
 from gpunit.spec import Spec
 from gpunit.state import State
 from tests.fakes import (
     BOOT_LOG,
+    RECORD,
     RUNNING,
     FakeClock,
     FakeOpener,
@@ -107,13 +109,179 @@ def test_a_400_moves_on_to_the_next_card(cwd: Path) -> None:
 
 
 @pytest.mark.spec("session:place:none-placed")
-def test_none_placed_exits_1_with_no_record(cwd: Path) -> None:
+def test_none_placed_exits_4_with_no_record(cwd: Path) -> None:
     provider = FakeProvider(creates=[Unplaceable("no capacity")])
 
-    assert gpunit(["up"], provider=provider) == 1
+    assert gpunit(["up"], provider=provider) == 4
     assert creates(provider) == ["RTX 4090", "RTX A6000"]
     assert not (cwd / ".gpunit" / "pod").exists()
     assert not (cwd / ".gpunit" / "pending").exists()
+
+
+@pytest.mark.spec("cli:exits:no-capacity-exits-4")
+def test_no_capacity_exits_4_on_a_refused_line(
+    cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    provider = FakeProvider(creates=[Unplaceable("no capacity")])
+
+    assert gpunit(["up"], provider=provider) == 4
+    err = capsys.readouterr().err
+    assert re.search(r"^\S+Z refused: no card in 'gpus' was placed$", err, re.M)
+
+
+@pytest.mark.spec("cli:exits:no-fit-exits-5")
+def test_no_card_that_fits_exits_5(
+    cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_spec(cwd, VALID + "max_hourly = 0.9\n")
+    over = GpuInfo(vram_gb=48, hourly=2.59)
+    provider = FakeProvider(gpus={"RTX 4090": over, "RTX A6000": over})
+
+    assert gpunit(["up"], provider=provider) == 5
+    err = capsys.readouterr().err
+    assert "skipped: RTX 4090 costs" in err
+    assert "skipped: RTX A6000 costs" in err
+    assert err.index("skipped: RTX A6000") < err.index("refused: ")
+    assert creates(provider) == []
+
+
+@pytest.mark.spec("cli:lines:skipped-forms")
+def test_the_skipped_lines_name_the_card_and_the_figure(
+    cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_spec(
+        cwd, VALID.replace("vram_gb = 24", "vram_gb = 48") + "max_hourly = 0.9\n"
+    )
+    provider = FakeProvider(
+        gpus={
+            "RTX 4090": GpuInfo(vram_gb=24, hourly=0.4),
+            "RTX A6000": GpuInfo(vram_gb=48, hourly=2.59),
+        }
+    )
+
+    gpunit(["up"], provider=provider)
+    err = capsys.readouterr().err
+    assert re.search(r"^\S+Z skipped: RTX 4090 has 24 GB, under 48$", err, re.M)
+    assert re.search(r"^\S+Z skipped: RTX A6000 costs \$2\.59/h, over 0\.9$", err, re.M)
+
+
+NO_CAPACITY = Unplaceable("no capacity")
+
+
+@pytest.mark.spec("session:stock:placed-later")
+def test_the_wait_places_a_pod_on_a_later_round(
+    cwd: Path, clock: FakeClock, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_spec(cwd, VALID + 'stock_wait = "10m"\n')
+    provider = FakeProvider(creates=[NO_CAPACITY, NO_CAPACITY, "pod-2"])
+
+    assert gpunit(["up"], provider=provider) == 0
+    assert creates(provider) == ["RTX 4090", "RTX A6000", "RTX 4090"]
+    record = State(cwd).read()
+    assert record is not None and record.id == "pod-2"
+    assert capsys.readouterr().err.count("no capacity: attempt") == 1
+    assert clock.now == 60
+
+
+@pytest.mark.spec("session:stock:gives-up")
+@pytest.mark.parametrize(
+    ("wait", "rounds"), [("2m", 3), ("3m", 4)], ids=["two-minutes", "twin-three"]
+)
+def test_the_wait_gives_up_with_the_refusal(
+    wait: str,
+    rounds: int,
+    cwd: Path,
+    clock: FakeClock,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    pending: list[bool] = []
+
+    def sleep(seconds: float) -> None:
+        pending.append((cwd / ".gpunit" / "pending").exists())
+        clock.sleep(seconds)
+
+    monkeypatch.setattr(lifecycle, "CLOCK", lifecycle.Clock(clock.monotonic, sleep))
+    provider = FakeProvider(creates=[NO_CAPACITY])
+
+    assert gpunit(["up", "--stock-wait", wait], provider=provider) == 4
+    assert creates(provider) == ["RTX 4090", "RTX A6000"] * rounds
+    assert pending == [False] * (rounds - 1)
+    assert clock.now == 60 * (rounds - 1)
+    assert not (cwd / ".gpunit" / "pod").exists()
+    assert not (cwd / ".gpunit" / "pending").exists()
+    assert "refused: no card in 'gpus' was placed" in capsys.readouterr().err
+
+
+@pytest.mark.spec("session:stock:no-fit-never-waits")
+def test_a_card_that_does_not_fit_never_waits(
+    cwd: Path, clock: FakeClock, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_spec(cwd, VALID + 'max_hourly = 0.9\nstock_wait = "1h"\n')
+    over = GpuInfo(vram_gb=48, hourly=2.59)
+    provider = FakeProvider(gpus={"RTX 4090": over, "RTX A6000": over})
+
+    assert gpunit(["up"], provider=provider) == 5
+    assert "no capacity: attempt" not in capsys.readouterr().err
+    assert clock.now == 0
+
+
+@pytest.mark.spec("session:stock:guards-rechecked")
+@pytest.mark.parametrize("other", ["record", "pending", "listed"])
+def test_a_round_after_the_wait_refuses_beside_another_session(
+    other: str,
+    cwd: Path,
+    clock: FakeClock,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_spec(cwd, VALID + 'stock_wait = "10m"\n')
+
+    def sleep(seconds: float) -> None:
+        # Another `up` in this checkout, during the wait.
+        if other == "record":
+            State(cwd).write(RECORD)
+        elif other == "pending":
+            State(cwd).mark_pending()
+        clock.sleep(seconds)
+
+    monkeypatch.setattr(lifecycle, "CLOCK", lifecycle.Clock(clock.monotonic, sleep))
+    listings = [[], [("pod-9", "RUNNING")]] if other == "listed" else [[]]
+    provider = FakeProvider(
+        creates=[NO_CAPACITY, NO_CAPACITY, "pod-2"], listings=listings
+    )
+
+    assert gpunit(["up"], provider=provider) == 1
+    assert creates(provider) == ["RTX 4090", "RTX A6000"]
+    assert "run gpunit down" in capsys.readouterr().err
+    if other == "record":
+        assert State(cwd).read() == RECORD
+
+
+@pytest.mark.spec("session:stock:window-rechecked")
+def test_a_round_after_the_wait_refuses_past_the_volumes_end(
+    cwd: Path,
+    clock: FakeClock,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    write_spec(cwd, WINDOW + 'stock_wait = "10m"\n')
+    # The wall clock moves with the fake one, so the window's end draws nearer.
+    utc = log.utc
+    monkeypatch.setattr(log, "utc", lambda after_s=0: utc(after_s + int(clock.now)))
+    # The ceiling, 45m, and the wait for SSH, 420s, fit now, and not a round later.
+    state = open_window(cwd, 2700 + 420 + 30, "v2", "CA-MTL-4")
+    provider = FakeProvider(
+        creates=[NO_CAPACITY, NO_CAPACITY, "pod-2"],
+        volumes={"v2": VolumeInfo("CA-MTL-4", 60)},
+    )
+
+    assert gpunit(["up"], provider=provider) == 1
+    assert creates(provider) == ["RTX 4090", "RTX A6000"]
+    recorded = state.window()
+    assert recorded is not None
+    assert f"the volume ends at {recorded.ends}" in capsys.readouterr().err
+    assert not (cwd / ".gpunit" / "pod").exists()
 
 
 @pytest.mark.spec("session:lost:5xx-exits-3")

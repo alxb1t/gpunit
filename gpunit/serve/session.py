@@ -52,11 +52,13 @@ def serve(
     read: Callable[[str], str] | None = None,
     opener: urllib.request.OpenerDirector | None = None,
     models: Path | None = None,
+    stock_wait: int | None = None,
 ) -> int:
     """Serve `name` until the session ends; return the exit code `gpunit run` would."""
     row = table.rows(models).models[name]
     key = secrets.token_urlsafe(32)
     spec = row.spec(ceiling_s, volume, max_hourly, key, _free_port())
+    spec = replace(spec, stock_wait_s=stock_wait)
     if volume is None and State(home(name)).window() is not None:
         # `up` mounts the recorded window volume: decision D43.
         spec = replace(spec, volume_gb=row.disk_gb)
@@ -110,11 +112,12 @@ def volume_up(
     yes: bool,
     provider: Provider,
     models: Path | None = None,
+    stock_wait: int | None = None,
 ) -> int:
     """Make or extend the window volume `serve` mounts for `name`, of its row's disk."""
     place = home(name)
     place.mkdir(mode=0o700, parents=True, exist_ok=True)
-    spec = _window_spec(name, ceiling_s, models)
+    spec = replace(_window_spec(name, ceiling_s, models), stock_wait_s=stock_wait)
     return volume.up(spec, provider, State(place), yes=yes)
 
 
@@ -168,7 +171,7 @@ def _agree(
         log.say(f"price: {card} ${info.hourly}/h")
         prices.append(Decimal(str(info.hourly)))
     if not prices:
-        log.refuse("no card in the table meets its vram_gb and max_hourly")
+        log.refuse("no card in the table meets its vram_gb and max_hourly", log.NO_FIT)
     most = most_cost(max(prices), spec)
     log.say(
         f"at most ${most} for {spec.ceiling_s}s and a {spec.timeout_s}s wait for SSH"

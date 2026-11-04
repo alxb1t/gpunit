@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-04
+
+Gate: local 0m18s · CI not read under mf-ship · 0.11.3: local 0m18s · CI not read under mf-ship
+
+### Changed
+
+- **Breaking for a caller that reads `1` as "no card":** no capacity exits `4`, no card that fits `5`, so a caller
+  retries the one and edits the spec on the other. `gpunit.Refused` gains `.code`; Ctrl-C at `volume up`'s price
+  exits `130`. D32 is amended (`0019`).
+- `docs/usage.md` states the lines a caller may parse: `refused:`, both `skipped:` forms and the attempt line, each
+  after the UTC time (`0019`).
+
+### Added
+
+- `stock_wait` in `gpunit.toml`, or `--stock-wait` on `up`, `run`, `serve` and `volume up`, retries a round that found
+  no capacity every 60 s until the duration passes, then exits `4`; no fit never waits, and a signal ends the wait
+  with nothing rented. D56 records it (`0019`).
+- A wait for stock checks again, before each later round, what `up` checks before its first: a record, a pending mark
+  or a listed pod another session made during the wait refuses, and so does a window volume the session would now
+  outlive; a signal during the wait sweeps no pod. `serve` with no card that fits exits `5` (`0019`).
+
 ## [0.11.3] - 2026-11-03
 
 Gate: local 0m18s · CI not read under mf-ship · 0.11.2: local 0m13s · CI not read under mf-ship

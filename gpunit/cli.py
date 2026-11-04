@@ -2,8 +2,10 @@
 
 import argparse
 import os
+import signal
 import sys
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 from typing import NoReturn
 
@@ -21,6 +23,7 @@ USAGE = (
     " | gpunit volume up [--spec PATH | --serve <model> [--models PATH] --ceiling 4h]"
     " [--yes]"
     " | gpunit volume down [--spec PATH | --serve <model> [--models PATH]]"
+    " | up, run, serve and volume up take --stock-wait 1h"
 )
 
 FAILED, USAGE_FAULT = 1, 2
@@ -43,6 +46,8 @@ def _parser() -> _Parser:
     for verb in ("up", "status", "down", "ssh", "run"):
         sub = verbs.add_parser(verb)
         sub.add_argument("--spec", type=Path, default=Path("gpunit.toml"))
+        if verb in ("up", "run"):
+            sub.add_argument("--stock-wait", type=_ceiling)
         if verb == "status":
             sub.add_argument("--json", action="store_true")
         if verb == "down":
@@ -57,6 +62,7 @@ def _parser() -> _Parser:
     serve.add_argument("--yes", action="store_true")
     serve.add_argument("--think", action="store_true")
     serve.add_argument("--models", type=Path)
+    serve.add_argument("--stock-wait", type=_ceiling)
     volume = verbs.add_parser("volume")
     actions = volume.add_subparsers(dest="action", required=True, parser_class=_Parser)
     for action in ("up", "down"):
@@ -67,6 +73,7 @@ def _parser() -> _Parser:
         if action == "up":
             sub.add_argument("--ceiling", type=_ceiling)
             sub.add_argument("--yes", action="store_true")
+            sub.add_argument("--stock-wait", type=_ceiling)
     report = verbs.add_parser("spend")
     report.add_argument("--days", type=_days, default=DAYS)
     report.add_argument("--json", action="store_true")
@@ -119,6 +126,7 @@ def parse(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
     # `spend` has no `--spec`: it reads only the billing and the ledger.
     args.model = getattr(args, "model", None)
     args.models = getattr(args, "models", None)
+    args.stock_wait = getattr(args, "stock_wait", None)
     if args.models is not None and args.model is None:
         raise Usage("--models goes with --serve")
     if args.model is not None or not hasattr(args, "spec"):
@@ -131,7 +139,10 @@ def parse(argv: list[str]) -> tuple[argparse.Namespace, list[str]]:
 def main(
     argv: list[str] | None = None, *, provider: Provider | None = None
 ) -> NoReturn:
-    """Run one verb and exit: 0 done, 1 refused or failed, 2 usage, 3 lost."""
+    """Run one verb and exit: 0 done, 1 refused or failed, 2 usage, 3 lost.
+
+    4 no capacity, 5 no card that fits, 128 + n on signal n.
+    """
     sys.exit(_run(sys.argv[1:] if argv is None else argv, provider))
 
 
@@ -144,8 +155,8 @@ def _run(argv: list[str], provider: Provider | None) -> int:
         log.say(f"usage: {fault}")
         log.say(f"usage: {USAGE}")
         return USAGE_FAULT
-    except log.Refusal:
-        return FAILED
+    except log.Refusal as refused:
+        return refused.code
 
     # Built only when a verb asks: no key is needed to read a spec or no record.
     def lazy() -> Provider:
@@ -161,6 +172,8 @@ def _run(argv: list[str], provider: Provider | None) -> int:
 
             return spend.spend(lazy(), args.days, as_json=args.json)
         spec = load_spec(args.spec)
+        if args.stock_wait is not None:
+            spec = replace(spec, stock_wait_s=args.stock_wait)
         match args.verb:
             case "up":
                 lifecycle.up(spec, lazy(), state)
@@ -177,10 +190,12 @@ def _run(argv: list[str], provider: Provider | None) -> int:
                 return FAILED
             case _:
                 return run.run(spec, lazy(), state, command)
-    except log.Refusal:
-        return FAILED
+    except log.Refusal as refused:
+        return refused.code
     except Lost:
         return run.LOST_EXIT
+    except KeyboardInterrupt:
+        return 128 + signal.SIGINT
 
 
 def _serve(args: argparse.Namespace, provider: Callable[[], Provider]) -> int:
@@ -197,6 +212,7 @@ def _serve(args: argparse.Namespace, provider: Callable[[], Provider]) -> int:
                 yes=args.yes,
                 provider=provider(),
                 models=args.models,
+                stock_wait=args.stock_wait,
             )
         return session.volume_down(args.model, provider(), args.models)
     return session.serve(
@@ -209,6 +225,7 @@ def _serve(args: argparse.Namespace, provider: Callable[[], Provider]) -> int:
         think=args.think,
         provider=provider(),
         models=args.models,
+        stock_wait=args.stock_wait,
     )
 
 

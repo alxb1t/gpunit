@@ -204,6 +204,26 @@ def _datacenter(spec: Spec, provider: Provider) -> str:
         log.refuse(f"the data centres could not be read: {fault}")
     standard = {dc for dc in standard if spec.allows(dc)}
     cards = lifecycle.placeable(spec, provider)
+    deadline, until = lifecycle.stock_deadline(spec)
+    attempt = 1
+    while (found := _stocked(cards, standard, provider)) is None:
+        if not lifecycle.stock_round(attempt, deadline, until):
+            within = (
+                f" within datacenters {', '.join(spec.datacenters)}"
+                if spec.datacenters
+                else ""
+            )
+            log.refuse(
+                "no card of gpus is in stock in a data centre with standard "
+                f"volumes{within}: " + ", ".join(cards),
+                log.NO_CAPACITY,
+            )
+        attempt += 1
+    return found
+
+
+def _stocked(cards: list[str], standard: set[str], provider: Provider) -> str | None:
+    """Return the data centre the first card in stock is placed in, else None."""
     for card in cards:
         try:
             stocked = provider.stock(card)
@@ -215,13 +235,7 @@ def _datacenter(spec: Spec, provider: Provider) -> str:
         if placed:
             # `min` keeps the provider's order among equal levels.
             return min(placed, key=lambda pair: STOCK.index(pair[1]))[0]
-    within = (
-        f" within datacenters {', '.join(spec.datacenters)}" if spec.datacenters else ""
-    )
-    log.refuse(
-        f"no card of gpus is in stock in a data centre with standard volumes{within}: "
-        + ", ".join(cards)
-    )
+    return None
 
 
 def _agree(
@@ -231,14 +245,18 @@ def _agree(
     refused: str,
     yes: bool,
 ) -> None:
-    """Print the price and ask `question`; refuse anything but yes, unless `yes`."""
+    """Print the price and ask `question`; refuse anything but yes, unless `yes`.
+
+    Ctrl-C writes the refusal and re-raises `KeyboardInterrupt`: decision D32.
+    """
     most = most_cost(size_gb, ceiling_s)
     log.say(f"price: ${VOLUME_GB_MONTH}/GB a month")
     log.say(f"at most ${most} for {size_gb} GB over {_hours(ceiling_s)}")
     try:
         agreed = yes or _ask(f"{question} for at most ${most}?")
     except KeyboardInterrupt:
-        agreed = False
+        log.say(f"refused: {refused}")
+        raise
     if not agreed:
         log.refuse(refused)
 
