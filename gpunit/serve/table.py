@@ -68,7 +68,7 @@ class Row:
                 "SERVE_REPO": self.repo,
                 "SERVE_REVISION": self.revision,
                 "SERVE_NAME": self.served,
-                # `serve/launch.py` splits it on spaces; `load` refuses a space inside.
+                # `serve/launch.py` splits it on whitespace; `load` refuses any inside.
                 "SERVE_ARGS": " ".join(self.args),
                 "VLLM_API_KEY": key,
             },
@@ -206,8 +206,14 @@ _LOGGING = frozenset(
 
 def _args(where: str, items: list[object]) -> tuple[str, ...]:
     args = strings(where, "args", items)
-    if any(" " in arg for arg in args):
-        log.refuse(f"{where}: 'args' holds an argument with a space, which sh splits")
+    # `serve/launch.py`'s split() breaks on a tab or any other whitespace, not a space
+    # alone, and would find a flag inside the argument.
+    for arg in args:
+        if any(char.isspace() for char in arg):
+            log.refuse(
+                f"{where}: 'args' holds {arg!r}, with a space or other whitespace,"
+                " which the launcher splits"
+            )
     # Refused before a pod is rented, whatever the launcher does: decision D40. vLLM
     # reads `_` as `-` and a prefix as its flag, so a row's own would win.
     for arg in args:

@@ -398,7 +398,8 @@ Behaviour: [serve](../openspec/specs/serve/spec.md).
 starts vLLM.**
 
 `gpunit/serve/models.toml` pins the image. `gpunit/serve/table.py::_args` and `serve/launch.py` hold one flag rule:
-each flag read as vLLM reads it, the launcher's and the logging flags refused whole or cut short.
+each flag read as vLLM reads it, the launcher's and the logging flags refused whole or cut short. `_args` refuses an
+argument holding whitespace too, so it reads the arguments the launcher's `split()` does.
 
 - **Why:** One image serves every row; only gpunit's launcher sees every row, so it holds the quiet flags.
 - **Made by:** `0005·D7`, `0012·D9`, `0014·D4`, `0014·D6`, `0020·D1`, `0020·D2`.

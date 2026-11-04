@@ -11,12 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Breaking for a row that holds such a flag:** a row's flag is read as vLLM reads it, `_` as `-` and cut short as
   the flag it starts, so `--revisio`, `--enable_log_requests`, `--log-level`, `--config` and a dotted flag are refused,
-  `--tokenizer` too. `serve/launch.py` refuses the same rows on the pod. T13, T30 and T55 read `mitigated` (`0020`).
+  `--tokenizer` too. `serve/launch.py` refuses the same rows on the pod. An argument holding a tab or other
+  whitespace is refused as a space is, since the launcher splits on it. T30 reads `mitigated`; T13 and T55 read
+  `partly`, since weights another argument names are unpinned, and `docs/usage.md` says so (`0020`).
 - The threat model's worker row and G17 say what a worker sends out: what it reads goes to its model provider and its
   session transcript, and a pushed commit is published. T20 reads `accepted`, G17 its proof (`0020`).
 - A wait for stock marks the checkout in `.gpunit/waiting`, removed on every way out by the process it names, so a
-  second `up` or `volume up` refuses while it sleeps and leaves the mark; a dead process's mark is removed, saying so
-  (`0020`).
+  second `up` or `volume up` refuses while it sleeps and leaves the mark, naming the file to remove when no gpunit
+  waits there; a dead process's mark is removed, saying so (`0020`).
 - The serve image is rebuilt from this launcher and re-pinned in `gpunit/serve/models.toml`, so a pod runs the new
   refusal (`0020`).
 

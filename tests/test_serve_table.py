@@ -6,6 +6,7 @@ import pytest
 from gpunit import log
 from gpunit.serve import table
 from gpunit.spec import DIGEST, Port
+from serve import launch
 from tests.fakes import FakeProvider
 from tests.helpers import NO_REQUESTS, gpunit
 
@@ -411,12 +412,13 @@ def _replayed(args: list[str]) -> dict[str, str | None]:
     for flag in (*sorted(table._LAUNCHERS), "--tokenizer", "--max-num-seqs"):
         parser.add_argument(flag)
     launched = ["--revision", PINNED, "--served-model-name", "m", "--port", "8000"]
-    # vLLM's FlexibleArgumentParser reads each flag's `_` as `-` before argparse does.
+    # vLLM's FlexibleArgumentParser reads each flag's `_` as `-` before argparse does,
+    # on the arguments `serve/launch.py` splits out of the row's joined ones.
     dashed = [
         arg.partition("=")[0].replace("_", "-") + "".join(arg.partition("=")[1:])
         if arg.startswith("--")
         else arg
-        for arg in args
+        for arg in " ".join(args).split()
     ]
     try:
         parsed = vars(parser.parse_known_args([*launched, *dashed])[0])
@@ -448,17 +450,28 @@ def test_no_row_resets_a_launcher_flag(capsys: pytest.CaptureFixture[str]) -> No
             _checked(args)
         err = capsys.readouterr().err
         assert f"{WHERE}: 'args' holds {named}; the launcher sets it" in err
+        # `serve/launch.py`'s copy of the rule names the same flag on the pod.
+        assert launch._refused(args) == named
     assert _checked(["--max-num-seqs", "8"]) == ("--max-num-seqs", "8")
+    assert launch._refused(["--max-num-seqs", "8"]) is None
 
     # The replay's twin: vLLM's parser reads a cut flag as the launcher's.
     assert _replayed(["--revisio", "main"])["--revision"] == "main"
+    # A tab hides a flag from the flag check, not from the launcher's split().
+    tabbed = ["--max-num-seqs", "8\t--revisio", "main"]
+    assert _replayed(tabbed)["--revision"] == "main"
+    with pytest.raises(log.Refusal):
+        _checked(tabbed)
+    assert f"{WHERE}: 'args' holds '8\\t--revisio'" in capsys.readouterr().err
     launched = _replayed([])
     passing = [["--max-num-seqs", "8"], ["--hostname", "x"], ["--port8001"]]
     for args in [*_cut_launcher_flags(), *passing]:
         try:
             _checked(args)
         except log.Refusal:
+            assert launch._refused(args) is not None, args
             continue
+        assert launch._refused(args) is None, args
         assert _replayed(args) in (launched, {}), args
 
 
@@ -478,6 +491,8 @@ def test_no_row_resets_a_launcher_flag(capsys: pytest.CaptureFixture[str]) -> No
 def test_a_row_turning_logging_on_by_another_name_is_refused(
     args: list[str], named: str | None, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    # `serve/launch.py`'s copy of the rule names the same flag on the pod.
+    assert launch._refused(args) == named
     if named is None:
         assert _checked(args) == tuple(args)
         return

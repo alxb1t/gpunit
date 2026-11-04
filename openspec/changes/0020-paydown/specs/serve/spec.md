@@ -8,7 +8,8 @@ the digest of the image every row serves on. No row's vLLM arguments SHALL turn 
 with `_` as `-` and cut at `=`; a row SHALL be refused, naming the flag, when a flag is not `--` followed by lowercase
 letters, digits and `-`; when it is, or abbreviates, a launcher flag — `--revision`, `--code-revision`,
 `--tokenizer-revision`, `--served-model-name`, `--host`, `--port`, `--api-key`; or when it is, or abbreviates,
-`--enable-log-requests`, `--enable-log-outputs`, `--log-level` or `--logging-config`. The image's launch script turns
+`--enable-log-requests`, `--enable-log-outputs`, `--log-level` or `--logging-config`; or, naming the argument, when an
+argument holds a space or other whitespace, which the launch script splits on. The image's launch script turns
 request logging off for every row. A row SHALL be
 refused, naming the row and the field, when a field is missing, the revision is not a commit hash, or the image is not
 a digest.
@@ -47,13 +48,15 @@ a digest.
 #### Scenario: a row's launcher flag, whole or cut short, is refused
 - **Key:** `serve:table:launcher-flags-refused`
 - **WHEN** a row's arguments hold `--revision main`, `--port=8001`, `--revisio main`, `--por=8001`, `--api-k k` or
-  `--code_rev main`
-- **THEN** the row is refused naming the flag, and `--max-num-seqs 8` passes
+  `--code_rev main`, or `--revisio` behind a tab inside another argument
+- **THEN** the row is refused naming the flag, or the argument that hides it, and `--max-num-seqs 8` passes; the
+  launch script's own check names the same flag
 
 #### Scenario: a row's rewritten logging flag is refused
 - **Key:** `serve:table:logging-families-refused`
 - **WHEN** a row's arguments hold `--enable_log_requests`, `--enable-log-o`, `--log-level=debug`, `--hf-overrides.x` or `--config`
-- **THEN** the row is refused naming the flag, and `--no-enable-log-requests` passes
+- **THEN** the row is refused naming the flag, and `--no-enable-log-requests` passes; the launch script's own check
+  names the same flag
 
 ### Requirement: The serve image is built on request and pinned
 

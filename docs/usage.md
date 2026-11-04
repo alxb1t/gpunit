@@ -204,16 +204,20 @@ uv run gpunit down --serve granite-4.0-micro --models ./models.toml
 - **One file is read, never merged.** `--models` and `GPUNIT_MODELS` name a file that must read; an absent default
   file means no rows of your own.
 - **A row of a bundled name replaces it,** said in one line: `<file> replaces the bundled qwen3-4b`.
-- **A row passes the bundled rows' checks:** every field, a 40-hex revision, no space inside an argument.
+- **A row passes the bundled rows' checks:** every field, a 40-hex revision, no space, tab or other whitespace inside
+  an argument, since the launcher splits the arguments on it.
 - **Each flag is read as vLLM reads it:** `_` as `-`, cut at `=`, and a flag cut short as the flag it starts. So
   `--revisio`, `--code_rev` and `--por=8001` are the launcher's own flags.
 - **A row is refused, naming the flag, when it holds:**
   - one of the launcher's own flags, whole or cut short: `--revision`, `--code-revision`, `--tokenizer-revision`,
-    `--served-model-name`, `--host`, `--port`, `--api-key`. So the pin holds, and `--tokenizer` is refused too;
+    `--served-model-name`, `--host`, `--port`, `--api-key`. So the row's pin holds, and `--tokenizer` is refused too;
   - a logging flag, whole or cut short: `--enable-log-requests`, `--enable-log-outputs`, `--log-level`,
     `--logging-config`; or `--config`;
   - a flag that is not `--` then lowercase letters, digits and `-`: a dotted `--hf-overrides.x`, a short `-tp`, or a
     value opening with `-`, as in `--seed -1`. Write the long name, or `--seed=-1`.
+- **The pin covers the row's repository alone.** Weights another argument names, a draft model in
+  `--speculative-config` or a LoRA in `--lora-modules`, are fetched at their own revision, `main` by default, and with
+  `--trust-remote-code` the draft's code runs too.
 - **No `image` key.** A file holds `[models.<name>]` rows alone, each served on the bundled image.
 - **Request logging and telemetry are off whatever a row says:** the image's launcher refuses a row the table
   refuses, and turns them off after the row's arguments.
@@ -415,7 +419,8 @@ e.g. `2026-11-03T09:14:02Z refused: no card in 'gpus' was placed`, then exit `4`
 - **A 404 is not "gone".** A wrong key gets a 404 too; `down` keeps a pod's record and exits `1`. A window
   volume is gone only when the account's listing lacks it too; then its record clears (decision D55).
 - **A lost create exits `3`.** `.gpunit/pending` stays, and `down` sweeps every live `gpunit-<project>` pod.
-- **One session per project.** `up` refuses on a record, a pending create, or a listed pod.
+- **One session per project.** `up` refuses on a record, a pending create, a listed pod, or another process's wait
+  for stock in `.gpunit/waiting`; when no gpunit waits there, after a crash, remove that file.
 - **Secure cloud, port 22 only.** Other ports reach the laptop over the SSH tunnel, never a public proxy.
 - **A fresh keypair per session**, in `.gpunit/`, deleted with the pod.
 - **gpunit's ssh is its own.** No ssh_config is read, and only the session's key is offered; a user who wants

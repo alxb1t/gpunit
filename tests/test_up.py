@@ -91,7 +91,10 @@ def test_a_wait_in_the_checkout_refuses_up(
         return
     assert gpunit(["up"], provider=NO_REQUESTS) == 1
     err = capsys.readouterr().err
-    assert f"a session is waiting for stock in this checkout (pid {pid})" in err
+    assert (
+        f"a session is waiting for stock in this checkout (pid {pid});"
+        " if no gpunit waits there, remove .gpunit/waiting\n"
+    ) in err
     assert State(cwd).waiting.read_text(encoding="utf-8") == f"{pid}\n"
 
 
@@ -217,10 +220,22 @@ NO_CAPACITY = Unplaceable("no capacity")
 
 
 @pytest.mark.spec("session:stock:placed-later")
+@pytest.mark.spec("session:stock:waiting-marked")
 def test_the_wait_places_a_pod_on_a_later_round(
-    cwd: Path, clock: FakeClock, capsys: pytest.CaptureFixture[str]
+    cwd: Path,
+    clock: FakeClock,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     write_spec(cwd, VALID + 'stock_wait = "10m"\n')
+    waiting = State(cwd).waiting
+    held: list[str] = []
+
+    def sleep(seconds: float) -> None:
+        held.append(waiting.read_text(encoding="utf-8"))
+        clock.sleep(seconds)
+
+    monkeypatch.setattr(lifecycle, "CLOCK", lifecycle.Clock(clock.monotonic, sleep))
     provider = FakeProvider(creates=[NO_CAPACITY, NO_CAPACITY, "pod-2"])
 
     assert gpunit(["up"], provider=provider) == 0
@@ -229,9 +244,12 @@ def test_the_wait_places_a_pod_on_a_later_round(
     assert record is not None and record.id == "pod-2"
     assert capsys.readouterr().err.count("no capacity: attempt") == 1
     assert clock.now == 60
+    assert held == [f"{os.getpid()}\n"]
+    assert not waiting.exists()
 
 
 @pytest.mark.spec("session:stock:gives-up")
+@pytest.mark.spec("session:stock:waiting-marked")
 @pytest.mark.parametrize(
     ("wait", "rounds"), [("2m", 3), ("3m", 4)], ids=["two-minutes", "twin-three"]
 )
@@ -244,9 +262,12 @@ def test_the_wait_gives_up_with_the_refusal(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     pending: list[bool] = []
+    waiting = State(cwd).waiting
+    held: list[str] = []
 
     def sleep(seconds: float) -> None:
         pending.append((cwd / ".gpunit" / "pending").exists())
+        held.append(waiting.read_text(encoding="utf-8"))
         clock.sleep(seconds)
 
     monkeypatch.setattr(lifecycle, "CLOCK", lifecycle.Clock(clock.monotonic, sleep))
@@ -255,9 +276,11 @@ def test_the_wait_gives_up_with_the_refusal(
     assert gpunit(["up", "--stock-wait", wait], provider=provider) == 4
     assert creates(provider) == ["RTX 4090", "RTX A6000"] * rounds
     assert pending == [False] * (rounds - 1)
+    assert held == [f"{os.getpid()}\n"] * (rounds - 1)
     assert clock.now == 60 * (rounds - 1)
     assert not (cwd / ".gpunit" / "pod").exists()
     assert not (cwd / ".gpunit" / "pending").exists()
+    assert not waiting.exists()
     assert "refused: no card in 'gpus' was placed" in capsys.readouterr().err
 
 
@@ -333,38 +356,22 @@ def test_a_round_after_the_wait_refuses_past_the_volumes_end(
 
 
 @pytest.mark.spec("session:stock:waiting-marked")
-@pytest.mark.parametrize(
-    ("creates_", "wait", "code"),
-    [
-        ([NO_CAPACITY, NO_CAPACITY, "pod-2"], "10m", 0),
-        ([NO_CAPACITY], "2m", 4),
-        ([NO_CAPACITY], "signal", 130),
-    ],
-    ids=["placed", "gives-up", "signal"],
-)
 def test_the_wait_marks_the_checkout(
-    creates_: list[str | Exception],
-    wait: str,
-    code: int,
-    cwd: Path,
-    clock: FakeClock,
-    monkeypatch: pytest.MonkeyPatch,
+    cwd: Path, clock: FakeClock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # Ctrl-C's way out; the placed-later and gives-up tests read the mark on theirs.
     held: list[str] = []
     waiting = State(cwd).waiting
 
     def sleep(seconds: float) -> None:
         held.append(waiting.read_text(encoding="utf-8"))
-        if wait == "signal":
-            raise KeyboardInterrupt
-        clock.sleep(seconds)
+        raise KeyboardInterrupt
 
     monkeypatch.setattr(lifecycle, "CLOCK", lifecycle.Clock(clock.monotonic, sleep))
-    stock_wait = "10m" if wait == "signal" else wait
-    provider = FakeProvider(creates=creates_)
+    provider = FakeProvider(creates=[NO_CAPACITY])
 
-    assert gpunit(["up", "--stock-wait", stock_wait], provider=provider) == code
-    assert held and set(held) == {f"{os.getpid()}\n"}
+    assert gpunit(["up", "--stock-wait", "10m"], provider=provider) == 130
+    assert held == [f"{os.getpid()}\n"]
     assert not waiting.exists()
 
 

@@ -422,7 +422,11 @@ def refuse_waiting(state: State) -> None:
     if pid == os.getpid():
         return
     if pid > 0 and _alive(pid):
-        log.refuse(f"a session is waiting for stock in this checkout (pid {pid})")
+        # A pid reused after a crash looks alive too, so the refusal names the way out.
+        log.refuse(
+            f"a session is waiting for stock in this checkout (pid {pid});"
+            " if no gpunit waits there, remove .gpunit/waiting"
+        )
     state.clear_stale_waiting()
     log.say(f"removed a stale wait mark (pid {pid if pid > 0 else 'unreadable'})")
 
