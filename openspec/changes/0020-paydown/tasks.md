@@ -6,7 +6,7 @@ The row arguments' rule, the threat model's worker rows, the wait mark, then the
 ## Progress
 
 - [x] 1 — The rows
-- [ ] 2 — The threat model
+- [x] 2 — The threat model
 - [ ] 3 — The wait mark
 - [ ] 4 — **HUMAN** — The serve image
 
@@ -27,7 +27,7 @@ The row arguments' rule, the threat model's worker rows, the wait mark, then the
 
 ## 2 — The threat model
 
-- [ ] 2.1 Rewrite the worker row, G17 and T20 in `THREAT_MODEL.md`, per [D4](design.md#d4).
+- [x] 2.1 Rewrite the worker row, G17 and T20 in `THREAT_MODEL.md`, per [D4](design.md#d4).
   Verify: `grep -c 'only a pushed commit leaves it' THREAT_MODEL.md` prints `0`, `grep -c 'model provider' THREAT_MODEL.md` prints a number of at least `2`, `grep '^| T20 ' THREAT_MODEL.md | grep -c '| accepted |'` prints `1`, and `uv run pytest -q --no-cov tests/test_docs.py` exits 0.
 
 ## 3 — The wait mark
