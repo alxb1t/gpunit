@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   session transcript, and a pushed commit is published. T20 reads `accepted`, G17 its proof (`0020`).
 - A wait for stock marks the checkout in `.gpunit/waiting`, removed on every way out, so a second `up` or `volume up`
   refuses while it sleeps; a dead process's mark is removed, saying so (`0020`).
+- The serve image is rebuilt from this launcher and re-pinned in `gpunit/serve/models.toml`, so a pod runs the new
+  refusal (`0020`).
 
 ## [0.12.0] - 2026-11-04
 

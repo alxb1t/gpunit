@@ -8,7 +8,7 @@ The row arguments' rule, the threat model's worker rows, the wait mark, then the
 - [x] 1 — The rows
 - [x] 2 — The threat model
 - [x] 3 — The wait mark
-- [ ] 4 — **HUMAN** — The serve image
+- [x] 4 — **HUMAN** — The serve image
 
 ## 1 — The rows
 
@@ -43,7 +43,7 @@ The row arguments' rule, the threat model's worker rows, the wait mark, then the
 
 ## 4 — **HUMAN** — The serve image
 
-- [ ] 4.1 Push the version branch and build the serve image on it, per [D6](design.md#d6):
+- [x] 4.1 Push the version branch and build the serve image on it, per [D6](design.md#d6):
 
   ```sh
   git push origin 0020-paydown
@@ -53,7 +53,7 @@ The row arguments' rule, the threat model's worker rows, the wait mark, then the
   ```
 
   Verify: `gh run list --repo alxb1t/gpunit --workflow build-serve-image.yml --branch 0020-paydown --limit 1 --json conclusion --jq '.[0].conclusion'` prints `success`.
-- [ ] 4.2 Read the image's digest, then set it in `gpunit/serve/models.toml`'s line
+- [x] 4.2 Read the image's digest, then set it in `gpunit/serve/models.toml`'s line
   `image = "ghcr.io/alxb1t/gpunit-vllm@sha256:<digest>"`:
 
   ```sh
