@@ -39,7 +39,7 @@ key its task names.
 
 - [ ] 3.1 Add `stock_wait` to `gpunit/spec.py` as `Spec.stock_wait_s`, per [D5](design.md#d5), and the test of
   `spec:file:stock-wait-duration` to `tests/test_spec.py`.
-  Verify: `grep -c '"stock_wait"' gpunit/spec.py` prints `1`, and `uv run pytest -q --no-cov tests/test_spec.py` exits 0.
+  Verify: `grep -c '"stock_wait"' gpunit/spec.py` prints `2`, the allowed key and its read, and `uv run pytest -q --no-cov tests/test_spec.py` exits 0.
 - [ ] 3.2 Add `--stock-wait` to `up`, `run`, `serve` and `volume up` in `gpunit/cli.py`, named in `USAGE`, and set it
   on the row's spec in `gpunit/serve/session.py`, per [D5](design.md#d5). Add a `--stock-wait soon` usage case to
   `tests/test_cli.py`.
