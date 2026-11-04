@@ -109,7 +109,7 @@ The system SHALL, when `volume` is set, read the volume's data centre from the p
 refuse when the volume cannot be read, SHALL create the pod in that data centre with the volume mounted, and SHALL
 tell the pod the volume's id as `GPUNIT_VOLUME_ID` and its mount path as `GPUNIT_VOLUME_PATH` in its environment. When
 `volume_gb` is set, the system SHALL do the same with the volume `.gpunit/volume` records; SHALL refuse, naming
-`gpunit volume up`, when none is recorded; and SHALL refuse, naming the volume's end, when the session's ceiling plus
+`gpunit volume up`, when none is recorded or the recorded one cannot be read; and SHALL refuse, naming the volume's end, when the session's ceiling plus
 its wait for SSH would end after it.
 
 #### Scenario: the create carries the volume's data centre
@@ -141,6 +141,11 @@ its wait for SSH would end after it.
 - **Key:** `session:volume:outlives-window-refuses`
 - **WHEN** the recorded volume ends in 30 minutes, and `ceiling = "45m"`
 - **THEN** `up` refuses naming the volume's end and `gpunit volume up`, and makes no create
+
+#### Scenario: an unreadable window volume names volume up
+- **Key:** `session:volume:window-unreadable-names-up`
+- **WHEN** `volume_gb = 60`, `.gpunit/volume` records `v2`, and its read answers `404`
+- **THEN** `up` refuses naming `v2` and `gpunit volume up`, makes no create, and `.gpunit/volume` remains
 
 ### Requirement: A fresh keypair per session
 

@@ -8,13 +8,16 @@ from typing import NoReturn
 import pytest
 
 from gpunit import ledger, lifecycle, log
-from gpunit.provider import GpuInfo, Lost, Unplaceable
+from gpunit.provider import GpuInfo, Lost, Unknown, Unplaceable, VolumeInfo
 from gpunit.state import State
 from gpunit.volume import most_cost
 from tests.fakes import FakeClock, FakeProvider, TtyInput
 from tests.helpers import NO_REQUESTS, WINDOW, gpunit, open_window, write_spec
 
 CARDS = WINDOW.replace('["RTX 4090", "RTX A6000"]', '["NVIDIA A40", "NVIDIA L40"]')
+# The recorded `v1`, as RunPod answers its read.
+LIVE = {"v1": VolumeInfo(datacenter="EU-RO-1", size_gb=60)}
+UNKNOWN = {"v1": Unknown("RunPod does not know volume 'v1'")}
 
 
 def interrupt(prompt: str) -> NoReturn:
@@ -295,13 +298,13 @@ def test_a_pending_mark_refuses(
 def test_up_again_extends(cwd: Path, capsys: pytest.CaptureFixture[str]) -> None:
     write_spec(cwd, WINDOW)
     state = open_window(cwd, 3600)
-    provider = FakeProvider()
+    provider = FakeProvider(volumes=LIVE)
 
     before = log.utc(14400)
     assert gpunit(["volume", "up", "--yes"], provider=provider) == 0
     after = log.utc(14400)
 
-    assert provider.calls == []
+    assert provider.calls == [("volume", ("v1",))]
     window = state.window()
     assert window is not None
     assert window.id == "v1"
@@ -319,11 +322,11 @@ def test_up_again_never_pulls_the_end_in(ceiling: str, kept: bool, cwd: Path) ->
     state = open_window(cwd, 14400)
     recorded = state.window()
     assert recorded is not None
-    provider = FakeProvider()
+    provider = FakeProvider(volumes=LIVE)
 
     assert gpunit(["volume", "up", "--yes"], provider=provider) == 0
 
-    assert provider.calls == []
+    assert provider.calls == [("volume", ("v1",))]
     window = state.window()
     assert window is not None
     assert (window.ends == recorded.ends) is kept
@@ -341,6 +344,26 @@ def test_up_on_an_overdue_volume_deletes_it_and_makes_a_new_one(cwd: Path) -> No
     window = state.window()
     assert window is not None
     assert window.id == "v2"
+
+
+@pytest.mark.spec("volume:gone:up-recreates")
+def test_up_makes_a_new_window_for_a_gone_volume(
+    cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_spec(cwd, WINDOW)
+    state = open_window(cwd, 3600)
+    provider = FakeProvider(
+        volumes=UNKNOWN, account_volumes=["v7"], volume_creates=["v2"]
+    )
+
+    assert gpunit(["volume", "up", "--yes"], provider=provider) == 0
+    assert "volume v1 is gone; creating a new one" in capsys.readouterr().err
+    assert len(provider.named("create_volume")) == 1
+    window = state.window()
+    assert window is not None
+    assert window.id == "v2"
+    # Gone is no delete: `spend` still names `v1` should it bill (decision D55).
+    assert ledger.deleted() == set()
 
 
 @pytest.mark.spec("volume:down:deletes")
@@ -387,11 +410,71 @@ def test_a_refused_delete_keeps_the_record(
     code: int, cwd: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     state = open_window(cwd, 3600)
-    provider = FakeProvider(volume_deletes={"v1": code})
+    provider = FakeProvider(
+        volumes=UNKNOWN, volume_deletes={"v1": code}, account_volumes=["v1"]
+    )
 
     assert gpunit(["volume", "down"], provider=provider) == 1
     assert state.window() is not None
     assert f"answered HTTP {code}; the record is kept" in capsys.readouterr().err
+
+
+@pytest.mark.spec("volume:gone:down-clears")
+def test_down_clears_a_gone_volume(
+    cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    state = open_window(cwd, 3600)
+    provider = FakeProvider(volumes=UNKNOWN, volume_deletes={"v1": 404})
+
+    assert gpunit(["volume", "down"], provider=provider) == 0
+    assert not state.volume.exists()
+    assert ledger.deleted() == set()
+    assert "volume v1 is gone; the record is cleared" in capsys.readouterr().err
+
+
+def kept_by_up_and_down(state: State, provider: FakeProvider) -> None:
+    """Assert `volume up` extends `v1` and `volume down` keeps its record."""
+    assert gpunit(["volume", "up", "--yes"], provider=provider) == 0
+    assert provider.named("create_volume") == []
+    window = state.window()
+    assert window is not None
+    assert window.id == "v1"
+    assert gpunit(["volume", "down"], provider=provider) == 1
+    assert state.window() is not None
+    assert ledger.deleted() == set()
+
+
+@pytest.mark.spec("volume:gone:listed-kept")
+def test_a_volume_the_listing_holds_is_kept(cwd: Path) -> None:
+    write_spec(cwd, WINDOW)
+    state = open_window(cwd, 3600)
+    provider = FakeProvider(
+        volumes=UNKNOWN, volume_deletes={"v1": 404}, account_volumes=["v7", "v1"]
+    )
+
+    kept_by_up_and_down(state, provider)
+
+
+@pytest.mark.spec("volume:gone:listing-lost-kept")
+@pytest.mark.parametrize(
+    ("read", "listing"),
+    [
+        (UNKNOWN["v1"], Lost("volume listing returned HTTP 401")),
+        # The listing answers without `v1`: only the failed read keeps the record.
+        (Lost("volume read returned HTTP 500"), []),
+    ],
+    ids=["listing-lost", "read-lost"],
+)
+def test_a_failed_listing_or_read_keeps_the_record(
+    read: Exception, listing: Lost | list[str], cwd: Path
+) -> None:
+    write_spec(cwd, WINDOW)
+    state = open_window(cwd, 3600)
+    provider = FakeProvider(
+        volumes={"v1": read}, volume_deletes={"v1": 404}, account_volumes=listing
+    )
+
+    kept_by_up_and_down(state, provider)
 
 
 @pytest.mark.spec("volume:down:refused-delete-kept")

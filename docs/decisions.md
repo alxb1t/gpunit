@@ -533,6 +533,20 @@ socket is marked `e2e` and runs in `make e2e`, which `.github/workflows/gate.yml
 - **Why:** MinionsFactory runs each phase's gate in an OS sandbox that refuses a loopback bind.
 - **Made by:** `0017·D2`.
 
+### D55 · A volume is gone when its read and the account's listing both lack it
+
+**A recorded volume whose read answers `404` and which the account's listing, read with the same key, does not hold is
+gone: `volume up` makes a new window, `volume down` and the ceiling's sweep clear the record. Gone is no delete: the
+ledger records no `deleted` line for it, so `gpunit spend` still names it once it passes its end and bills. A pod's
+`404` still keeps its record (decision D23).**
+
+`gpunit/lifecycle.py::gone` holds the check; `gpunit/provider.py::Provider.volume_ids` is the listing.
+
+- **Why:** A key that fails the listing cannot pass for gone, and a volume deleted outside gpunit left a record
+  nothing cleared. A valid key of another RunPod account reads the volume as gone too, its listing being its own
+  account's; a volume truly gone never bills again, so `spend`'s warning names only one misjudged so.
+- **Made by:** `0018·D1`.
+
 ### D56 · A stall in stock is waited out on request
 
 **`stock_wait`, or `--stock-wait`, retries a round that found no capacity every 60 s until the duration passes, then

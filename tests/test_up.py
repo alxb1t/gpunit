@@ -544,6 +544,27 @@ def test_the_windows_volume_is_mounted(cwd: Path) -> None:
     assert spec.volume == "v2"
 
 
+@pytest.mark.spec("session:volume:window-unreadable-names-up")
+@pytest.mark.parametrize("window", [True, False], ids=["window", "twin-volume-key"])
+def test_an_unreadable_window_volume_names_volume_up(
+    window: bool, cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    state = State(cwd)
+    if window:
+        write_spec(cwd, WINDOW)
+        open_window(cwd, 4 * 3600, "v2", "CA-MTL-4")
+    else:
+        write_spec(cwd, VALID + 'volume = "v2"\n')
+    provider = FakeProvider(volumes={"v2": Unknown("404")})
+
+    assert gpunit(["up"], provider=provider) == 1
+    err = capsys.readouterr().err
+    assert "volume v2" in err
+    assert ("; run gpunit volume up" in err) is window
+    assert creates(provider) == []
+    assert (state.window() is not None) is window
+
+
 @pytest.mark.spec("session:volume:window-missing-refuses")
 def test_no_window_volume_refuses(
     cwd: Path, capsys: pytest.CaptureFixture[str]

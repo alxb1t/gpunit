@@ -55,7 +55,7 @@ def test_gpu_reads_the_memory_and_the_secure_price() -> None:
     url = opener.requests[0].full_url
     assert url.endswith("/catalog/gpus/NVIDIA%20GeForce%20RTX%204090")
     assert opener.requests[0].get_header("Authorization") == f"Bearer {KEY}"
-    assert opener.requests[0].get_header("User-agent") == "gpunit/0.11.2"
+    assert opener.requests[0].get_header("User-agent") == "gpunit/0.11.3"
 
 
 @pytest.mark.spec("session:place:unknown-card-refuses")
@@ -603,6 +603,12 @@ def test_the_volume_listing_walks_the_cursor_and_keeps_the_name() -> None:
 
     assert provider.volumes("gpunit-isekai") == ["v1", "v3"]
     assert opener.requests[0].full_url.endswith("/network-volumes?limit=1000")
+    assert "cursor=c1" in opener.requests[1].full_url
+    provider, opener = runpod(
+        (200, page([ours, other], "c1", "networkVolumes")),
+        (200, page([again], None, "networkVolumes")),
+    )
+    assert provider.volume_ids() == ["v1", "v2", "v3"]
     assert "cursor=c1" in opener.requests[1].full_url
 
 
