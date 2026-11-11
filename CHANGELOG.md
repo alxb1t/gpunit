@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `live/serve_dead.py` call it, and the layer test holds that `providers` alone imports the RunPod module (`0022`).
 - `delete`, `stop` and `delete_volume` return `Deleted(kind, code)`; `lifecycle` and `volume` branch on `kind`, and
   `runpod.outcome` is the one rule that reads RunPod's statuses. Messages and exit codes are as they were (`0022`).
+- RunPod's words stay in `gpunit/runpod.py`: `PodInfo.dead`, a best-first `Provider.stock`, `log_cap`, `volume_rate`
+  and `key_names` replace `DEAD`, `STOCK`, `LOG_TAIL`, `VOLUME_GB_MONTH` and the key's name in `lifecycle`, `volume`,
+  `hostkey` and `run`. No message or exit code moves (`0022`).
 
 ## [0.12.2] - 2026-11-11
 

@@ -45,8 +45,6 @@ A second provider implements `gpunit/provider.py::Provider` in a module of the c
 `gpunit.runpod`, and adds it to `tests/test_layers.py::LAYERS` and [modules](modules.md), and has
 `gpunit/providers.py::build` return it. What it meets today:
 
-- **RunPod's words outside `gpunit/runpod.py`:** the dead statuses, the stock levels, the log tail, the volume price
-  and the key's name (`0015·F5`).
 - **Boot's stop:** `boot/boot.py` stops a RunPod pod over RunPod's API (`0015·F14`).
 
 Its tests are `tests/test_<provider>.py` on hand-written bodies in `tests/fixtures/`, as `tests/test_runpod.py`

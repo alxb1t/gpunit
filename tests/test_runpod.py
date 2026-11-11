@@ -56,6 +56,19 @@ def test_the_builder_returns_runpod_for_now() -> None:
         providers.build({})
 
 
+@pytest.mark.spec(
+    "session:hostkey:tail-bound",
+    "volume:up:price-names-the-window",
+    "run:handover:no-account-key",
+)
+def test_runpod_states_its_own_words() -> None:
+    provider, _ = runpod()
+
+    assert provider.log_cap == 5000
+    assert provider.volume_rate == "0.07"
+    assert provider.key_names == ("RUNPOD_API_KEY",)
+
+
 @pytest.mark.spec("session:place:under-floor-skipped")
 def test_gpu_reads_the_memory_and_the_secure_price() -> None:
     provider, opener = runpod((200, fixture("gpu.json")))
@@ -191,17 +204,26 @@ def test_a_transport_failure_is_lost(fault: Exception) -> None:
 
 @pytest.mark.spec("session:wait:failed-poll-is-not-yet")
 def test_get_reads_the_direct_ssh_address_or_none() -> None:
+    running = json.loads(fixture("pod_running.json"))
     provider, _ = runpod(
         (200, fixture("pod_created.json")),
         (200, fixture("pod_pending.json")),
         (500, b"oops"),
         (200, fixture("pod_running.json")),
+        *[
+            (200, json.dumps(running | {"status": status}).encode())
+            for status in ("EXITED", "ERROR", "TERMINATED")
+        ],
     )
 
     assert provider.get("pod-abc123") == PodInfo("PENDING", None, None)
     assert provider.get("pod-abc123") == PodInfo("RUNNING", None, None)
     assert provider.get("pod-abc123") is None
     assert provider.get("pod-abc123") == PodInfo("RUNNING", "203.0.113.7", 40022)
+    for status in ("EXITED", "ERROR", "TERMINATED"):
+        pod = provider.get("pod-abc123")
+        assert pod is not None
+        assert (pod.status, pod.dead) == (status, True)
 
 
 @pytest.mark.spec("session:datacenters:pod-outside-tears-down")
@@ -548,10 +570,10 @@ def test_an_unreadable_billing_is_lost(answer: Answer, read: str, key: bytes) ->
 
 
 @pytest.mark.spec("volume:up:datacenter-from-stock")
-def test_stock_reads_the_secure_pod_stock_and_drops_none() -> None:
+def test_stock_reads_the_secure_pod_stock_best_first() -> None:
     provider, opener = runpod((200, fixture("gpu_stock.json")))
 
-    assert provider.stock("NVIDIA A40") == [("EU-RO-1", "MEDIUM"), ("CA-MTL-4", "HIGH")]
+    assert provider.stock("NVIDIA A40") == [("CA-MTL-4", "HIGH"), ("EU-RO-1", "MEDIUM")]
     url = urllib.parse.urlsplit(opener.requests[0].full_url)
     assert url.path == "/v2/catalog/gpus/NVIDIA%20A40"
     assert urllib.parse.parse_qs(url.query) == {

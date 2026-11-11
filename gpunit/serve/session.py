@@ -23,7 +23,7 @@ WAIT_S = table.WAIT_S
 POLL_S = 5
 PROGRESS_S = 30
 REQUEST_S = 5
-LOG_TAIL = 50
+PROGRESS_TAIL = 50
 HOLD_S = 30
 # Two missed polls: a pod the ceiling stopped answers nothing again.
 QUIET_S = 60
@@ -235,7 +235,7 @@ def _wait(
         if now - start >= WAIT_S:
             log.refuse(f"the model did not load within {WAIT_S}s")
         if now >= progress:
-            lines = provider.log(pod_id, tail=LOG_TAIL, since=created)
+            lines = provider.log(pod_id, tail=PROGRESS_TAIL, since=created)
             kept.take(lines)
             if lines:
                 log.say(f"loading: {log.clean(lines[-1])}")
@@ -263,7 +263,7 @@ def _hold(
     while True:
         clock.sleep(HOLD_S)
         now = clock.monotonic()
-        kept.take(provider.log(pod_id, tail=LOG_TAIL, since=created))
+        kept.take(provider.log(pod_id, tail=PROGRESS_TAIL, since=created))
         if dead.seen(provider.get(pod_id)):
             _stopped(kept, "the pod stopped while serving")
         if _answers(base, key, opener):

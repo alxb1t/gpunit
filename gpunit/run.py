@@ -25,7 +25,7 @@ def run(spec: Spec, provider: Provider, state: State, command: list[str]) -> int
 
     def body() -> int:
         with library.open_session(spec, provider, state, None) as opened:
-            return _command(spec, opened, command)
+            return _command(spec, opened, command, provider.key_names)
 
     return outcome(body)
 
@@ -48,8 +48,13 @@ def outcome(body: Callable[[], int]) -> int:
         return 128 + signal.SIGINT
 
 
-def _command(spec: Spec, opened: library.Session, command: list[str]) -> int:
-    env = {k: v for k, v in os.environ.items() if k != "RUNPOD_API_KEY"} | {
+def _command(
+    spec: Spec,
+    opened: library.Session,
+    command: list[str],
+    withheld: tuple[str, ...],
+) -> int:
+    env = {k: v for k, v in os.environ.items() if k not in withheld} | {
         "GPUNIT_HOST": opened.host,
         "GPUNIT_SSH": shlex.join(opened.ssh),
     }

@@ -37,6 +37,12 @@ LOG_IDLE_S = 3
 MAX_PAGES = 100
 # The most lines a log read backfills.
 MAX_TAIL = 5000
+# RunPod's standard storage under 1 TB, billed by the hour: decision D41.
+VOLUME_RATE = "0.07"
+# The statuses of a container that is not running.
+DEAD_STATUSES = ("EXITED", "ERROR", "TERMINATED")
+# The stock levels that offer the card, best first.
+STOCK_LEVELS = ("HIGH", "MEDIUM", "LOW")
 # The statuses each call succeeds with.
 DELETED = (200, 204)
 VOLUME_DELETED = (204,)
@@ -76,6 +82,10 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 class RunPod:
     """RunPod's REST v2; the key travels only in a request header."""
+
+    log_cap = MAX_TAIL
+    volume_rate = VOLUME_RATE
+    key_names = ("RUNPOD_API_KEY",)
 
     def __init__(
         self,
@@ -314,7 +324,7 @@ class RunPod:
             ]
         except (AttributeError, TypeError, KeyError, ValueError):
             raise Lost(_report(f"stock read of {card!r}", answer)) from None
-        return [(dc, level) for dc, level in stocked if level != "NONE"]
+        return ranked(stocked)
 
     def volume_datacenters(self) -> set[str]:
         """Return the data centres offering standard volumes; raise `Lost`."""
@@ -407,6 +417,15 @@ def outcome(status: int, taken: tuple[int, ...]) -> Deleted:
     return Deleted("refused", status)
 
 
+def ranked(stocked: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """Return the pairs in stock, best level first, equal levels in their order.
+
+    e.g. [("A", "LOW"), ("B", "HIGH"), ("C", "NONE")] → [("B", "HIGH"), ("A", "LOW")]
+    """
+    offered = [pair for pair in stocked if pair[1] in STOCK_LEVELS]
+    return sorted(offered, key=lambda pair: STOCK_LEVELS.index(pair[1]))
+
+
 def _pod_info(body: Any) -> PodInfo:  # noqa: ANN401 — any shape until read
     direct = (body.get("ssh") or {}).get("direct") or {}
     port = direct.get("port")
@@ -415,6 +434,7 @@ def _pod_info(body: Any) -> PodInfo:  # noqa: ANN401 — any shape until read
         host=direct.get("host") or None,
         port=int(port) if port else None,
         datacenter=body.get("dataCenterId") or None,
+        dead=str(body["status"]) in DEAD_STATUSES,
     )
 
 

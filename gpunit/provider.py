@@ -32,12 +32,16 @@ class VolumeInfo:
 
 @dataclass(frozen=True)
 class PodInfo:
-    """A pod's status, its public SSH address once mapped, and its data centre."""
+    """A pod's status, its public SSH address once mapped, and its data centre.
+
+    `dead` says whether the container is not running.
+    """
 
     status: str
     host: str | None
     port: int | None
     datacenter: str | None = None
+    dead: bool = False
 
 
 @dataclass(frozen=True)
@@ -136,7 +140,7 @@ class Provider(Protocol):
         ...
 
     def stock(self, card: str) -> list[tuple[str, str]]:
-        """Return (data centre, availability) where the card is in stock.
+        """Return (data centre, availability) where the card is in stock, best first.
 
         Raise `Unknown` on a 404, else `Lost`. e.g. [("EU-RO-1", "HIGH")]
         """
@@ -168,4 +172,19 @@ class Provider(Protocol):
 
     def list(self, project: str, image: str) -> list[tuple[str, str]]:
         """Return (id, status) of each live project pod; raise `Lost` or `NoImage`."""
+        ...
+
+    @property
+    def log_cap(self) -> int:
+        """The most lines `log` returns."""
+        ...
+
+    @property
+    def volume_rate(self) -> str:
+        """The price of a GB-month, as a decimal string."""
+        ...
+
+    @property
+    def key_names(self) -> tuple[str, ...]:
+        """The names of the environment variables that hold the account key."""
         ...

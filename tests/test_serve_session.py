@@ -27,7 +27,7 @@ from tests.helpers import gpunit, open_window
 
 MODELS = (200, b'{"object": "list", "data": [{"id": "qwen3-4b"}]}')
 NOT_YET = urllib.error.URLError(ConnectionRefusedError(61, "Connection refused"))
-EXITED = PodInfo(status="EXITED", host=None, port=None)
+EXITED = PodInfo(status="EXITED", host=None, port=None, dead=True)
 # What `log.utc` answers in a test that patches it: the record's `created`.
 CREATED = "2026-10-14T00:00:00Z"
 

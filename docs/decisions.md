@@ -22,11 +22,10 @@ decision names the file.
 
 **The session talks to a GPU cloud through `gpunit/provider.py::Provider`; RunPod is one implementation of it.**
 
-Its nouns are gpunit's: a card, a pod, a volume, a log, a bill. Breached: `gpunit/lifecycle.py::_delete_pods` compares
-HTTP codes (`0015·F3`); `gpunit/lifecycle.py::DEAD` and `gpunit/volume.py::STOCK` are RunPod's words (`0015·F5`).
+Its nouns are gpunit's: a card, a pod, a volume, a log, a bill.
 
 - **Why:** The contract must not be RunPod's shape by accident, so a second provider is one more implementation.
-- **Made by:** `0001·D2`, `0007·D2`, `0010·D1`.
+- **Made by:** `0001·D2`, `0007·D2`, `0010·D1`, `0022·D1`, `0022·D3`, `0022·D5`, `0022·D6`, `0022·D7`, `0022·D8`.
 
 ### D3 · RunPod on `urllib`: bounded calls, the key in a header, no redirect, quiet log reads end
 

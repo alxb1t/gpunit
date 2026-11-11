@@ -19,7 +19,15 @@ from gpunit.provider import (
     VolumeCost,
     VolumeInfo,
 )
-from gpunit.runpod import DELETED, STOPPED, VOLUME_DELETED, outcome
+from gpunit.runpod import (
+    DELETED,
+    MAX_TAIL,
+    STOPPED,
+    VOLUME_DELETED,
+    VOLUME_RATE,
+    outcome,
+    ranked,
+)
 from gpunit.spec import Spec
 from gpunit.state import Record
 from tests.helpers import IMAGE
@@ -73,6 +81,10 @@ class FakeProvider:
 
     The sequence scripts are read in order, their last answer repeating.
     """
+
+    log_cap = MAX_TAIL
+    volume_rate = VOLUME_RATE
+    key_names = ("RUNPOD_API_KEY",)
 
     def __init__(
         self,
@@ -184,7 +196,7 @@ class FakeProvider:
     def stock(self, card: str) -> list[tuple[str, str]]:
         """Answer the card's script, or `EU-RO-1` at `HIGH`."""
         self.calls.append(("stock", (card,)))
-        return list(_raise_or(self.stocks.get(card, [("EU-RO-1", "HIGH")])))
+        return ranked(_raise_or(self.stocks.get(card, [("EU-RO-1", "HIGH")])))
 
     def volume_datacenters(self) -> set[str]:
         """Answer the scripted data centres."""

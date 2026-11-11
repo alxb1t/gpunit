@@ -441,7 +441,7 @@ def test_a_failed_poll_is_not_yet(cwd: Path) -> None:
     assert record is not None and (record.host, record.port) == ("203.0.113.7", 40022)
 
 
-EXITED = PodInfo(status="EXITED", host=None, port=None)
+EXITED = PodInfo(status="EXITED", host=None, port=None, dead=True)
 
 
 @pytest.mark.spec("session:wait:dead-pod-tears-down")

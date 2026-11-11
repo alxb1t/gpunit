@@ -6,7 +6,7 @@ One builder, an outcome for each delete, and RunPod's words in `runpod.py`. Deci
 
 - [x] 1 — The builder · moderate
 - [x] 2 — The outcomes · hard
-- [ ] 3 — The words · moderate
+- [x] 3 — The words · moderate
 
 ## 1 — The builder
 
@@ -68,41 +68,41 @@ One builder, an outcome for each delete, and RunPod's words in `runpod.py`. Deci
 
 ## 3 — The words
 
-- [ ] 3.1 In `gpunit/provider.py`, add `dead: bool = False` as the last field of `PodInfo`, its docstring ending `and whether the container is not running`. In `gpunit/runpod.py`, add `DEAD_STATUSES = ("EXITED", "ERROR", "TERMINATED")` after `MAX_TAIL` with the comment `The statuses of a container that is not running.`, and have the helper that `RunPod.get` and `RunPod.pod` call to build a `PodInfo` set `dead=str(body["status"]) in DEAD_STATUSES` ([D5](design.md#d5)). **HALT CHECK**: `grep -c "PodInfo(" gpunit/runpod.py` prints `1` before this task.
+- [x] 3.1 In `gpunit/provider.py`, add `dead: bool = False` as the last field of `PodInfo`, its docstring ending `and whether the container is not running`. In `gpunit/runpod.py`, add `DEAD_STATUSES = ("EXITED", "ERROR", "TERMINATED")` after `MAX_TAIL` with the comment `The statuses of a container that is not running.`, and have the helper that `RunPod.get` and `RunPod.pod` call to build a `PodInfo` set `dead=str(body["status"]) in DEAD_STATUSES` ([D5](design.md#d5)). **HALT CHECK**: `grep -c "PodInfo(" gpunit/runpod.py` prints `1` before this task.
   Verify: `grep -n -E "dead=.*DEAD_STATUSES" gpunit/runpod.py` prints a line.
 
-- [ ] 3.2 In `gpunit/lifecycle.py`, delete `DEAD` and its comment, and make `DeadPod.seen` read `dead = info is not None and info.dead`.
+- [x] 3.2 In `gpunit/lifecycle.py`, delete `DEAD` and its comment, and make `DeadPod.seen` read `dead = info is not None and info.dead`.
   Verify: `grep -n -E "^DEAD|status in DEAD" gpunit/lifecycle.py` prints nothing.
 
-- [ ] 3.3 In `tests/test_up.py` and `tests/test_serve_session.py`, make the `EXITED` fixture `PodInfo(status="EXITED", host=None, port=None, dead=True)`. In `tests/test_runpod.py`, extend `test_get_reads_the_direct_ssh_address_or_none` with more answers, each `pod_running.json` with `status` set to `EXITED`, `ERROR` and `TERMINATED`, read `dead` true, and its earlier `PENDING` and `RUNNING` reads `dead` false.
+- [x] 3.3 In `tests/test_up.py` and `tests/test_serve_session.py`, make the `EXITED` fixture `PodInfo(status="EXITED", host=None, port=None, dead=True)`. In `tests/test_runpod.py`, extend `test_get_reads_the_direct_ssh_address_or_none` with more answers, each `pod_running.json` with `status` set to `EXITED`, `ERROR` and `TERMINATED`, read `dead` true, and its earlier `PENDING` and `RUNNING` reads `dead` false.
   Verify: `uv run pytest tests/test_runpod.py tests/test_up.py tests/test_serve_session.py -q -m "not e2e"` exits 0.
 
-- [ ] 3.4 In `gpunit/runpod.py`, add `STOCK_LEVELS = ("HIGH", "MEDIUM", "LOW")` after `MAX_TAIL` and `ranked(stocked: list[tuple[str, str]]) -> list[tuple[str, str]]` after `outcome`: the pairs whose level is in `STOCK_LEVELS`, best first, equal levels in their order. `RunPod.stock` returns `ranked(...)` in place of its `!= "NONE"` filter. In `gpunit/provider.py`, `Provider.stock`'s docstring says `best first`.
+- [x] 3.4 In `gpunit/runpod.py`, add `STOCK_LEVELS = ("HIGH", "MEDIUM", "LOW")` after `MAX_TAIL` and `ranked(stocked: list[tuple[str, str]]) -> list[tuple[str, str]]` after `outcome`: the pairs whose level is in `STOCK_LEVELS`, best first, equal levels in their order. `RunPod.stock` returns `ranked(...)` in place of its `!= "NONE"` filter. In `gpunit/provider.py`, `Provider.stock`'s docstring says `best first`.
   Verify: `grep -n -E "^STOCK_LEVELS = |def ranked" gpunit/runpod.py` prints a line for each.
 
-- [ ] 3.5 In `gpunit/volume.py`, delete `STOCK` and its comment, and make `_stocked` return the first data centre of `stocked` that is in `standard` ([D6](design.md#d6)), where it chose by level with `min`.
+- [x] 3.5 In `gpunit/volume.py`, delete `STOCK` and its comment, and make `_stocked` return the first data centre of `stocked` that is in `standard` ([D6](design.md#d6)), where it chose by level with `min`.
   Verify: `grep -n "STOCK" gpunit/volume.py` prints nothing.
 
-- [ ] 3.6 In `tests/fakes.py`, make `FakeProvider.stock` answer `ranked(...)` of its script and import `ranked`. In `tests/test_runpod.py`, rename `test_stock_reads_the_secure_pod_stock_and_drops_none` to `test_stock_reads_the_secure_pod_stock_best_first` and expect `[("CA-MTL-4", "HIGH"), ("EU-RO-1", "MEDIUM")]`.
+- [x] 3.6 In `tests/fakes.py`, make `FakeProvider.stock` answer `ranked(...)` of its script and import `ranked`. In `tests/test_runpod.py`, rename `test_stock_reads_the_secure_pod_stock_and_drops_none` to `test_stock_reads_the_secure_pod_stock_best_first` and expect `[("CA-MTL-4", "HIGH"), ("EU-RO-1", "MEDIUM")]`.
   Verify: `uv run pytest tests/test_runpod.py tests/test_volume.py -q` exits 0.
 
-- [ ] 3.7 In `gpunit/provider.py`, add to `Provider`, after `list`, the read-only properties `log_cap -> int`, `volume_rate -> str` and `key_names -> tuple[str, ...]`, docstrings: the most lines `log` returns, the price of a GB-month as a decimal string, and the names of the environment variables that hold the account key. In `gpunit/runpod.py`, add `VOLUME_RATE = "0.07"` with `volume.py`'s comment on it, and on `RunPod` the class attributes `log_cap = MAX_TAIL`, `volume_rate = VOLUME_RATE` and `key_names = ("RUNPOD_API_KEY",)` ([D7](design.md#d7), [D8](design.md#d8), [D9](design.md#d9)).
+- [x] 3.7 In `gpunit/provider.py`, add to `Provider`, after `list`, the read-only properties `log_cap -> int`, `volume_rate -> str` and `key_names -> tuple[str, ...]`, docstrings: the most lines `log` returns, the price of a GB-month as a decimal string, and the names of the environment variables that hold the account key. In `gpunit/runpod.py`, add `VOLUME_RATE = "0.07"` with `volume.py`'s comment on it, and on `RunPod` the class attributes `log_cap = MAX_TAIL`, `volume_rate = VOLUME_RATE` and `key_names = ("RUNPOD_API_KEY",)` ([D7](design.md#d7), [D8](design.md#d8), [D9](design.md#d9)).
   Verify: `grep -n -E "def (log_cap|volume_rate|key_names)" gpunit/provider.py` prints a line for each, and `grep -n -E "^    (log_cap|volume_rate|key_names) = " gpunit/runpod.py` prints a line for each.
 
-- [ ] 3.8 In `tests/fakes.py`, give `FakeProvider` the class attributes `log_cap = MAX_TAIL`, `volume_rate = VOLUME_RATE` and `key_names = ("RUNPOD_API_KEY",)`, importing the constants from `gpunit.runpod`. In `tests/test_runpod.py`, add `test_runpod_states_its_own_words`, marked `session:hostkey:tail-bound`, `volume:up:price-names-the-window` and `run:handover:no-account-key`, asserting `log_cap == 5000`, `volume_rate == "0.07"` and `key_names == ("RUNPOD_API_KEY",)`.
+- [x] 3.8 In `tests/fakes.py`, give `FakeProvider` the class attributes `log_cap = MAX_TAIL`, `volume_rate = VOLUME_RATE` and `key_names = ("RUNPOD_API_KEY",)`, importing the constants from `gpunit.runpod`. In `tests/test_runpod.py`, add `test_runpod_states_its_own_words`, marked `session:hostkey:tail-bound`, `volume:up:price-names-the-window` and `run:handover:no-account-key`, asserting `log_cap == 5000`, `volume_rate == "0.07"` and `key_names == ("RUNPOD_API_KEY",)`.
   Verify: `uv run pytest tests/test_runpod.py -q -k test_runpod_states_its_own_words` exits 0.
 
-- [ ] 3.9 In `gpunit/hostkey.py`, delete `LOG_TAIL = 5000`; `read` calls `provider.log(record.id, tail=provider.log_cap)` and tests `len(lines) < provider.log_cap`, its comment saying `The provider's longest tail alone`. In `gpunit/serve/session.py`, rename `LOG_TAIL = 50` and its readers to `PROGRESS_TAIL`.
+- [x] 3.9 In `gpunit/hostkey.py`, delete `LOG_TAIL = 5000`; `read` calls `provider.log(record.id, tail=provider.log_cap)` and tests `len(lines) < provider.log_cap`, its comment saying `The provider's longest tail alone`. In `gpunit/serve/session.py`, rename `LOG_TAIL = 50` and its readers to `PROGRESS_TAIL`.
   Verify: `grep -n -E "^(DEAD|STOCK|LOG_TAIL|VOLUME_GB_MONTH) =" gpunit/hostkey.py gpunit/serve/session.py` prints nothing.
 
-- [ ] 3.10 In `gpunit/volume.py`, delete `VOLUME_GB_MONTH` and its comment; `most_cost(size_gb, ceiling_s, rate: Decimal)` multiplies by `rate`; `_agree(size_gb, ceiling_s, rate, question, refused, yes)` prints `price: ${rate}/GB a month`; `_extend` takes `rate` after `ceiling_s` and passes it on; `up` passes `Decimal(provider.volume_rate)` to `_agree` and `_extend` ([D8](design.md#d8)). In `tests/test_volume.py`, `most_cost` takes `Decimal("0.07")` as its third argument.
+- [x] 3.10 In `gpunit/volume.py`, delete `VOLUME_GB_MONTH` and its comment; `most_cost(size_gb, ceiling_s, rate: Decimal)` multiplies by `rate`; `_agree(size_gb, ceiling_s, rate, question, refused, yes)` prints `price: ${rate}/GB a month`; `_extend` takes `rate` after `ceiling_s` and passes it on; `up` passes `Decimal(provider.volume_rate)` to `_agree` and `_extend` ([D8](design.md#d8)). In `tests/test_volume.py`, `most_cost` takes `Decimal("0.07")` as its third argument.
   Verify: `grep -n "VOLUME_GB_MONTH" gpunit/volume.py` prints nothing, and `uv run pytest tests/test_volume.py -q` exits 0.
 
-- [ ] 3.11 In `gpunit/run.py`, make `_command(spec, opened, command, withheld)` drop each name of `withheld` from the command's env where it dropped `"RUNPOD_API_KEY"`, and `run` pass `provider.key_names` ([D9](design.md#d9)).
+- [x] 3.11 In `gpunit/run.py`, make `_command(spec, opened, command, withheld)` drop each name of `withheld` from the command's env where it dropped `"RUNPOD_API_KEY"`, and `run` pass `provider.key_names` ([D9](design.md#d9)).
   Verify: `grep -n "RUNPOD_API_KEY" gpunit/run.py` prints nothing.
 
-- [ ] 3.12 In `docs/decisions.md`, in the decision titled *A `Provider` protocol, its nouns not RunPod's*, delete the sentence beginning `Breached:` and add `0022·D1`, `0022·D3`, `0022·D5`, `0022·D6`, `0022·D7` and `0022·D8` to its *Made by*; in `docs/principles.md`, the row *The seam names no provider noun* is held by `architecture:layers:provider-built` and its breach is `—`.
+- [x] 3.12 In `docs/decisions.md`, in the decision titled *A `Provider` protocol, its nouns not RunPod's*, delete the sentence beginning `Breached:` and add `0022·D1`, `0022·D3`, `0022·D5`, `0022·D6`, `0022·D7` and `0022·D8` to its *Made by*; in `docs/principles.md`, the row *The seam names no provider noun* is held by `architecture:layers:provider-built` and its breach is `—`.
   Verify: `grep -n "0015·F[235]" docs/decisions.md docs/principles.md` prints nothing.
 
-- [ ] 3.13 In `docs/extending.md`, delete the bullet on RunPod's words outside `gpunit/runpod.py`, the one that cites `0015·F5`.
+- [x] 3.13 In `docs/extending.md`, delete the bullet on RunPod's words outside `gpunit/runpod.py`, the one that cites `0015·F5`.
   Verify: `grep -n "0015·F5" docs/extending.md` prints nothing.

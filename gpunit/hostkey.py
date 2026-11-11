@@ -12,7 +12,6 @@ from gpunit.state import Record, State
 LOG_WAIT_S = 60
 # sshd can answer after the port is mapped, so the scan waits longer than the log.
 SCAN_WAIT_S = 180
-LOG_TAIL = 5000
 
 T = TypeVar("T")
 
@@ -37,15 +36,15 @@ def verify(
     # The fingerprint comes over the authenticated API, never over the connection
     # it vouches for; nothing connects until the two agree.
     def read() -> str | None:
-        # The last LOG_TAIL lines alone: RunPod's `since` reads the same tail
-        # (decision D22), so a key line a heavy boot pushes out of it is not read.
-        lines = provider.log(record.id, tail=LOG_TAIL)
+        # The provider's longest tail alone (decision D22): a key line a heavy
+        # boot pushes out of it is not read.
+        lines = provider.log(record.id, tail=provider.log_cap)
         if printed := fingerprint(lines, nonce):
             return printed
         # Judged on a read that holds the whole log, its first line boot's
         # `step: the ceiling`, whose key line is boot's own: a full tail can hold
         # only a command's echo of an older one.
-        if len(lines) < LOG_TAIL and old_boot(lines):
+        if len(lines) < provider.log_cap and old_boot(lines):
             raise _OldBoot
         return None
 

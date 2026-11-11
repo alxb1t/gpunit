@@ -27,8 +27,6 @@ from gpunit.state import Record, State, Window
 
 POLL_S = 5
 STOCK_ROUND_S = 60
-# The statuses of a container that is not running; two polls in a row end the wait.
-DEAD = ("EXITED", "ERROR", "TERMINATED")
 # Checked before the create: a tool missing after it leaves a pod rented.
 SSH_TOOLS = ("ssh", "ssh-keygen", "ssh-keyscan")
 
@@ -62,7 +60,7 @@ class DeadPod:
     def seen(self, info: PodInfo | None) -> bool:
         """Return True when this poll and the one before both read a dead status."""
         # A restart may show a dead status once, so only a second poll in a row ends it.
-        dead = info is not None and info.status in DEAD
+        dead = info is not None and info.dead
         twice, self._last = dead and self._last, dead
         return twice
 
