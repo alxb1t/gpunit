@@ -32,7 +32,7 @@ The provider reads a pod and lists the account's, the rule clears a gone record,
   Verify: `grep -n "pod {record.id} is gone; its record is cleared" gpunit/lifecycle.py` prints a line.
 
 - [x] 2.3 In `lifecycle._delete_pods`, add the branch of [D5](design.md#d5) between the `DELETED` branch and the `404` branch: `elif pod_gone(provider, record.id):` clears the session with `state.clear_session()` and says `f"pod {record.id} is gone; its record is cleared"`, and sets no `failed`. The 404 and other-code branches, their messages and the sweep stay as they are. `.gpunit/pending` and the ledger are untouched ([D6](design.md#d6)).
-  Verify: `grep -n "elif pod_gone(provider, record.id):" gpunit/lifecycle.py` prints a line.
+  Verify: `grep -n "elif pod_gone(provider, record.id)" gpunit/lifecycle.py` prints a line.
 
 - [x] 2.4 In `tests/test_down.py`, parametrize `test_a_404_keeps_the_record` by ids `gone`, `listing-lost`, `still-listed`, each a `FakeProvider(deletes={"pod-1": 404}, pods={"pod-1": Unknown(...)}, account_pods=...)`. `gone`: `account_pods=[]` → exit `0`, `state.pod`, `state.known_hosts`, `state.key` and `state.key_pub` gone, stderr holds `pod pod-1 is gone; its record is cleared`, `ledger.deleted()` is empty. `listing-lost`: `account_pods=Lost("pod listing returned HTTP 403")` → exit `1`, record kept, stderr holds `the key may be wrong`. `still-listed`: `account_pods=["pod-1"]` → the same as `listing-lost`. Mark it with both `session:down:404-keeps-record` and `session:down:gone-clears`; keep its name, `docs/principles.md` cites it.
   Verify: `uv run pytest tests/test_down.py tests/test_library.py tests/test_run.py -q -k "test_a_404_keeps_the_record and gone"` exits 0.
