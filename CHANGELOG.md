@@ -10,8 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The provider reads one pod, `Provider.pod`, which raises `Unknown` on a 404 and `Lost` on any other failed read, and
-  lists the account's pods, `Provider.pod_ids`. `get` is unchanged. The rule that uses them lands in the next phase
-  (`0021`).
+  lists the account's pods, `Provider.pod_ids`. `get` is unchanged. `status` and `down` use them to tell a gone pod
+  from a failed read (`0021`).
 
 ### Fixed
 
