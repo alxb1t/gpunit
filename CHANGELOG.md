@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-11-11
+
+Gate: local 0m13s · CI not read under mf-ship · 0.12.1: local 0m17s · CI not read under mf-ship
+
+### Changed
+
+- The provider reads one pod, `Provider.pod`, which raises `Unknown` on a 404 and `Lost` on any other failed read, and
+  lists the account's pods, `Provider.pod_ids`. `get` is unchanged. `status` and `down` use them to tell a gone pod
+  from a failed read (`0021`).
+
+### Fixed
+
+- `status` and `down` clear the record of a pod gone from the account: its read answers 404 and the account's listing
+  lacks it. A wrong key, a lost answer and a listed pod keep the record as before. Gone is no delete: the ledger
+  and `.gpunit/pending` are untouched (`0021`).
+- The guide states the rule: decision D57 holds it, D23 and D55 point to it, and `docs/principles.md`, `docs/usage.md`,
+  `docs/data-flow.md`, `README.md` and `THREAT_MODEL.md` (T47) carry it. The principles row for pinned inputs names
+  its breach (`0021`).
+- A gone clear takes `.gpunit/lock` without waiting and clears only a record that names the judged pod; `up` holds the
+  lock from its keypair to its record. A `status` or `down` overlapping an `up` no longer removes the new session's
+  key and record. D57, the principles words and the threat model (T35, T47) carry it (`0021`).
+
 ## [0.12.1] - 2026-11-04
 
 Gate: local 0m17s · CI not read under mf-ship · 0.12.0: local 0m18s · CI not read under mf-ship

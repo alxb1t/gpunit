@@ -55,7 +55,7 @@ def test_gpu_reads_the_memory_and_the_secure_price() -> None:
     url = opener.requests[0].full_url
     assert url.endswith("/catalog/gpus/NVIDIA%20GeForce%20RTX%204090")
     assert opener.requests[0].get_header("Authorization") == f"Bearer {KEY}"
-    assert opener.requests[0].get_header("User-agent") == "gpunit/0.12.1"
+    assert opener.requests[0].get_header("User-agent") == "gpunit/0.12.2"
 
 
 @pytest.mark.spec("session:place:unknown-card-refuses")
@@ -363,11 +363,39 @@ def test_a_redirect_is_not_followed(
 
 @pytest.mark.spec("session:one:listed-refuses")
 def test_the_listing_names_the_projects_live_pods() -> None:
-    provider, _ = runpod((200, fixture("pods_page.json")))
+    gone = {"id": "p1", "name": "gpunit-isekai", "status": "TERMINATED", "image": IMAGE}
+    other = {"id": "p2", "name": "someone-else", "status": "RUNNING", "image": "x"}
+    provider, _ = runpod(
+        (200, fixture("pods_page.json")), (200, page([gone, other], None))
+    )
 
     listed = provider.list("isekai", IMAGE)
 
     assert listed == [("pod-abc123", "RUNNING"), ("pod-old", "EXITED")]
+    assert provider.pod_ids() == ["p1", "p2"]
+
+
+@pytest.mark.spec("session:down:gone-clears")
+@pytest.mark.parametrize(
+    ("answer", "outcome"),
+    [
+        ((200, fixture("pod_running.json")), PodInfo("RUNNING", "203.0.113.7", 40022)),
+        ((404, fixture("problem.json")), Unknown),
+        ((500, b"oops"), Lost),
+    ],
+    ids=["200", "404", "500"],
+)
+def test_a_pod_read_answers_the_pod_unknown_or_lost(
+    answer: Answer, outcome: PodInfo | type[Exception]
+) -> None:
+    provider, opener = runpod(answer)
+
+    if isinstance(outcome, PodInfo):
+        assert provider.pod("pod-abc123") == outcome
+    else:
+        with pytest.raises(outcome):
+            provider.pod("pod-abc123")
+    assert opener.requests[0].full_url.endswith("/pods/pod-abc123")
 
 
 @pytest.mark.spec("session:one:look-alike-image-ignored")

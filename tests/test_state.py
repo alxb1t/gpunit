@@ -1,9 +1,11 @@
+import fcntl
 import os
 from pathlib import Path
 
 import pytest
 
 from gpunit.state import Record, State, Window
+from tests.fakes import RECORD
 
 
 @pytest.mark.spec("session:down:success-clears")
@@ -84,3 +86,29 @@ def test_the_wait_mark_holds_this_process(tmp_path: Path) -> None:
     state.waiting.write_text(f"{os.getppid()}\n", encoding="utf-8")
     state.clear_waiting()
     assert state.waiting.read_text(encoding="utf-8") == f"{os.getppid()}\n"
+
+
+@pytest.mark.spec("session:down:gone-clears-its-own")
+def test_a_gone_clear_takes_only_its_own_session(tmp_path: Path) -> None:
+    state = State(tmp_path)
+    state.write(RECORD)
+    state.write_known_hosts("203.0.113.7 ssh-ed25519 AAAA")
+    state.key.write_text("key", encoding="utf-8")
+    state.key_pub.write_text("key.pub", encoding="utf-8")
+    session = [state.pod, state.known_hosts, state.key, state.key_pub]
+
+    assert not state.clear_gone("pod-2")
+    assert all(path.exists() for path in session)
+
+    holder = os.open(state.lock, os.O_RDWR | os.O_CREAT, 0o600)
+    try:
+        fcntl.flock(holder, fcntl.LOCK_EX)
+        assert not state.clear_gone("pod-1")
+        assert all(path.exists() for path in session)
+    finally:
+        os.close(holder)
+
+    assert state.clear_gone("pod-1")
+    assert not any(path.exists() for path in session)
+    assert state.lock.exists()
+    assert state.lock.stat().st_mode & 0o777 == 0o600

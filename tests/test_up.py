@@ -1,3 +1,4 @@
+import fcntl
 import os
 import re
 from pathlib import Path
@@ -63,11 +64,37 @@ def test_a_listed_pod_refuses_up(cwd: Path, capsys: pytest.CaptureFixture[str]) 
 
 
 @pytest.mark.spec("session:one:look-alike-image-ignored")
-def test_up_lists_by_the_specs_project_and_image(cwd: Path) -> None:
+@pytest.mark.spec("session:down:gone-clears-its-own")
+def test_up_lists_by_the_specs_project_and_image(
+    cwd: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     provider = FakeProvider(listings=[[]])
+    create = provider.create
+    held_at_create: list[bool] = []
+
+    def create_under_the_lock(
+        spec: Spec, gpu: str, pubkey: str, ceiling_s: int, *, nonce: str
+    ) -> str:
+        held_at_create.append(_lock_is_held(cwd))
+        return create(spec, gpu, pubkey, ceiling_s, nonce=nonce)
+
+    monkeypatch.setattr(provider, "create", create_under_the_lock)
 
     assert gpunit(["up"], provider=provider) == 0
     assert provider.named("list") == [("isekai", IMAGE)]
+    assert held_at_create == [True]
+    assert not _lock_is_held(cwd)
+
+
+def _lock_is_held(cwd: Path) -> bool:
+    probe = os.open(State(cwd).lock, os.O_RDWR | os.O_CREAT, 0o600)
+    try:
+        fcntl.flock(probe, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        return True
+    finally:
+        os.close(probe)
+    return False
 
 
 def _mark_waiting(cwd: Path, held: str) -> None:

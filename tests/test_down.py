@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from gpunit import log
-from gpunit.provider import Lost
+from gpunit import ledger, log
+from gpunit.provider import Lost, Unknown
 from gpunit.state import State, Window
 from tests.fakes import RECORD, FakeProvider
 from tests.helpers import gpunit
@@ -18,12 +18,33 @@ def recorded(cwd: Path) -> State:
 
 
 @pytest.mark.spec("session:down:404-keeps-record")
-def test_a_404_keeps_the_record(cwd: Path, capsys: pytest.CaptureFixture[str]) -> None:
+@pytest.mark.spec("session:down:gone-clears")
+@pytest.mark.parametrize(
+    "account_pods",
+    [[], Lost("pod listing returned HTTP 403"), ["pod-1"]],
+    ids=["gone", "listing-lost", "still-listed"],
+)
+def test_a_404_keeps_the_record(
+    account_pods: list[str] | Lost, cwd: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     state = recorded(cwd)
+    provider = FakeProvider(
+        deletes={"pod-1": 404},
+        pods={"pod-1": Unknown("RunPod does not know pod 'pod-1'")},
+        account_pods=account_pods,
+    )
 
-    assert gpunit(["down"], provider=FakeProvider(deletes={"pod-1": 404})) == 1
-    assert state.pod.exists()
-    assert "the key may be wrong" in capsys.readouterr().err
+    gone = account_pods == []
+    assert gpunit(["down"], provider=provider) == (0 if gone else 1)
+    err = capsys.readouterr().err
+    if gone:
+        for path in (state.pod, state.known_hosts, state.key, state.key_pub):
+            assert not path.exists()
+        assert "pod pod-1 is gone; its record is cleared" in err
+        assert ledger.deleted() == set()
+    else:
+        assert state.pod.exists()
+        assert "the key may be wrong" in err
 
 
 @pytest.mark.spec("session:down:success-clears")
