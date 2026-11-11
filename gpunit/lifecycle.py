@@ -260,7 +260,7 @@ def gone(provider: Provider, volume_id: str) -> bool:
 
 def pod_gone(provider: Provider, pod_id: str) -> bool:
     """Return True when the pod's read answers 404 and the listing lacks it."""
-    # A wrong key gets a 404 too, but fails the listing: decision D55.
+    # A wrong key gets a 404 too, but fails the listing: decision D57.
     try:
         provider.pod(pod_id)
     except Unknown:

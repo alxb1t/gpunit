@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.4] - 2026-11-11
+
+Gate: local 2m49s · CI not read under mf-ship · 0.12.3: local 0m14s · CI not read under mf-ship
+
+### Changed
+
+- `tests/test_docs.py` holds the root documents' paths, `path::symbol` and line citations, as it held `docs/`'s, so
+  they stay current with the code (`0023`).
+- The docs say what the code does since the seam, the gone pod and readiness: the architecture diagram draws
+  `Provider` and `providers.build`, `TeardownFailed` exits `3` after a lost create, and `pod_gone` cites D57 (`0023`).
+- Each rule has one home: the gone rule in D57, which the other pages link; the change rules in `CONTRIBUTING.md`;
+  the key's exposure in `docs/usage.md`; the install pin in `docs/usage.md` alone (`0023`).
+- `THREAT_MODEL.md` holds at the commit it is read at, with no version stamps; each residual analysis moved into its
+  decision, so a threat row is its threat, mitigation, status and citations (`0023`).
+- The pages put the reader's need first: `docs/usage.md` gives the contract before `serve` and security last, as
+  links into the threat model; `README.md` shows `gpunit.session()` and `serve`; `CONTRIBUTING.md` gains the path by
+  hand and the test-placement policy; `ARCHITECTURE.md` says what each layer holds (`0023`).
+
 ## [0.12.3] - 2026-11-11
 
 Gate: local 0m14s · CI not read under mf-ship · 0.12.2: local 0m13s · CI not read under mf-ship

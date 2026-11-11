@@ -12,7 +12,7 @@ cut, built, checked and released as one OpenSpec change under `openspec/changes/
 - **Tests:** `tests/test_cli.py` and the module's own `tests/test_<module>.py`, on `tests/fakes.py::FakeProvider`.
 - **Docs:** `docs/usage.md`'s *The verbs*, and a line in [modules](modules.md) for a new module.
 - **Version:** a new verb needs a `vX.Y`, never a patch
-  ([D8](decisions.md#d8--a-patch-closes-cards-it-adds-no-verb-gpunittoml-key-or-exit-code)).
+  ([D8](decisions.md#d8--a-patch-fixes-what-is-there-it-adds-no-verb-gpunittoml-key-or-exit-code)).
 
 ## A gpunit.toml key
 
@@ -46,6 +46,12 @@ A second provider implements `gpunit/provider.py::Provider` in a module of the c
 `gpunit/providers.py::build` return it. What it meets today:
 
 - **Boot's stop:** `boot/boot.py` stops a RunPod pod over RunPod's API (`0015·F14`).
+- **The price prompt:** `gpunit/volume.py::_agree` and `gpunit/serve/session.py::_agree` each ask the price, with
+  their own Ctrl-C and end-of-input rules (`0015·F9`).
+- **The card filter:** `gpunit/lifecycle.py::placeable` and `gpunit/serve/session.py::_agree` each filter the cards
+  on `vram_gb` and `max_hourly`, with their own message (`0015·F10`).
+- **No `provider` key yet:** `gpunit/providers.py::build` returns RunPod whatever `gpunit.toml` says.
+- **`gpunit/provider.py::Provider.stop` is called by nothing:** the pod stops itself, from `boot/boot.py`.
 
 Its tests are `tests/test_<provider>.py` on hand-written bodies in `tests/fixtures/`, as `tests/test_runpod.py`
 does; the session tests stay on `FakeProvider`. Its proof is a live target against the new cloud.

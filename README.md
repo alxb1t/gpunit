@@ -1,7 +1,6 @@
 # gpunit
 
 [![gate](https://github.com/alxb1t/gpunit/actions/workflows/gate.yml/badge.svg)](https://github.com/alxb1t/gpunit/actions/workflows/gate.yml)
-[![license](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
 **Rent a cloud GPU, use it, and tear it down on every way out.**
 
@@ -19,21 +18,20 @@ gpunit run -- <cmd>                              boot.py -- <cmd>
 Each project carried its own RunPod scripts, copied from the last and drifted apart. gpunit is the one session they
 all open, use and close, from the CLI or from Python.
 
-## Built so
+## What holds
 
-| claim | held by |
+| rule | held by |
 |---|---|
 | the host key is proven over the provider's log, with a session nonce, before anything connects | [D22](docs/decisions.md#d22--the-host-key-is-proven-over-the-log) |
-| the pod enforces its own spend ceiling, with the laptop asleep | [D25](docs/decisions.md#d25--the-pod-stops-at-its-ceiling-and-on-any-end-down-deletes), [D46](docs/decisions.md#d46--the-ceiling-in-a-forked-watchdog-the-stop-in-a-finally-retried) |
-| teardown on every way out; a pod's 404 is "gone" only when the account's listing lacks it too, as a window volume's is | [D20](docs/decisions.md#d20--teardown-only-when-a-create-began-here-or-was-lost), [D23](docs/decisions.md#d23--teardown-the-recorded-pod-and-the-projects-pods-are-swept), [D57](docs/decisions.md#d57--a-pod-is-gone-when-its-read-and-the-accounts-listing-both-lack-it), [D55](docs/decisions.md#d55--a-volume-is-gone-when-its-read-and-the-accounts-listing-both-lack-it) |
+| the pod enforces its own spend ceiling, with the laptop asleep | [D25](docs/decisions.md#d25--the-pod-stops-at-its-ceiling-and-on-any-end-down-deletes) |
+| a pod or a window volume is gone only when its read and the account's listing both lack it | [D57](docs/decisions.md#d57--a-pod-is-gone-when-its-read-and-the-accounts-listing-both-lack-it) |
 | nothing is rented without the price and a `y` | [D35](docs/decisions.md#d35--the-price-first-yn---yes-skips-it) |
-| the standard library alone; `boot.py` at 100 % coverage | [D1](docs/decisions.md#d1--a-flat-stdlib-package-python-311-no-runtime-dependency), [D5](docs/decisions.md#d5--the-gate-fakes-every-provider-answer-bootpy-at-100-) |
-| the layers and the docs held by tests | [D49](docs/decisions.md#d49--the-layers-held-by-teststest_layerspy), [D50](docs/decisions.md#d50--the-guide-why-flow-and-where-never-a-value-symbols-and-decision-ids-cited-held-by-teststest_docspy) |
+| the standard library alone, no runtime dependency | [D1](docs/decisions.md#d1--a-flat-stdlib-package-python-311-no-runtime-dependency) |
+| `boot.py` at 100 % line and branch coverage | [D5](docs/decisions.md#d5--the-gate-fakes-every-provider-answer-bootpy-at-100-) |
 
 ## Try it
 
-A `gpunit.toml` at the project root, for an image whose entrypoint is `boot.py`
-([how](docs/usage.md#use-it-from-a-project)):
+A `gpunit.toml`, an image whose entrypoint is `boot.py`, and gpunit [from a release tag](docs/usage.md#use-it-from-a-project):
 
 ```toml
 project = "demo"
@@ -45,12 +43,18 @@ disk_gb = 20
 ```
 
 ```sh
-uv add --dev git+https://github.com/alxb1t/gpunit@v0.12.3
 export RUNPOD_API_KEY=...
 uv run gpunit run -- sh -c '$GPUNIT_SSH nvidia-smi'
 ```
 
-## Read more
+```python
+import gpunit
 
-[usage](docs/usage.md) · [proofs](docs/proofs.md) · [the guide](ARCHITECTURE.md) ·
+with gpunit.session("gpunit.toml") as s:
+    print(s.host, s.port(8188))
+```
+
+`gpunit serve qwen3-4b --ceiling 2h` chats with a model on a rented card ([how](docs/usage.md#serve-a-model)).
+
+[usage](docs/usage.md) · [proofs](docs/proofs.md) · [architecture](ARCHITECTURE.md) ·
 [threat model](THREAT_MODEL.md) · [CHANGELOG](CHANGELOG.md) · [LICENSE](LICENSE)

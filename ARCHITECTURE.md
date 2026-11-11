@@ -7,23 +7,34 @@ laptop half places a pod, proves its host key, tunnels its ports and tears it do
 its ceiling and whenever its command ends.
 
 ```
- laptop                                            pod
- ──────                                            ───
- cli ─┬─▶ run · serve ─▶ library ─▶ lifecycle      boot/boot.py
-      ├─▶ volume ─────────────────▶ lifecycle        ceiling watchdog, sshd,
-      └─▶ spend                                      key line, the command, stop
-                   library's tunnel: ssh -N -L ────▶ sshd :22
-                                                     serve/launch.py ──▶ vLLM
- lifecycle · volume · spend ──▶ RunPod REST v2 ◀── the container log
-                                create · log · delete · billing
+ laptop                                                    pod
+ ──────                                                    ───
+ cli ─┬─▶ run · serve ─▶ library ─▶ lifecycle ─▶ hostkey   boot/boot.py
+      ├─▶ volume ─────────────────▶ lifecycle                ceiling watchdog, sshd,
+      └─▶ spend                                              key line, the command, stop
+                   library's tunnel: ssh -N -L ──────────▶ sshd :22
+                                                           serve/launch.py ──▶ vLLM
+ cli · library ─▶ providers.build ─▶ runpod, as the Provider
+ lifecycle · volume · spend ─▶ Provider ◀─ runpod ─▶ RunPod REST v2 ◀── the container log
+                               the seam              create · log · delete · billing
 ```
 
 They meet at RunPod's API, which carries the create's env in and boot's lines out, and at the pod's sshd, which the
 laptop reaches only after the key in the log matches the scan
 ([D22](docs/decisions.md#d22--the-host-key-is-proven-over-the-log)).
 
-**The layers**, lowest last: interface · serve · session · lifecycle · cloud · model · foundation. A module imports
-its own layer and those below ([modules](docs/modules.md)).
+**The layers**, lowest last. A module imports its own layer and those below; each module's layer is in
+[modules](docs/modules.md).
+
+| layer | holds |
+|---|---|
+| interface | the verbs and their exit codes (`gpunit.cli`), and the public names (`gpunit`) |
+| serve | a model's row, its price, the wait for the model, the chat or the `--api` hold |
+| session | the session from Python and `run`: the `with` block, its signals, the tunnel, the teardown |
+| lifecycle | `up`, `status`, `down` and `ssh`; the host key's proof; the window volume; `spend` |
+| cloud | `providers.build`, which picks the provider, and `runpod`, the one `Provider` |
+| model | the `Spec`, the `.gpunit/` files, the ledger, the boot contract and the `Provider` seam |
+| foundation | gpunit's lines and its version |
 
 ## The map
 

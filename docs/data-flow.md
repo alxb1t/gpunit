@@ -22,7 +22,8 @@ and leaves the pod for `down` ([D27](decisions.md#d27--session-is-a-context-mana
 - **Checks** run before any request: the spec, the record and `pending`, the ssh tools, the local ports
   ([D24](decisions.md#d24--gpunits-ssh-is-its-own-the-tools-checked-before-any-request)). The window's sweep runs
   first ([D43](decisions.md#d43--every-session-mounts-the-window-the-sweep-runs-first)).
-- **Place and create:** one create per card; a 400 moves on, anything else is `Lost`
+- **Place and create:** one create per card; the seam's `Unplaceable` moves on to the next card, anything else is
+  `Lost`
   ([D19](decisions.md#d19--placement-the-catalogue-floor-one-create-per-card-a-400-moves-on-the-rest-is-lost)).
 - **Wait:** a bounded poll until the pod's port 22 is mapped; two dead polls end it, and a pod outside
   `datacenters` is torn down ([D21](decisions.md#d21--the-wait-a-bounded-poll-a-failed-read-is-not-yet-two-dead-polls-end-any-wait),
@@ -63,7 +64,7 @@ In `.gpunit/` beside the spec, each written whole, the directory `0700`
 ([D15](decisions.md#d15--gpunit-in-the-working-directory-each-record-written-whole-the-directory-0700)).
 
 ```
- pod:     pending ──create answered──▶ pod ──down, 204 / status or down finds it gone──▶ (gone)
+ pod:     pending ──create answered──▶ pod ──down's delete is gone / status or down finds it gone──▶ (gone)
             │                           also: key, key.pub, known_hosts
             └──lost──▶ kept; the next down sweeps by name and image
 
@@ -73,13 +74,15 @@ In `.gpunit/` beside the spec, each written whole, the directory `0700`
 ```
 
 - `pending` marks a create that may have made a pod no record names; `State.began` says this process wrote it.
-- `pod` is the record: the pod's id, image, address and create time. A 404 on delete keeps it unless the pod is gone, its
-  read and the account's listing both lacking it
+- `pod` is the record: the pod's id, image, address and create time. A delete whose `Deleted.kind` is not `gone`
+  keeps it unless the pod is gone
   ([D23](decisions.md#d23--teardown-the-recorded-pod-and-the-projects-pods-are-swept),
   [D57](decisions.md#d57--a-pod-is-gone-when-its-read-and-the-accounts-listing-both-lack-it)).
 - `key` and `key.pub` are the session's keypair, deleted with the pod
   ([D16](decisions.md#d16--a-keypair-per-session-deleted-at-teardown)).
 - `volume` and `volume.pending` are the window's record and mark, beside the pod's.
+- `.gpunit/lock` is held by `up` from the keypair to the record; a gone clear takes it without waiting and clears
+  nothing while another process holds it (`gpunit/state.py::State.locked`, `gpunit/state.py::State.clear_gone`).
 - `waiting` holds the id of a process waiting for stock, from its first wait to its way out. Another live process's
   mark refuses `up` and `volume up`; a dead one's is removed
   ([D56](decisions.md#d56--a-stall-in-stock-is-waited-out-on-request)).

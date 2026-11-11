@@ -192,7 +192,9 @@ def unresolved(root: Path, tops: Collection[str]) -> list[str]:
     `gpunit/lifecycle.py:75` is a line citation, and fails, in a span or in prose.
     """
     faults = []
-    for page in sorted((root / "docs").glob("*.md")):
+    for page in guide(root):
+        if not page.exists():
+            continue
         where = page.relative_to(root).as_posix()
         text = FENCE.sub("", page.read_text(encoding="utf-8"))
         faults += [
@@ -329,10 +331,12 @@ def test_a_missing_symbol_or_a_line_citation_is_caught(tmp_path: Path) -> None:
                 " or https://example.com:8080/x\n"
                 "```\n`gpunit/fenced.py`\ngpunit/fenced.py:3\n```\n"
             ),
+            "README.md": "`gpunit/x.py::up` `gpunit/x.py::lost`\n",
         },
     )
 
     assert unresolved(root, {"gpunit", "tests"}) == [
+        "README.md: gpunit/x.py defines no lost",
         "docs/a.md: :12-14 cites a line",
         "docs/a.md: Makefile:12 cites a line",
         "docs/a.md: gpunit/lifecycle.py:75 cites a line",

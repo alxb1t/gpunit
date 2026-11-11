@@ -22,7 +22,8 @@ decision names the file.
 
 **The session talks to a GPU cloud through `gpunit/provider.py::Provider`; RunPod is one implementation of it.**
 
-Its nouns are gpunit's: a card, a pod, a volume, a log, a bill.
+Its nouns are gpunit's: a card, a pod, a volume, a log, a bill. `gpunit/providers.py::build` is the one place that
+builds the provider, and `providers` alone imports `runpod`.
 
 - **Why:** The contract must not be RunPod's shape by accident, so a second provider is one more implementation.
 - **Made by:** `0001·D2`, `0007·D2`, `0010·D1`, `0022·D1`, `0022·D3`, `0022·D5`, `0022·D6`, `0022·D7`, `0022·D8`.
@@ -73,14 +74,14 @@ carry it before the live runs.
 - **Made by:** `0001·D14`, `0002·D13`, `0008·D4`, `0009·D7`, `0009·D8`, `0010·D10`, `0010·D11`, `0012·D10`,
   `0012·D12`, `0012·D13`, `0014·D12`.
 
-### D7 · An archived change is a record; a card against it closes won't-fix
+### D7 · An archived change is a record; a finding against it is fixed in a new change
 
 **A change under `openspec/changes/archive/` is a record: a finding against it is fixed in a new change.**
 
 - **Why:** History is the archive and git; a fix in place would rewrite what was shipped.
 - **Made by:** `0002·D12`, `0003·D6`, `0006·D7`, `0009·D6`, `0011·D9`, `0012·D11`, `0013·D12`, `0014·D10`.
 
-### D8 · A patch closes cards; it adds no verb, `gpunit.toml` key or exit code
+### D8 · A patch fixes what is there; it adds no verb, `gpunit.toml` key or exit code
 
 **A `vX.Y.Z` change fixes what is there; a new verb, key or exit code needs a `vX.Y`.**
 
@@ -218,6 +219,23 @@ other failure as `Lost`.**
 - **Why:** A restart may show a dead status once, and a failed read says nothing of the pod.
 - **Made by:** `0001·D8`, `0006·D2`, `0009·D1`.
 
+### D56 · A stall in stock is waited out on request
+
+**`stock_wait`, or `--stock-wait`, retries a round that found no capacity every 60 s until the duration passes, then
+refuses with `4`; no other refusal waits, and a signal ends the wait with nothing rented and nothing torn down.**
+
+`gpunit/lifecycle.py::stock_round` holds the round; `lifecycle.up` and `gpunit/volume.py::_datacenter` ask it. A
+round of 400s leaves no pending mark and no create begun (`gpunit/state.py::State.clear_round`), and `lifecycle.up`
+runs its guards again before each later round (`gpunit/lifecycle.py::_guarded`): a record, a pending mark or a listed
+pod another session made during the wait refuses, and so does a window volume the session would now outlive.
+`.gpunit/waiting` holds the waiting process's id from the first wait, removed on every way out by that process alone
+(`gpunit/state.py::State.mark_waiting`, `State.clear_waiting`); `gpunit/lifecycle.py::refuse_waiting` refuses `up`
+and `volume up` beside another live process's mark, and removes a dead one's.
+
+- **Why:** A data centre's stock runs out for hours, and every caller would write the same retry loop. A mark the
+  process owns guards the checkout while it sleeps, and one `kill -9` cannot leave it stuck.
+- **Made by:** `0019·D6`, `0020·D5`.
+
 ### D22 · The host key is proven over the log
 
 **The pod prints its key, with the session's nonce, before its command; the laptop compares it to the scan.**
@@ -233,10 +251,28 @@ writes `known_hosts`. Behaviour: [session](../openspec/specs/session/spec.md).
 **`down` deletes the recorded pod and sweeps the project's by name and image; a failed delete keeps the record unless
 the pod is gone (decision D57).**
 
-`gpunit/provider.py::Deleted` says what a delete did, in its `kind`.
+`gpunit/provider.py::Deleted` says what a delete did, in its `kind` and `code`, the provider's own answer.
 
 - **Why:** A false "gone" leaves a pod billing, and the project's pods are swept whatever the record says.
 - **Made by:** `0001·D9`, `0002·D5`, `0021·D1`.
+
+### D57 · A pod is gone when its read and the account's listing both lack it
+
+**A recorded pod whose read answers `404` and which the account's listing, read with the same key, does not hold is
+gone: `status` and `down` clear its record. Gone is no delete: the ledger records no line for it, and `.gpunit/pending`
+stays for the sweep to clear. The clear holds `.gpunit/lock`, which `up` holds from its keypair to its record, and clears
+only a record that still names the pod.** A window volume is gone by the same rule:
+[D55](#d55--a-volume-is-gone-when-its-read-and-the-accounts-listing-both-lack-it).
+
+`gpunit/lifecycle.py::pod_gone` holds the check; `gpunit/provider.py::Provider.pod` is the read and
+`gpunit/provider.py::Provider.pod_ids` the listing; `gpunit/state.py::State.clear_gone` is the clear. Its line,
+`pod <id> is gone; its record is cleared`, holds a pod id gpunit already logs, no secret and no file.
+
+- **Why:** The listing is there for D55's reason, and a pod deleted outside gpunit left a record nothing cleared.
+- **Residual:** a valid key of another RunPod account reads a pod as gone, its read answering `404` and its listing
+  being its own, so the record clears while the pod bills on. Accepted: the person runs one account. A pod-scoped key
+  fails the listing with `403` and keeps the record.
+- **Made by:** `0021·D1`, `0021·D11`.
 
 ### D24 · gpunit's ssh is its own; the tools checked before any request
 
@@ -315,6 +351,13 @@ it still ends on a signal.**
 `gpunit/library.py::_Signals.refuse` raises it through the session's signal handler.
 
 - **Why:** A reopen would send the traffic, and the vLLM key, to a squatter; a thread cannot raise in the main one.
+- **Residual:** `ssh` binds the port only once it has connected and authenticated, and a probe cannot tell its bind
+  from a squatter's, so after each open and each reopen the port is unheld until that bind. A squatter that binds in
+  that span holds the port until `ssh` exits and the watcher's next poll refuses: `ssh`'s connect and key exchange,
+  bounded by `gpunit/library.py::TUNNEL_CONNECT_S`, its authentication, which no timeout bounds, and a poll of
+  `gpunit/library.py::TUNNEL_POLL_S`. While a dead tunnel waits to reopen, a squatter is refused within a poll. A
+  request in either span, as `serve`'s first poll (`gpunit/serve/session.py::_answers`) or a chat turn after a
+  reopen, may reach it with its Bearer key.
 - **Made by:** `0013·D5`, `0013·D6`, `0013·S2`.
 
 ### D32 · Exit codes: `0`, `1`, `2`, `3`, `4`, `5`, `128+n`
@@ -333,9 +376,13 @@ it still ends on a signal.**
 **`gpunit run` hands its command the pod's address, the local ports and an `ssh` line, and strips the account key
 from its environment.**
 
-`gpunit/run.py` sets `GPUNIT_HOST`, `GPUNIT_SSH` and a `GPUNIT_PORT_<remote>` per port.
+`gpunit/run.py` sets `GPUNIT_HOST`, `GPUNIT_SSH` and a `GPUNIT_PORT_<remote>` per port, and drops each name
+`gpunit/provider.py::Provider.key_names` lists.
 
 - **Why:** The command never needs the account key.
+- **Residual:** the command runs as the operator's uid beside gpunit, which holds the key in its own environment,
+  readable from `/proc/<gpunit pid>/environ` on Linux or `ps -E` on macOS;
+  [usage *The account key*](usage.md#the-account-key) says so.
 - **Made by:** `0001·D10`, `0004·D6`, `0013·D1`.
 
 ## Serve
@@ -349,6 +396,9 @@ a bundled name replaces it.**
 Behaviour: [serve](../openspec/specs/serve/spec.md).
 
 - **Why:** A model is a row and its spec is built, never written; a file outside every repo needs no gitignore.
+- **Residual:** a row's revision pins its own repository alone. Weights another argument names, a draft model in
+  `--speculative-config` or a LoRA in `--lora-modules`, are fetched at their own revision, `main` by default, and with
+  `--trust-remote-code` the draft's code runs too.
 - **Made by:** `0005·D1`, `0008·D1`, `0008·D2`, `0014·D1`, `0014·D2`, `0014·D3`, `0014·D5`, `0014·D7`, `0014·S2`.
 
 ### D35 · The price first, `y/N`; `--yes` skips it
@@ -435,6 +485,25 @@ record is deleted only on a person's `y`.**
 
 - **Why:** A forgotten volume ends at the next command, with no chore to remember.
 - **Made by:** `0010·D6`, `0010·D7`, `0010·D8`, `0010·R2`, `0011·D2`, `0011·D3`.
+
+### D55 · A volume is gone when its read and the account's listing both lack it
+
+**A recorded volume whose read answers `404` and which the account's listing, read with the same key, does not hold is
+gone: `volume up` makes a new window, `volume down` and the ceiling's sweep clear the record. Gone is no delete: the
+ledger records no `deleted` line for it, so `gpunit spend` still names it once it passes its end and bills.** A pod is
+gone by the same rule: [D57](#d57--a-pod-is-gone-when-its-read-and-the-accounts-listing-both-lack-it).
+
+`gpunit/lifecycle.py::gone` holds the check; `gpunit/provider.py::Provider.volume_ids` is the listing.
+
+- **Why:** A key that fails the listing cannot pass for gone, and a volume deleted outside gpunit left a record
+  nothing cleared.
+- **Residual:** a valid key of another RunPod account reads the volume as gone, its read answering `404` and its
+  listing being its own account's, so `volume up`, `volume down` or the sweep clears the record while the volume bills
+  on in the first account. No gone path writes a `deleted` line (`gpunit/volume.py::up`, `gpunit/volume.py::down`,
+  `gpunit/lifecycle.py::sweep_window`), so `spend` with the first account's key still names it past its end; a volume
+  truly gone never bills again, so the warning names only one misjudged so. No checkout records it then, and
+  `gpunit volume down` finds nothing to delete: it is deleted by hand in the RunPod console.
+- **Made by:** `0018·D1`.
 
 ## Spend
 
@@ -535,49 +604,3 @@ socket is marked `e2e` and runs in `make e2e`, which `.github/workflows/gate.yml
 
 - **Why:** MinionsFactory runs each phase's gate in an OS sandbox that refuses a loopback bind.
 - **Made by:** `0017·D2`.
-
-### D55 · A volume is gone when its read and the account's listing both lack it
-
-**A recorded volume whose read answers `404` and which the account's listing, read with the same key, does not hold is
-gone: `volume up` makes a new window, `volume down` and the ceiling's sweep clear the record. Gone is no delete: the
-ledger records no `deleted` line for it, so `gpunit spend` still names it once it passes its end and bills. A pod is
-gone by the same rule (decision D57).**
-
-`gpunit/lifecycle.py::gone` holds the check; `gpunit/provider.py::Provider.volume_ids` is the listing.
-
-- **Why:** A key that fails the listing cannot pass for gone, and a volume deleted outside gpunit left a record
-  nothing cleared. A valid key of another RunPod account reads the volume as gone too, its listing being its own
-  account's; a volume truly gone never bills again, so `spend`'s warning names only one misjudged so.
-- **Made by:** `0018·D1`.
-
-### D56 · A stall in stock is waited out on request
-
-**`stock_wait`, or `--stock-wait`, retries a round that found no capacity every 60 s until the duration passes, then
-refuses with `4`; no other refusal waits, and a signal ends the wait with nothing rented and nothing torn down.**
-
-`gpunit/lifecycle.py::stock_round` holds the round; `lifecycle.up` and `gpunit/volume.py::_datacenter` ask it. A
-round of 400s leaves no pending mark and no create begun (`gpunit/state.py::State.clear_round`), and `lifecycle.up`
-runs its guards again before each later round (`gpunit/lifecycle.py::_guarded`): a record, a pending mark or a listed
-pod another session made during the wait refuses, and so does a window volume the session would now outlive.
-`.gpunit/waiting` holds the waiting process's id from the first wait, removed on every way out by that process alone
-(`gpunit/state.py::State.mark_waiting`, `State.clear_waiting`); `gpunit/lifecycle.py::refuse_waiting` refuses `up`
-and `volume up` beside another live process's mark, and removes a dead one's.
-
-- **Why:** A data centre's stock runs out for hours, and every caller would write the same retry loop. A mark the
-  process owns guards the checkout while it sleeps, and one `kill -9` cannot leave it stuck.
-- **Made by:** `0019·D6`, `0020·D5`.
-
-### D57 · A pod is gone when its read and the account's listing both lack it
-
-**A recorded pod whose read answers `404` and which the account's listing, read with the same key, does not hold is
-gone: `status` and `down` clear its record. Gone is no delete: the ledger records no line for it, and `.gpunit/pending`
-stays for the sweep to clear. The clear holds `.gpunit/lock`, which `up` holds from its keypair to its record, and clears
-only a record that still names the pod.**
-
-`gpunit/lifecycle.py::pod_gone` holds the check; `gpunit/provider.py::Provider.pod` is the read and
-`gpunit/provider.py::Provider.pod_ids` the listing; `gpunit/state.py::State.clear_gone` is the clear.
-
-- **Why:** A key that fails the listing cannot pass for gone, and a pod deleted outside gpunit left a record nothing
-  cleared. A valid key of another RunPod account reads a pod as gone too; the person runs one account, so the case
-  does not apply.
-- **Made by:** `0021·D1`, `0021·D11`.

@@ -35,7 +35,7 @@ Each quote is a line its tail holds, word for word.
   ```
 
 - **A user file's row served:** [`live/serve_last_run.txt`](../live/serve_last_run.txt),
-  `make live-serve granite-4.0-micro`, 2026-10-18, `0014-your-own-rows`.
+  `make live-serve MODEL=granite-4.0-micro`, 2026-10-18, `0014-your-own-rows`.
 
   ```
   2026-10-18T15:36:13Z granite-4.0-micro answers on http://127.0.0.1:52857/v1
