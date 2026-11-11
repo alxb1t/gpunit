@@ -9,7 +9,9 @@ when the sweep left nothing; and SHALL exit `1` when any delete failed or the li
 is gone when its read answers `404` and the account's listing of its pods, read with the same key, answers without it.
 A read or listing that fails, or a listing that holds the pod, SHALL keep the record. A gone pod's record SHALL be
 cleared, saying `pod <id> is gone; its record is cleared`, and SHALL be no failure. Gone is no delete: the ledger SHALL
-record no line for it.
+record no line for it. The clear SHALL hold the checkout's `.gpunit/lock` without waiting for it, and SHALL clear only
+a record that still names the pod judged gone; `up` SHALL hold that lock from its keypair to its record. A lock another
+process holds, or a record naming another pod, SHALL keep every session file.
 
 #### Scenario: a 404 keeps the record
 - **Key:** `session:down:404-keeps-record`
@@ -20,6 +22,11 @@ record no line for it.
 - **Key:** `session:down:gone-clears`
 - **WHEN** the delete answers 404, the pod's read answers 404 and the account's listing lacks the pod
 - **THEN** `.gpunit/pod`, `.gpunit/known_hosts`, `.gpunit/key` and `.gpunit/key.pub` are gone, stderr says the pod is gone, the ledger gains no line, and `down` exits `0`
+
+#### Scenario: a gone clear takes only its own session
+- **Key:** `session:down:gone-clears-its-own`
+- **WHEN** a pod is judged gone while another process holds `.gpunit/lock`, or the record names another pod
+- **THEN** `.gpunit/pod`, `.gpunit/known_hosts`, `.gpunit/key` and `.gpunit/key.pub` remain
 
 #### Scenario: a success clears the record
 - **Key:** `session:down:success-clears`

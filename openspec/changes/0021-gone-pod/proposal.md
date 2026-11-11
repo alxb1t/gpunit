@@ -22,6 +22,7 @@ A pod deleted outside gpunit leaves `.gpunit/pod` behind, and no command clears 
 - `status` clears a gone pod's record, says so on stderr, and prints the no-session output. Exit stays `0`.
 - `down` runs the same check on any failed delete of the recorded pod. Gone clears the record and is no failure. Anything else keeps today's behaviour.
 - Gone is no delete: no ledger line. `.gpunit/pending` is unchanged.
+- A gone clear holds `.gpunit/lock` and clears only a record that still names the pod; `up` holds the lock from its keypair to its record, so an overlapping `status` never takes a new session's key.
 - A new decision, D57, holds the rule. D23 loses its 404 clause and D55 its last sentence.
 - Requirement changes, one line each:
   - `Down never reads a 404 as gone, and sweeps every listed pod` (session) is removed, and `Down clears a record only when its pod is gone, and sweeps every listed pod` is added.
@@ -41,8 +42,8 @@ None.
 
 ## Impact
 
-- Code: `gpunit/provider.py`, `gpunit/runpod.py`, `gpunit/lifecycle.py`, `tests/fakes.py`.
-- Tests: `tests/test_runpod.py`, `tests/test_down.py`, `tests/test_status.py`.
+- Code: `gpunit/provider.py`, `gpunit/runpod.py`, `gpunit/lifecycle.py`, `gpunit/state.py`, `tests/fakes.py`.
+- Tests: `tests/test_runpod.py`, `tests/test_down.py`, `tests/test_status.py`, `tests/test_state.py`, `tests/test_up.py`.
 - Docs: `docs/decisions.md`, `docs/principles.md`, `docs/usage.md`, `docs/data-flow.md`, `README.md`, `THREAT_MODEL.md`, and the `session` and `cli` specs through the delta.
 - No new verb, config key or exit code ([D8](../../../docs/decisions.md)). No new network call: `pod` reads `GET /pods/<id>` as `get` does, and `pod_ids` walks `GET /pods` as `list` does.
 

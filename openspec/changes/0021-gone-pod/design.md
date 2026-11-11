@@ -19,6 +19,9 @@ Provider.pod_ids()        ── Lost    ─▶ not gone: record kept
    │ id listed            ─────────────▶ not gone: record kept
    │ id absent
    ▼
+State.clear_gone(id)      ── .gpunit/lock held, or the record names another pod ─▶ record kept
+   │ under the lock, the record names the pod
+   ▼
 gone: clear_session(), one stderr line, no ledger line
 ```
 
@@ -26,6 +29,7 @@ gone: clear_session(), one stderr line, no ledger line
 
 - Goal: a gone pod's record is cleared by `status` and by `down`, and by every caller of `down`.
 - Goal: a wrong key, a lost answer and a listed pod keep the record as today.
+- Goal: a gone clear removes only the session it judged, never one an overlapping `up` made ([D11](#d11)).
 - Non-goal: a pod warning in `spend`; isekai's banner copy.
 - Non-goal: a live proof ([D10](#d10)).
 
@@ -43,6 +47,7 @@ gone: clear_session(), one stderr line, no ledger line
 | [D8](#d8) | `FakeProvider` scripts `pod()` and `pod_ids()`; an unscripted pod read raises `Lost` | tests that rely on a pod 404 failing the teardown stay as they are | an unscripted read answering a pod or 404: each such test would need a script |
 | [D9](#d9) | Debt `0020·R7` closes here: the principles row for pinned inputs names its breach | the change opens `docs/principles.md`, the card's trigger | leaving it for another change |
 | [D10](#d10) | No live proof | read on 2026-11-10, RunPod REST v2: `GET pod w7qrzhsta9d4gy` answered `404 pod not found` and the account's pod listing was empty, a deleted pod not listed even as `TERMINATED` | a metered run: nothing it shows is outside the fakes |
+| [D11](#d11) | A gone clear takes `.gpunit/lock` without waiting and clears only a record that still names the judged pod; `up` holds the lock, waiting for it, from its keypair to its record | an overlapping `status` could judge the old pod gone after another process cleared it and an `up` wrote a new session, then remove the new record and key (converge S2) | a re-read alone: the check and the unlink still race with `up`'s keypair; a waiting lock in the clear: it would wait out an `up`'s whole stock wait |
 
 ### D1
 
@@ -122,6 +127,30 @@ The card's fix is one cell of the principles row: the breach names `gpunit/serve
 
 The acceptance holds on the fakes: a record whose pod reads 404 and is missing from `pod_ids()` is cleared by `status` and by `down`; a 404 with the listing `Lost`, or the pod still listed, keeps the record; a live pod is unchanged.
 
+### D11
+
+`State.locked()` is a context manager: `_mkdir`, then `os.open(self.lock, os.O_RDWR | os.O_CREAT, 0o600)` and
+`fcntl.flock(fd, fcntl.LOCK_EX)`; on exit it closes the descriptor, which releases the lock. `State.clear_gone(pod_id)
+-> bool` opens the same file and takes `fcntl.LOCK_EX | fcntl.LOCK_NB`: a `BlockingIOError` returns `False`; under the
+lock, when `read()` names `pod_id`, it calls `clear_session()` and returns `True`, else it returns `False`.
+`.gpunit/lock` stays empty, mode `0600` in the `0700` directory, and nothing removes it; `fcntl` is the standard
+library's.
+
+`up` runs from `state.keygen(...)` through `state.write(record)` inside `with state.locked():`, the stock rounds
+included. It waits only for a clear's four unlinks. The clear never waits: while `up` holds the lock no record exists
+for it to clear, since `up` refuses on a record (`gpunit/lifecycle.py::_guarded`).
+
+`status` and `_delete_pods` call `pod_gone(...) and state.clear_gone(record.id)`. A `False` falls through to the
+branches of today: `status` reports the record it read, `UNKNOWN`; `down` keeps the record and fails. The `DELETED`
+branch of `_delete_pods` is unchanged.
+
+| interleaving | the clear |
+|---|---|
+| another process cleared the old record; no `up` has begun | takes the lock, reads no record, clears nothing |
+| an `up` holds the lock, between its keypair and its record | cannot take the lock, clears nothing |
+| an `up` wrote the new record and released the lock | reads the new pod's record, clears nothing |
+| no other process | reads the judged pod's record, clears it |
+
 ## Tests
 
 Every test is a unit or integration test on faked provider answers; the change adds no end-to-end run and no engine matrix ([T1](../../../CODING_STANDARDS.md)). Placement follows [T2](../../../CODING_STANDARDS.md): a step in an existing test where one reaches the state.
@@ -133,8 +162,9 @@ Every test is a unit or integration test on faked provider answers; the change a
 | fake | `tests/fakes.py` | `FakeProvider.pod` and `FakeProvider.pod_ids`, the scripts the tests below use | the protocol gains both methods, and the fake must satisfy it |
 | integration | `tests/test_down.py` | `test_a_404_keeps_the_record` parametrized, ids `gone`, `listing-lost`, `still-listed` | the test already reaches a recorded pod and a 404 |
 | integration | `tests/test_status.py` | `test_status_clears_a_gone_pod`, ids `gone`, `still-listed`, `listing-lost`, `read-lost` | no status test reaches a record whose read fails |
-
-The count of the tests in `tests/test_down.py`, `tests/test_status.py` and `tests/test_runpod.py`, by `uv run pytest tests/test_down.py tests/test_status.py tests/test_runpod.py --collect-only -q`: 74 at the base, 83 after the change, nine added.
+| unit | `tests/test_state.py` | `test_a_gone_clear_takes_only_its_own_session` ([D11](#d11)) | no state test reaches the lock; the clear's three outcomes need no provider |
+| integration | `tests/test_status.py` | an id `held` in `test_status_clears_a_gone_pod` | the test already reaches a gone pod; a held lock keeps its record |
+| integration | `tests/test_up.py` | a step in `test_up_lists_by_the_specs_project_and_image`: the lock is held across the create, free after | the test already reaches the create |
 
 No test is deleted or merged. The tests that rely on a pod 404 failing the teardown — in `tests/test_library.py` and `tests/test_run.py`, each building `FakeProvider(deletes={"pod-1": 404})` — stay as they are: an unscripted pod read raises `Lost` ([D8](#d8)), so the record is kept.
 
@@ -144,7 +174,8 @@ None.
 
 ## Risks / Trade-offs
 
-- **A key of another RunPod account** reads a pod as gone: its read answers 404 and its listing is its own. The record clears while the pod bills on. Accepted: the person uses no other account's key ([D6](#d6)); D57's Why says so. A pod-scoped key cannot do it, its listing failing with 403.
+- **A key of another RunPod account** reads a pod as gone: its read answers 404 and its listing is its own. The record clears while the pod bills on. Accepted: the person uses no other account's key ([D6](#d6)); D57's Why and T47's residual say so. The person settled it before the cut (2026-11-10), as T48 already accepts the same case for a window volume at the base (D55), so converge's S1 stands answered by that decision, not reopened: no recorded account identity qualifies the listing. A pod-scoped key cannot do it, its listing failing with 403.
+- **An overlapping `status` and `up`** in one checkout: a clear judged against an old record could remove a new session's record and key. Closed by [D11](#d11): the clear runs under `.gpunit/lock`, which `up` holds from its keypair to its record, and clears only a record that names the judged pod.
 - **A listing that lags** a pod just made could omit it. `status` and `down` read a record made earlier, and the pod's read answers 404 before the listing is consulted, so a pod RunPod knows is never gone.
 - **`status` now reads the pod and the listing** for a record whose read failed, and makes no extra call for a live pod.
 

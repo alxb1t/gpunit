@@ -6,7 +6,8 @@ The system SHALL, on `status`, print the recorded session — the pod id, the im
 SHALL print the same as one JSON object on `--json`; with no record it SHALL say so and exit `0`. When the pod's read
 fails, it SHALL report the status `UNKNOWN`. When the recorded pod is gone — its read answers `404` and the account's
 listing lacks it — it SHALL clear the record, say `pod <id> is gone; its record is cleared` on stderr, print what it
-prints with no record, and exit `0`.
+prints with no record, and exit `0`; it SHALL clear it as `down` does, under the checkout's `.gpunit/lock` and only
+while the record names the pod, and else report it `UNKNOWN`.
 
 #### Scenario: status as JSON
 - **Key:** `cli:status:json`
@@ -25,5 +26,5 @@ prints with no record, and exit `0`.
 
 #### Scenario: a pod still listed keeps its record
 - **Key:** `cli:status:listed-keeps-record`
-- **WHEN** `gpunit status` runs with a record whose pod reads 404 and the account's listing still holds it, or the listing fails
+- **WHEN** `gpunit status` runs with a record whose pod reads 404 and the account's listing still holds it, or the listing fails, or another process holds `.gpunit/lock`
 - **THEN** `.gpunit/pod` remains, stdout names the status `UNKNOWN`, and it exits `0`
