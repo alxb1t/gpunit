@@ -89,7 +89,7 @@ with gpunit.session("gpunit.toml", environ={"RUNPOD_API_KEY": key}, say=my_log) 
 |---|---|---|
 | `gpunit.Refused` | it refused; nothing it rented is left. Its `.code` is the exit code | `1`, `4` or `5` |
 | `gpunit.Lost` | a create's answer was lost; the sweep was attempted | `3` |
-| `gpunit.TeardownFailed` | the teardown failed; `.gpunit/pod` is kept, so run `gpunit down`. Its `__cause__` is the exception that ended the block, if one did, or the `Refused` whose own teardown failed while the session opened | `1` |
+| `gpunit.TeardownFailed` | the teardown failed; `.gpunit/pod` is kept, so run `gpunit down`. Its `__cause__` is the exception that ended the block, if one did, or the `Refused` whose own teardown failed while the session opened | `1`, or `3` when its `__cause__` is `Lost` |
 | `gpunit.Interrupted` | `SIGINT`, `SIGTERM` or `SIGHUP` ended the block; a `KeyboardInterrupt` whose `.signal` names it | `128+n` |
 
 - **The spec** is a path, or a `Spec` from `gpunit.load_spec`. `cwd` is where `.gpunit/` lives; it defaults to
@@ -388,7 +388,7 @@ billing and the ledger.
 | exit | means |
 |---|---|
 | `0` | done; for `run`, the command's own code passes through |
-| `1` | refused or failed; the teardown failed |
+| `1` | refused or failed; the teardown failed, unless a lost create ended the session, which is `3` |
 | `2` | usage: an unknown verb, a missing command, an unreadable spec path, `serve` or `volume up --serve` without `--ceiling`, `--models` without a model, an unknown model, `spend --days` under 1 or over 3660, `volume` without `up` or `down`, a `--stock-wait` that is no duration |
 | `3` | a create's answer was lost; a pod may exist and bill — run `gpunit down`; for a volume's create, `gpunit volume down` |
 | `4` | no capacity: every create of a session answered 400, or `volume up` found no card in stock; worth a retry, which `stock_wait` or `--stock-wait` on `up`, `run`, `serve` and `volume up` makes every 60s until it passes |
@@ -421,7 +421,8 @@ e.g. `2026-11-03T09:14:02Z refused: no card in 'gpus' was placed`, then exit `4`
   window volume follows the same rule (decisions D55, D57).
 - **A lost create exits `3`.** `.gpunit/pending` stays, and `down` sweeps every live `gpunit-<project>` pod.
 - **One session per project.** `up` refuses on a record, a pending create, a listed pod, or another process's wait
-  for stock in `.gpunit/waiting`; when no gpunit waits there, after a crash, remove that file.
+  for stock in `.gpunit/waiting`. The next `up` or `volume up` removes a dead process's mark; a refusal that names a
+  pid no longer waiting, as after a crash and a reused pid, asks you to remove the file.
 - **Secure cloud, port 22 only.** Other ports reach the laptop over the SSH tunnel, never a public proxy.
 - **A fresh keypair per session**, in `.gpunit/`, deleted with the pod.
 - **gpunit's ssh is its own.** No ssh_config is read, and only the session's key is offered; a user who wants

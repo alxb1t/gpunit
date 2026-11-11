@@ -38,7 +38,8 @@ The main edges, each pointing down:
 ```
 
 The rules beside the layers, each in `tests/test_layers.py`: nothing imports the package `gpunit` itself; the
-package imports the standard library and `gpunit` alone, and `serve/launch.py` the standard library alone; `sys.exit` is called in `cli` alone.
+package imports the standard library and `gpunit` alone, and `serve/launch.py` the standard library alone; `sys.exit`
+is called in `cli` alone; only `providers` imports `runpod` (`tests/test_layers.py::BUILDERS`).
 
 ## Each module
 
@@ -56,7 +57,7 @@ package imports the standard library and `gpunit` alone, and `serve/launch.py` t
 - `gpunit.hostkey` — the host key, proven over the authenticated log before anything connects.
 - `gpunit.volume` — `volume up` and `volume down`: the window volume.
 - `gpunit.spend` — `spend`: the billing over whole UTC days, by project.
-- `gpunit.runpod` — RunPod's REST v2 behind the seam, on `urllib`.
+- `gpunit.runpod` — the one `Provider` implementation: RunPod's REST v2, on `urllib`.
 - `gpunit.providers` — the one place that builds the provider.
 - `gpunit.spec` — `gpunit.toml` into a `Spec`, refusing what no session may open on.
 - `gpunit.state` — the session's files under `.gpunit/`, and gpunit's home state.

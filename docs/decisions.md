@@ -22,7 +22,8 @@ decision names the file.
 
 **The session talks to a GPU cloud through `gpunit/provider.py::Provider`; RunPod is one implementation of it.**
 
-Its nouns are gpunit's: a card, a pod, a volume, a log, a bill.
+Its nouns are gpunit's: a card, a pod, a volume, a log, a bill. `gpunit/providers.py::build` is the one place that
+builds the provider, and `providers` alone imports `runpod`.
 
 - **Why:** The contract must not be RunPod's shape by accident, so a second provider is one more implementation.
 - **Made by:** `0001·D2`, `0007·D2`, `0010·D1`, `0022·D1`, `0022·D3`, `0022·D5`, `0022·D6`, `0022·D7`, `0022·D8`.
@@ -233,7 +234,7 @@ writes `known_hosts`. Behaviour: [session](../openspec/specs/session/spec.md).
 **`down` deletes the recorded pod and sweeps the project's by name and image; a failed delete keeps the record unless
 the pod is gone (decision D57).**
 
-`gpunit/provider.py::Deleted` says what a delete did, in its `kind`.
+`gpunit/provider.py::Deleted` says what a delete did, in its `kind` and `code`, the provider's own answer.
 
 - **Why:** A false "gone" leaves a pod billing, and the project's pods are swept whatever the record says.
 - **Made by:** `0001·D9`, `0002·D5`, `0021·D1`.
@@ -333,7 +334,8 @@ it still ends on a signal.**
 **`gpunit run` hands its command the pod's address, the local ports and an `ssh` line, and strips the account key
 from its environment.**
 
-`gpunit/run.py` sets `GPUNIT_HOST`, `GPUNIT_SSH` and a `GPUNIT_PORT_<remote>` per port.
+`gpunit/run.py` sets `GPUNIT_HOST`, `GPUNIT_SSH` and a `GPUNIT_PORT_<remote>` per port, and drops each name
+`gpunit/provider.py::Provider.key_names` lists.
 
 - **Why:** The command never needs the account key.
 - **Made by:** `0001·D10`, `0004·D6`, `0013·D1`.

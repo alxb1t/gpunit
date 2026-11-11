@@ -7,15 +7,16 @@ laptop half places a pod, proves its host key, tunnels its ports and tears it do
 its ceiling and whenever its command ends.
 
 ```
- laptop                                            pod
- ──────                                            ───
- cli ─┬─▶ run · serve ─▶ library ─▶ lifecycle      boot/boot.py
-      ├─▶ volume ─────────────────▶ lifecycle        ceiling watchdog, sshd,
-      └─▶ spend                                      key line, the command, stop
-                   library's tunnel: ssh -N -L ────▶ sshd :22
-                                                     serve/launch.py ──▶ vLLM
- lifecycle · volume · spend ──▶ RunPod REST v2 ◀── the container log
-                                create · log · delete · billing
+ laptop                                                    pod
+ ──────                                                    ───
+ cli ─┬─▶ run · serve ─▶ library ─▶ lifecycle ─▶ hostkey   boot/boot.py
+      ├─▶ volume ─────────────────▶ lifecycle                ceiling watchdog, sshd,
+      └─▶ spend                                              key line, the command, stop
+                   library's tunnel: ssh -N -L ──────────▶ sshd :22
+                                                           serve/launch.py ──▶ vLLM
+ cli · library ─▶ providers.build ─▶ runpod, as the Provider
+ lifecycle · volume · spend ─▶ Provider ◀─ runpod ─▶ RunPod REST v2 ◀── the container log
+                               the seam              create · log · delete · billing
 ```
 
 They meet at RunPod's API, which carries the create's env in and boot's lines out, and at the pod's sshd, which the

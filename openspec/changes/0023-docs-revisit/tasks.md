@@ -4,42 +4,42 @@ The phases: the root documents held by the test and every stale claim fixed, eac
 
 ## Progress
 
-- [ ] 1 — Currency · moderate
+- [x] 1 — Currency · moderate
 - [ ] 2 — One home · moderate
 - [ ] 3 — The readers' pages · hard
 
 ## 1 — Currency
 
-- [ ] 1.1 In `tests/test_docs.py`, make `unresolved` walk `guide(root)` and skip a page that does not exist ([D4](design.md#d4)).
+- [x] 1.1 In `tests/test_docs.py`, make `unresolved` walk `guide(root)` and skip a page that does not exist ([D4](design.md#d4)).
   Extend `test_a_missing_symbol_or_a_line_citation_is_caught` with a `README.md` citing `gpunit/x.py::lost`, and its expected faults.
   Verify: `uv run pytest tests/test_docs.py -k missing_symbol` exits 0.
-- [ ] 1.2 Redraw `ARCHITECTURE.md`'s diagram with `Provider`, `providers.build`, `runpod` and `hostkey` ([D15](design.md#d15)); the diagram alone.
+- [x] 1.2 Redraw `ARCHITECTURE.md`'s diagram with `Provider`, `providers.build`, `runpod` and `hostkey` ([D15](design.md#d15)); the diagram alone.
   Verify: `git grep -n "providers.build" -- ARCHITECTURE.md` prints a line.
-- [ ] 1.3 In `docs/usage.md`, make the `gpunit.TeardownFailed` row's exit `1`, or `3` when its `__cause__` is `Lost`; the exit table's `1` row agrees ([D3](design.md#d3)).
+- [x] 1.3 In `docs/usage.md`, make the `gpunit.TeardownFailed` row's exit `1`, or `3` when its `__cause__` is `Lost`; the exit table's `1` row agrees ([D3](design.md#d3)).
   Verify: `git grep -nE "TeardownFailed.*[^0-9]3[^0-9]" -- docs/usage.md` prints the row.
-- [ ] 1.4 In `docs/usage.md`'s *The spend rules*, replace "when no gpunit waits there, after a crash, remove that file" with: the next `up` removes a dead process's mark, and a refusal naming a pid that no longer waits asks for the file's removal ([D3](design.md#d3)).
+- [x] 1.4 In `docs/usage.md`'s *The spend rules*, replace "when no gpunit waits there, after a crash, remove that file" with: the next `up` removes a dead process's mark, and a refusal naming a pid that no longer waits asks for the file's removal ([D3](design.md#d3)).
   Verify: `git grep -n "remove that file" -- docs/usage.md` prints nothing.
-- [ ] 1.5 In `docs/data-flow.md`, say the seam's outcomes where it says RunPod's HTTP codes: *Place and create*, the `pod` diagram line, the `pod` bullet. Add a `.gpunit/lock` bullet to *The state files*.
+- [x] 1.5 In `docs/data-flow.md`, say the seam's outcomes where it says RunPod's HTTP codes: *Place and create*, the `pod` diagram line, the `pod` bullet. Add a `.gpunit/lock` bullet to *The state files*.
   Verify: `git grep -nE "a 400 moves on|204 /|404 on delete" -- docs/data-flow.md` prints nothing, and `git grep -n "gpunit/lock" -- docs/data-flow.md` prints a line.
-- [ ] 1.6 In `THREAT_MODEL.md`, make F12 and T21 say `_command` drops `provider.key_names`, not `RUNPOD_API_KEY` ([D3](design.md#d3)).
+- [x] 1.6 In `THREAT_MODEL.md`, make F12 and T21 say `_command` drops `provider.key_names`, not `RUNPOD_API_KEY` ([D3](design.md#d3)).
   Verify: `git grep -nE "(without|drops) .RUNPOD_API_KEY" -- THREAT_MODEL.md` prints nothing.
-- [ ] 1.7 In `THREAT_MODEL.md` §6, list the module `providers`, and the archived changes `0021-gone-pod` and `0022-the-seam` by directory and `design.md`, with no decision id; add each other change from 0014 to 0020 that a row rests on.
+- [x] 1.7 In `THREAT_MODEL.md` §6, list the module `providers`, and the archived changes `0021-gone-pod` and `0022-the-seam` by directory and `design.md`, with no decision id; add each other change from 0014 to 0020 that a row rests on.
   Verify: `git grep -nE "gpunit/\{[a-z,]*providers" -- THREAT_MODEL.md` prints a line, and `git grep -nE "(0021-gone-pod|0022-the-seam)/design.md" -- THREAT_MODEL.md` prints a line.
-- [ ] 1.8 In `docs/decisions.md`, say what the seam made of [D2](../../../docs/decisions.md), [D23](../../../docs/decisions.md) and [D33](../../../docs/decisions.md): `gpunit/providers.py::build`; `Deleted`'s `kind` and `code`; `Provider.key_names` ([D3](design.md#d3)).
+- [x] 1.8 In `docs/decisions.md`, say what the seam made of [D2](../../../docs/decisions.md), [D23](../../../docs/decisions.md) and [D33](../../../docs/decisions.md): `gpunit/providers.py::build`; `Deleted`'s `kind` and `code`; `Provider.key_names` ([D3](design.md#d3)).
   Verify: `git grep -nE "key_names|kind. and .code" -- docs/decisions.md` prints a line for D23 and for D33.
-- [ ] 1.9 In `docs/principles.md` *The code*, replace the row "The seam names no provider noun" with "Only `providers` imports `runpod`", from [D2](../../../docs/decisions.md), held by `architecture:layers:provider-built` ([D16](design.md#d16)).
+- [x] 1.9 In `docs/principles.md` *The code*, replace the row "The seam names no provider noun" with "Only `providers` imports `runpod`", from [D2](../../../docs/decisions.md), held by `architecture:layers:provider-built` ([D16](design.md#d16)).
   Verify: `git grep -n "names no provider noun" -- docs/principles.md` prints nothing.
-- [ ] 1.10 In `docs/extending.md`'s *A provider*, add what a second provider meets: the price prompt and card filter, no `provider` key yet, and `Provider.stop` called by nothing, beside F14.
+- [x] 1.10 In `docs/extending.md`'s *A provider*, add what a second provider meets: the price prompt and card filter, no `provider` key yet, and `Provider.stop` called by nothing, beside F14.
   Verify: `git grep -n "Provider.stop" -- docs/extending.md` prints a line.
-- [ ] 1.11 In `docs/modules.md`, leave the layer table, which the layers test reads, add the fourth rule beside the layers, only `providers` imports `runpod`, and describe `gpunit.runpod` as the one `Provider` implementation, not "REST v2 behind the seam".
+- [x] 1.11 In `docs/modules.md`, leave the layer table, which the layers test reads, add the fourth rule beside the layers, only `providers` imports `runpod`, and describe `gpunit.runpod` as the one `Provider` implementation, not "REST v2 behind the seam".
   Verify: `git grep -n "REST v2 behind the seam" -- docs/modules.md` prints nothing.
-- [ ] 1.12 In `CONTRIBUTING.md`, tell the pipeline with integrate, say simplify closes build, and drop "but the bootstrap's" by telling the `Change:` trailer truly ([D3](design.md#d3)).
+- [x] 1.12 In `CONTRIBUTING.md`, tell the pipeline with integrate, say simplify closes build, and drop "but the bootstrap's" by telling the `Change:` trailer truly ([D3](design.md#d3)).
   Verify: `git grep -n "but the bootstrap's" -- CONTRIBUTING.md` prints nothing.
-- [ ] 1.13 In `gpunit/lifecycle.py`, change `pod_gone`'s comment to cite `decision D57` ([D1](design.md#d1)); `gone` keeps D55.
+- [x] 1.13 In `gpunit/lifecycle.py`, change `pod_gone`'s comment to cite `decision D57` ([D1](design.md#d1)); `gone` keeps D55.
   Verify: `git grep -n "decision D57" -- gpunit/lifecycle.py` prints a line.
-- [ ] 1.14 In `docs/proofs.md`, quote the serve target as `make live-serve MODEL=granite-4.0-micro` ([D3](design.md#d3)).
+- [x] 1.14 In `docs/proofs.md`, quote the serve target as `make live-serve MODEL=granite-4.0-micro` ([D3](design.md#d3)).
   Verify: `git grep -n "live-serve granite" -- docs/proofs.md` prints nothing.
-- [ ] 1.15 Run the widened test and fix each root-document citation it names by the code's current name; drop none to pass.
+- [x] 1.15 Run the widened test and fix each root-document citation it names by the code's current name; drop none to pass.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
 
 ## 2 — One home

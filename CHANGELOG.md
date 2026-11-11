@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `tests/test_docs.py` holds the root documents' paths, `path::symbol` and line citations, as it held `docs/`'s, so
+  they stay current with the code (`0023`).
+- The docs say what the code does since the seam, the gone pod and readiness: the architecture diagram draws
+  `Provider` and `providers.build`, `TeardownFailed` exits `3` after a lost create, and `pod_gone` cites D57 (`0023`).
+
 ## [0.12.3] - 2026-11-11
 
 Gate: local 0m14s · CI not read under mf-ship · 0.12.2: local 0m13s · CI not read under mf-ship
