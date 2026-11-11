@@ -23,7 +23,8 @@ The OpenSpec CLI is recorded, not pinned: `@fission-ai/openspec@1.11.0`, resolve
   or log line (decision D9).
 - A decision made or overturned edits `docs/decisions.md`; the change's own `design.md` keeps the history.
 - A new module edits `tests/test_layers.py`'s `LAYERS` and `docs/modules.md` together.
-- A refactor changes no spec scenario, message or exit code (decision D51).
+- A refactor changes no spec scenario of behaviour, message or exit code; the `architecture` spec moves with the code,
+  and tests change in names, imports, fakes and the expected value of a retyped seam answer alone (decision D51).
 - The live targets rent a real pod or volume: they run by hand, never in CI (decision D6).
 
 ## The evidence a change carries
