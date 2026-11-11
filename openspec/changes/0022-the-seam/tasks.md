@@ -5,7 +5,7 @@ One builder, an outcome for each delete, and RunPod's words in `runpod.py`. Deci
 ## Progress
 
 - [x] 1 — The builder · moderate
-- [ ] 2 — The outcomes · hard
+- [x] 2 — The outcomes · hard
 - [ ] 3 — The words · moderate
 
 ## 1 — The builder
@@ -42,28 +42,28 @@ One builder, an outcome for each delete, and RunPod's words in `runpod.py`. Deci
 - [x] 2.2 In `gpunit/runpod.py`, import `Deleted` in place of `DELETED`; add `DELETED = (200, 204)`, `VOLUME_DELETED = (204,)` and `STOPPED = (200,)` after `MAX_TAIL`; add `def outcome(status: int, taken: tuple[int, ...]) -> Deleted` after `_quote`: `gone` when `status in taken`, `missing` on `404`, `no answer` on `0`, else `refused`. `delete` returns `outcome(answer.status, DELETED)`, `delete_volume` returns `outcome(answer.status, VOLUME_DELETED)` and logs when `answer.status not in VOLUME_DELETED`, and `stop` passes its call's `.status` with `STOPPED`.
   Verify: `grep -n -E "^(DELETED|VOLUME_DELETED|STOPPED) = " gpunit/runpod.py` prints a line for each, and `grep -n "def outcome" gpunit/runpod.py` prints a line.
 
-- [ ] 2.3 In `gpunit/lifecycle.py`, import `Deleted` from `gpunit.provider` in place of `DELETED` and rename `code` to `deleted` in `_delete_pods`: the recorded pod's branches are `deleted.kind == "gone"`, then `0021`'s `elif pod_gone(provider, record.id) and state.clear_gone(record.id):` as it is, then `deleted.kind == "missing"` with the `404` message as it is, then the rest with `answered HTTP {deleted.code}`; the sweep reads `deleted.kind == "gone"` and prints `{deleted.code}` ([D4](design.md#d4)). **HALT CHECK**: `grep -n "elif pod_gone(provider, record.id) and state.clear_gone(record.id):" gpunit/lifecycle.py` prints a line before this task; `0021` adds it.
+- [x] 2.3 In `gpunit/lifecycle.py`, import `Deleted` from `gpunit.provider` in place of `DELETED` and rename `code` to `deleted` in `_delete_pods`: the recorded pod's branches are `deleted.kind == "gone"`, then `0021`'s `elif pod_gone(provider, record.id) and state.clear_gone(record.id):` as it is, then `deleted.kind == "missing"` with the `404` message as it is, then the rest with `answered HTTP {deleted.code}`; the sweep reads `deleted.kind == "gone"` and prints `{deleted.code}` ([D4](design.md#d4)). **HALT CHECK**: `grep -n "elif pod_gone(provider, record.id) and state.clear_gone(record.id):" gpunit/lifecycle.py` prints a line before this task; `0021` adds it.
   Verify: `grep -n "code in DELETED" gpunit/lifecycle.py` prints nothing, and `grep -n "elif code == 404:" gpunit/lifecycle.py` prints nothing.
 
-- [ ] 2.4 In `gpunit/lifecycle.py`, make `delete_volume` return `Deleted` and call `ledger.record_deleted` on `deleted.kind == "gone"`; in `sweep_window` read `deleted.kind == "gone"` and `deleted.kind == "missing" and gone(built, window.id)` for its branches, and print `deleted.code` in the warning.
+- [x] 2.4 In `gpunit/lifecycle.py`, make `delete_volume` return `Deleted` and call `ledger.record_deleted` on `deleted.kind == "gone"`; in `sweep_window` read `deleted.kind == "gone"` and `deleted.kind == "missing" and gone(built, window.id)` for its branches, and print `deleted.code` in the warning.
   Verify: `grep -n -E "code == 204|code == 404 and" gpunit/lifecycle.py` prints nothing.
 
-- [ ] 2.5 In `gpunit/volume.py`, make `down` read `deleted.kind == "gone"` and `deleted.kind == "missing" and lifecycle.gone(...)`, and `_sweep` read `(deleted := lifecycle.delete_volume(provider, volume_id)).kind == "gone"`; both messages print `deleted.code` where they printed `code`.
+- [x] 2.5 In `gpunit/volume.py`, make `down` read `deleted.kind == "gone"` and `deleted.kind == "missing" and lifecycle.gone(...)`, and `_sweep` read `(deleted := lifecycle.delete_volume(provider, volume_id)).kind == "gone"`; both messages print `deleted.code` where they printed `code`.
   Verify: `grep -n -E "code == (204|404)|\) == 204" gpunit/volume.py` prints nothing.
 
-- [ ] 2.6 In `tests/fakes.py`, import `Deleted` from `gpunit.provider` and `outcome` with the sets of statuses it takes from `gpunit.runpod`; `FakeProvider.delete` returns `outcome(self.deletes.get(pod_id, 204), DELETED)`, `stop` returns `outcome(200, STOPPED)`, `delete_volume` returns `outcome(self.volume_deletes.get(volume_id, 204), VOLUME_DELETED)`, each annotated `-> Deleted`; the scripts keep their codes ([D10](design.md#d10)).
+- [x] 2.6 In `tests/fakes.py`, import `Deleted` from `gpunit.provider` and `outcome` with the sets of statuses it takes from `gpunit.runpod`; `FakeProvider.delete` returns `outcome(self.deletes.get(pod_id, 204), DELETED)`, `stop` returns `outcome(200, STOPPED)`, `delete_volume` returns `outcome(self.volume_deletes.get(volume_id, 204), VOLUME_DELETED)`, each annotated `-> Deleted`; the scripts keep their codes ([D10](design.md#d10)).
   Verify: `grep -n -E "\) -> Deleted:" tests/fakes.py` prints a line for each of the three.
 
-- [ ] 2.7 In `tests/test_down.py`, `tests/test_library.py` and `tests/test_run.py`, import `Deleted` from `gpunit.provider` and annotate the `FakeProvider` subclasses' `delete` and `delete_volume` `-> Deleted`; `HeldVolume.delete_volume` in `tests/test_down.py` returns `deleted` as it came when the pod was deleted, else `Deleted("refused", 409)`.
+- [x] 2.7 In `tests/test_down.py`, `tests/test_library.py` and `tests/test_run.py`, import `Deleted` from `gpunit.provider` and annotate the `FakeProvider` subclasses' `delete` and `delete_volume` `-> Deleted`; `HeldVolume.delete_volume` in `tests/test_down.py` returns `deleted` as it came when the pod was deleted, else `Deleted("refused", 409)`.
   Verify: `grep -n "Deleted" tests/test_down.py tests/test_library.py tests/test_run.py` prints a line in each file.
 
-- [ ] 2.8 In `tests/test_runpod.py`, import `Deleted` and assert the outcome: rename `test_delete_returns_the_status_and_0_without_an_answer` to `test_delete_returns_what_happened_and_the_code` with `[Deleted("gone", 204), Deleted("missing", 404), Deleted("no answer", 0)]`; `test_stop_posts_the_stop_action` expects `Deleted("gone", 200)`; rename `test_delete_volume_returns_the_status_and_0_without_an_answer` to `test_delete_volume_returns_what_happened_and_the_code` with `[Deleted("gone", 204), Deleted("refused", 409), Deleted("no answer", 0)]`.
+- [x] 2.8 In `tests/test_runpod.py`, import `Deleted` and assert the outcome: rename `test_delete_returns_the_status_and_0_without_an_answer` to `test_delete_returns_what_happened_and_the_code` with `[Deleted("gone", 204), Deleted("missing", 404), Deleted("no answer", 0)]`; `test_stop_posts_the_stop_action` expects `Deleted("gone", 200)`; rename `test_delete_volume_returns_the_status_and_0_without_an_answer` to `test_delete_volume_returns_what_happened_and_the_code` with `[Deleted("gone", 204), Deleted("refused", 409), Deleted("no answer", 0)]`.
   Verify: `uv run pytest tests/test_runpod.py -q -k "delete or stop"` exits 0.
 
-- [ ] 2.9 In `docs/decisions.md`, replace the sentence of D23 that cites `gpunit/provider.py::DELETED` with the sentence: `gpunit/provider.py::Deleted` says what a delete did, in its `kind`. **HALT CHECK**: `grep -n "provider.py::DELETED" docs/decisions.md` prints a line before this task; `0021` leaves it in place.
+- [x] 2.9 In `docs/decisions.md`, replace the sentence of D23 that cites `gpunit/provider.py::DELETED` with the sentence: `gpunit/provider.py::Deleted` says what a delete did, in its `kind`. **HALT CHECK**: `grep -n "provider.py::DELETED" docs/decisions.md` prints a line before this task; `0021` leaves it in place.
   Verify: `grep -n "provider.py::DELETED" docs/decisions.md` prints nothing, and `grep -n "provider.py::Deleted" docs/decisions.md` prints a line.
 
-- [ ] 2.10 In `docs/extending.md`, delete the bullet *HTTP statuses in the seam*, the one that cites `0015·F3`.
+- [x] 2.10 In `docs/extending.md`, delete the bullet *HTTP statuses in the seam*, the one that cites `0015·F3`.
   Verify: `grep -n "0015·F3" docs/extending.md` prints nothing.
 
 ## 3 — The words

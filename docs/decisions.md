@@ -234,7 +234,7 @@ writes `known_hosts`. Behaviour: [session](../openspec/specs/session/spec.md).
 **`down` deletes the recorded pod and sweeps the project's by name and image; a failed delete keeps the record unless
 the pod is gone (decision D57).**
 
-`gpunit/provider.py::DELETED` is the success set.
+`gpunit/provider.py::Deleted` says what a delete did, in its `kind`.
 
 - **Why:** A false "gone" leaves a pod billing, and the project's pods are swept whatever the record says.
 - **Made by:** `0001·D9`, `0002·D5`, `0021·D1`.

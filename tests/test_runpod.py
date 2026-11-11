@@ -14,6 +14,7 @@ from gpunit import providers
 from gpunit.contract import fingerprint
 from gpunit.log import Refusal
 from gpunit.provider import (
+    Deleted,
     GpuInfo,
     Lost,
     NoImage,
@@ -447,10 +448,14 @@ def test_an_unreadable_listing_is_lost() -> None:
 
 
 @pytest.mark.spec("session:down:404-keeps-record")
-def test_delete_returns_the_status_and_0_without_an_answer() -> None:
+def test_delete_returns_what_happened_and_the_code() -> None:
     provider, opener = runpod((204, b""), (404, fixture("problem.json")), OSError())
 
-    assert [provider.delete("p1") for _ in range(3)] == [204, 404, 0]
+    assert [provider.delete("p1") for _ in range(3)] == [
+        Deleted("gone", 204),
+        Deleted("missing", 404),
+        Deleted("no answer", 0),
+    ]
     assert opener.requests[0].get_method() == "DELETE"
 
 
@@ -458,7 +463,7 @@ def test_delete_returns_the_status_and_0_without_an_answer() -> None:
 def test_stop_posts_the_stop_action() -> None:
     provider, opener = runpod((200, b"{}"))
 
-    assert provider.stop("p1") == 200
+    assert provider.stop("p1") == Deleted("gone", 200)
     assert opener.requests[0].full_url.endswith("/pods/p1/action")
     assert opener.sent() == {"action": "stop"}
 
@@ -662,9 +667,13 @@ def test_an_unreadable_volume_listing_is_lost() -> None:
 
 
 @pytest.mark.spec("volume:down:sweeps-by-name")
-def test_delete_volume_returns_the_status_and_0_without_an_answer() -> None:
+def test_delete_volume_returns_what_happened_and_the_code() -> None:
     provider, opener = runpod((204, b""), (409, fixture("problem.json")), OSError())
 
-    assert [provider.delete_volume("v1") for _ in range(3)] == [204, 409, 0]
+    assert [provider.delete_volume("v1") for _ in range(3)] == [
+        Deleted("gone", 204),
+        Deleted("refused", 409),
+        Deleted("no answer", 0),
+    ]
     assert opener.requests[0].get_method() == "DELETE"
     assert opener.requests[0].full_url.endswith("/network-volumes/v1")

@@ -93,17 +93,18 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
     failed = False
     window = state.window()
     if window is not None:
-        code = lifecycle.delete_volume(provider, window.id)
-        if code == 204:
+        deleted = lifecycle.delete_volume(provider, window.id)
+        if deleted.kind == "gone":
             state.clear_window()
             log.say(f"volume {window.id} deleted")
-        elif code == 404 and lifecycle.gone(provider, window.id):
+        elif deleted.kind == "missing" and lifecycle.gone(provider, window.id):
             state.clear_window()
             log.say(f"volume {window.id} is gone; the record is cleared")
         else:
             # A 404 is gone only when the listing lacks it too: decision D55.
             log.say(
-                f"delete of volume {window.id} answered HTTP {code}; the record is kept"
+                f"delete of volume {window.id} answered HTTP {deleted.code}; "
+                "the record is kept"
             )
             failed = True
     if not state.volume_pending.exists():
@@ -155,10 +156,10 @@ def _sweep(name: str, provider: Provider, state: State) -> int:
             settled = False
         elif not answer:
             log.say(f"volume {volume_id} kept")
-        elif (code := lifecycle.delete_volume(provider, volume_id)) == 204:
+        elif (deleted := lifecycle.delete_volume(provider, volume_id)).kind == "gone":
             log.say(f"swept volume {volume_id}")
         else:
-            log.say(f"delete of swept volume {volume_id} answered HTTP {code}")
+            log.say(f"delete of swept volume {volume_id} answered HTTP {deleted.code}")
             settled = False
     if not settled:
         return 1

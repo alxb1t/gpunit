@@ -1,7 +1,7 @@
 """The seam between the session and a GPU cloud: what is asked, and what answers."""
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol
 
 from gpunit.spec import Spec
 
@@ -12,10 +12,6 @@ def pod_name(project: str) -> str:
     e.g. "isekai" → "gpunit-isekai"
     """
     return f"gpunit-{project}"
-
-
-# The statuses a delete succeeds with; `down` and `RunPod.delete` read the same set.
-DELETED = (200, 204)
 
 
 @dataclass(frozen=True)
@@ -42,6 +38,18 @@ class PodInfo:
     host: str | None
     port: int | None
     datacenter: str | None = None
+
+
+@dataclass(frozen=True)
+class Deleted:
+    """What a delete or a stop did, and the provider's code for it.
+
+    `gone`: the call took effect. `missing`: the provider does not know the name.
+    `refused`: the provider answered and did not do it. `no answer`: none came.
+    """
+
+    kind: Literal["gone", "missing", "refused", "no answer"]
+    code: int
 
 
 @dataclass(frozen=True)
@@ -119,12 +127,12 @@ class Provider(Protocol):
         """Return each volume's charge per UTC day in `[start, end)`; raise `Lost`."""
         ...
 
-    def delete(self, pod_id: str) -> int:
-        """Delete the pod and return the HTTP status; 0 when no answer came."""
+    def delete(self, pod_id: str) -> Deleted:
+        """Delete the pod and return what happened; `no answer` when none came."""
         ...
 
-    def stop(self, pod_id: str) -> int:
-        """Stop the pod and return the HTTP status; 0 when no answer came."""
+    def stop(self, pod_id: str) -> Deleted:
+        """Stop the pod and return what happened; `no answer` when none came."""
         ...
 
     def stock(self, card: str) -> list[tuple[str, str]]:
@@ -154,8 +162,8 @@ class Provider(Protocol):
         """Return the id of every pod of the key's account; raise `Lost`."""
         ...
 
-    def delete_volume(self, volume_id: str) -> int:
-        """Delete the volume and return the HTTP status; 0 when no answer came."""
+    def delete_volume(self, volume_id: str) -> Deleted:
+        """Delete the volume and return what happened; `no answer` when none came."""
         ...
 
     def list(self, project: str, image: str) -> list[tuple[str, str]]:

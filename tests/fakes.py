@@ -10,7 +10,16 @@ from email.message import Message
 from pathlib import Path
 from typing import TypeVar
 
-from gpunit.provider import GpuInfo, Lost, PodCost, PodInfo, VolumeCost, VolumeInfo
+from gpunit.provider import (
+    Deleted,
+    GpuInfo,
+    Lost,
+    PodCost,
+    PodInfo,
+    VolumeCost,
+    VolumeInfo,
+)
+from gpunit.runpod import DELETED, STOPPED, VOLUME_DELETED, outcome
 from gpunit.spec import Spec
 from gpunit.state import Record
 from tests.helpers import IMAGE
@@ -162,15 +171,15 @@ class FakeProvider:
         self.calls.append(("volume_billing", (start, end)))
         return _in_window(_raise_or(self.volume_costs), start, end)
 
-    def delete(self, pod_id: str) -> int:
-        """Answer the pod's scripted status, or 204."""
+    def delete(self, pod_id: str) -> Deleted:
+        """Answer the pod's scripted status, or 204, as RunPod's rule reads it."""
         self.calls.append(("delete", (pod_id,)))
-        return self.deletes.get(pod_id, 204)
+        return outcome(self.deletes.get(pod_id, 204), DELETED)
 
-    def stop(self, pod_id: str) -> int:
-        """Answer 200."""
+    def stop(self, pod_id: str) -> Deleted:
+        """Answer a stop that took effect."""
         self.calls.append(("stop", (pod_id,)))
-        return 200
+        return outcome(200, STOPPED)
 
     def stock(self, card: str) -> list[tuple[str, str]]:
         """Answer the card's script, or `EU-RO-1` at `HIGH`."""
@@ -202,10 +211,10 @@ class FakeProvider:
         self.calls.append(("pod_ids", ()))
         return list(_raise_or(self.account_pods))
 
-    def delete_volume(self, volume_id: str) -> int:
-        """Answer the volume's scripted status, or 204."""
+    def delete_volume(self, volume_id: str) -> Deleted:
+        """Answer the volume's scripted status, or 204, as RunPod's rule reads it."""
         self.calls.append(("delete_volume", (volume_id,)))
-        return self.volume_deletes.get(volume_id, 204)
+        return outcome(self.volume_deletes.get(volume_id, 204), VOLUME_DELETED)
 
     def list(self, project: str, image: str) -> list[tuple[str, str]]:
         """Answer the next listing in the script."""
