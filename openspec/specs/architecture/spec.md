@@ -5,7 +5,7 @@ the guide's links, decision ids and code citations resolve, all checked by the g
 
 ## Requirements
 
-### Requirement: The modules import down the layers
+### Requirement: The modules import down the layers, and RunPod only through providers
 
 The gate SHALL fail when a module of the package imports a module of a higher layer, lazy imports inside functions
 included. The layers, lowest first: foundation, model, cloud, lifecycle, session, serve, interface. A module MAY import
@@ -30,7 +30,7 @@ module of the package in the layer the gate holds it to.
 - **WHEN** two model-layer modules import each other
 - **THEN** the check names the cycle
 
-#### Scenario: the provider is built in two places alone
+#### Scenario: the RunPod module is imported by providers alone
 - **Key:** `architecture:layers:provider-built`
 - **WHEN** the gate reads every import of the RunPod module
 - **THEN** its importer is `providers` alone, and any other importer is named
@@ -58,8 +58,8 @@ The gate SHALL fail when a relative link in `docs/`, `README.md`, `AGENTS.md`, `
 `CODING_STANDARDS.md` or `CONTRIBUTING.md` names a file that does not exist, or an anchor its target does not hold.
 Every decision id the guide links, and every `decision Dn` cited in the code, configuration and guide, SHALL name a
 decision in `docs/decisions.md`. No file the gate scans SHALL cite an archived change's design by its decision id. A
-backticked repository path in the guide SHALL name a file that exists, a `path::symbol` citation SHALL name a file
-that defines that symbol, and the guide SHALL cite no source line by number.
+backticked repository path in `docs/` or in a root document SHALL name a file that exists, a `path::symbol` citation
+SHALL name a file that defines that symbol, and neither SHALL cite a source line by number.
 
 #### Scenario: the guide's links resolve
 - **Key:** `architecture:docs:links-resolve`
@@ -84,9 +84,10 @@ that defines that symbol, and the guide SHALL cite no source line by number.
 
 #### Scenario: a symbol citation resolves
 - **Key:** `architecture:docs:symbols-resolve`
-- **WHEN** the guide cites `gpunit/lifecycle.py::up`, or a file by line as `gpunit/lifecycle.py:75`
-- **THEN** the symbol citation passes while the file defines `up`, a missing symbol is named, and the line citation
-  is named
+- **WHEN** a page of `docs/` or a root document cites `gpunit/lifecycle.py::up`, or a file by line as
+  `gpunit/lifecycle.py:75`
+- **THEN** the symbol citation passes while the file defines `up`, a missing symbol is named with its page, and the
+  line citation is named with its page
 
 ### Requirement: The front page fits one screen
 

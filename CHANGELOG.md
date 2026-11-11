@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.4] - 2026-11-11
+
+Gate: local 2m49s · CI not read under mf-ship · 0.12.3: local 0m14s · CI not read under mf-ship
+
 ### Changed
 
 - `tests/test_docs.py` holds the root documents' paths, `path::symbol` and line citations, as it held `docs/`'s, so

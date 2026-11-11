@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.12.4
 ---
 
 # Docs revisit

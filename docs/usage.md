@@ -35,7 +35,7 @@ How to use gpunit: from a project, from Python, and through `serve`.
    the file in. `python3-minimal` is not enough: it lacks the modules the stop's request needs.
 
    ```dockerfile
-   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.12.3/boot/boot.py /opt/gpunit/boot.py
+   ADD --checksum=sha256:<digest> https://raw.githubusercontent.com/alxb1t/gpunit/v0.12.4/boot/boot.py /opt/gpunit/boot.py
    ENTRYPOINT ["python3", "/opt/gpunit/boot.py", "--"]
    CMD ["python3", "main.py", "--listen", "0.0.0.0", "--port", "8188"]
    ```
@@ -49,7 +49,7 @@ How to use gpunit: from a project, from Python, and through `serve`.
    beside it: [the account key](#the-account-key) on the laptop, [the pod's own key](#accepted-risks) on the pod.
 
    ```sh
-   uv add --dev git+https://github.com/alxb1t/gpunit@v0.12.3
+   uv add --dev git+https://github.com/alxb1t/gpunit@v0.12.4
    echo .gpunit/ >> .gitignore
    export RUNPOD_API_KEY=...
    uv run gpunit run -- python3 render.py
