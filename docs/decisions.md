@@ -506,11 +506,12 @@ Each page links the spec for behaviour and names the file for a value.
 
 ### D51 · A refactor changes no scenario, message or exit code
 
-**A change that moves or renames code leaves every spec scenario, message and exit code as it was; tests change in
-names and imports alone.**
+**A change that moves or renames code leaves every spec scenario of behaviour, message and exit code as it was; the
+`architecture` spec, which states the repo's shape, moves with it. Tests change in names, imports, fakes and the
+expected value of a retyped seam answer alone.**
 
 - **Why:** The unchanged tests prove nothing moved.
-- **Made by:** `0015·D1`.
+- **Made by:** `0015·D1`, `0022·D2`.
 
 ### D52 · README is a one-screen front page
 

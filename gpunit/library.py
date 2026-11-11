@@ -12,9 +12,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from types import FrameType
 
-from gpunit import lifecycle, log
+from gpunit import lifecycle, log, providers
 from gpunit.provider import Lost, Provider
-from gpunit.runpod import RunPod
 from gpunit.spec import Spec, load_spec
 from gpunit.state import Record, State
 
@@ -72,7 +71,7 @@ def session(
     """
     with _saying(say):
         loaded = spec if isinstance(spec, Spec) else load_spec(Path(spec))
-        provider = RunPod(environ if environ is not None else os.environ)
+        provider = providers.build(environ if environ is not None else os.environ)
     with open_session(loaded, provider, State(cwd or Path.cwd()), say) as opened:
         yield opened
 

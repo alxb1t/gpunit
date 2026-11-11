@@ -42,10 +42,9 @@ is a change:
 ## A provider
 
 A second provider implements `gpunit/provider.py::Provider` in a module of the cloud layer, beside
-`gpunit.runpod`, and adds it to `tests/test_layers.py::LAYERS` and [modules](modules.md). What it meets today:
+`gpunit.runpod`, and adds it to `tests/test_layers.py::LAYERS` and [modules](modules.md), and has
+`gpunit/providers.py::build` return it. What it meets today:
 
-- **Where it is built:** `gpunit/library.py::session` and `gpunit/cli.py::_run` build `RunPod`; neither chooses
-  (`0015·F2`).
 - **HTTP statuses in the seam:** `delete`, `stop` and `delete_volume` return HTTP codes the callers compare
   (`0015·F3`).
 - **RunPod's words outside `gpunit/runpod.py`:** the dead statuses, the stock levels, the log tail, the volume price

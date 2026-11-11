@@ -11,7 +11,7 @@ from types import FrameType
 
 import pytest
 
-from gpunit import library, lifecycle
+from gpunit import library, lifecycle, providers
 from gpunit.library import Interrupted, Refused, Session, TeardownFailed
 from gpunit.provider import Lost, Provider, Unplaceable
 from gpunit.runpod import RunPod
@@ -469,7 +469,7 @@ def test_the_key_comes_from_the_mapping(
     monkeypatch.delenv("RUNPOD_API_KEY", raising=False)
     opener = session_opener()
     monkeypatch.setattr(
-        library, "RunPod", lambda environ: RunPod(environ, opener=opener)
+        providers, "RunPod", lambda environ: RunPod(environ, opener=opener)
     )
 
     with library.session(

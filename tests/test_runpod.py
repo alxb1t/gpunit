@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from gpunit import providers
 from gpunit.contract import fingerprint
 from gpunit.log import Refusal
 from gpunit.provider import (
@@ -45,6 +46,13 @@ SPEC = Spec(
     disk_gb=50,
     env={"MODE": "render", "GPUNIT_CEILING": "1"},
 )
+
+
+@pytest.mark.spec("architecture:layers:provider-built")
+def test_the_builder_returns_runpod_for_now() -> None:
+    assert isinstance(providers.build({"RUNPOD_API_KEY": KEY}), RunPod)
+    with pytest.raises(Refusal, match="RUNPOD_API_KEY"):
+        providers.build({})
 
 
 @pytest.mark.spec("session:place:under-floor-skipped")

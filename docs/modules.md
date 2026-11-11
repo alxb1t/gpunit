@@ -14,23 +14,23 @@ Lowest last. A new module edits this table and `LAYERS` together.
 | serve | `gpunit.serve` · `gpunit.serve.table` · `gpunit.serve.chat` · `gpunit.serve.session` |
 | session | `gpunit.library` · `gpunit.run` |
 | lifecycle | `gpunit.lifecycle` · `gpunit.hostkey` · `gpunit.volume` · `gpunit.spend` |
-| cloud | `gpunit.runpod` |
+| cloud | `gpunit.runpod` · `gpunit.providers` |
 | model | `gpunit.spec` · `gpunit.state` · `gpunit.provider` · `gpunit.ledger` · `gpunit.contract` |
 | foundation | `gpunit.log` · `gpunit.version` |
 
 The main edges, each pointing down:
 
 ```
- interface   gpunit · __main__ ─▶ cli ─┬─▶ run · runpod · lifecycle
+ interface   gpunit · __main__ ─▶ cli ─┬─▶ run · providers · lifecycle
      │                                 └─▶ spend · volume · serve.*, lazy
      ▼
  serve       serve.session ─▶ serve.chat · serve.table
      ▼
- session     run ─▶ library ─▶ lifecycle · runpod
+ session     run ─▶ library ─▶ lifecycle · providers
      ▼
  lifecycle   volume ─▶ lifecycle ─▶ hostkey        spend
      ▼
- cloud       runpod ─▶ contract
+ cloud       providers ─▶ runpod ─▶ contract
      ▼
  model       provider ─▶ spec    ledger ─▶ state    contract ─▶ spec
      ▼
@@ -57,6 +57,7 @@ package imports the standard library and `gpunit` alone, and `serve/launch.py` t
 - `gpunit.volume` — `volume up` and `volume down`: the window volume.
 - `gpunit.spend` — `spend`: the billing over whole UTC days, by project.
 - `gpunit.runpod` — RunPod's REST v2 behind the seam, on `urllib`.
+- `gpunit.providers` — the one place that builds the provider.
 - `gpunit.spec` — `gpunit.toml` into a `Spec`, refusing what no session may open on.
 - `gpunit.state` — the session's files under `.gpunit/`, and gpunit's home state.
 - `gpunit.provider` — the seam: the `Provider` protocol, its types and its exceptions.
@@ -67,9 +68,10 @@ package imports the standard library and `gpunit` alone, and `serve/launch.py` t
 
 ## Where RunPod is built
 
-`gpunit/library.py::session` builds it from the environment it is given; `gpunit/cli.py::_run` builds it when a verb
-first asks. `run` and `serve` open through `gpunit/library.py::open_session` with the provider already built, and the
-tests pass a `FakeProvider` there. A second provider changes these sites (`0015·F2`).
+`gpunit/providers.py::build` builds it. `gpunit/library.py::session` calls it with the environment it is given;
+`gpunit/cli.py::_run` calls it when a verb first asks. `run` and `serve` open through
+`gpunit/library.py::open_session` with the provider already built, and the tests pass a `FakeProvider` there. A second
+provider changes that function.
 
 ## The lazy edges
 

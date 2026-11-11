@@ -4,34 +4,34 @@ One builder, an outcome for each delete, and RunPod's words in `runpod.py`. Deci
 
 ## Progress
 
-- [ ] 1 — The builder · moderate
+- [x] 1 — The builder · moderate
 - [ ] 2 — The outcomes · hard
 - [ ] 3 — The words · moderate
 
 ## 1 — The builder
 
-- [ ] 1.1 Add `gpunit/providers.py` per [D1](design.md#d1): the docstring `The one place that builds the provider.`, the imports of `Mapping`, `Provider` and `RunPod`, and `build(environ: Mapping[str, str]) -> Provider` returning `RunPod(environ)`. Add `"gpunit.providers": "cloud",` to `LAYERS` in `tests/test_layers.py` after the `gpunit.runpod` entry, and `gpunit.providers` to the cloud row and the module list of `docs/modules.md`.
+- [x] 1.1 Add `gpunit/providers.py` per [D1](design.md#d1): the docstring `The one place that builds the provider.`, the imports of `Mapping`, `Provider` and `RunPod`, and `build(environ: Mapping[str, str]) -> Provider` returning `RunPod(environ)`. Add `"gpunit.providers": "cloud",` to `LAYERS` in `tests/test_layers.py` after the `gpunit.runpod` entry, and `gpunit.providers` to the cloud row and the module list of `docs/modules.md`.
   Verify: `grep -n "def build" gpunit/providers.py` prints a line, and `grep -n "gpunit.providers" tests/test_layers.py docs/modules.md` prints a line in each file.
 
-- [ ] 1.2 In `gpunit/cli.py`, change `from gpunit import lifecycle, log, run` to `from gpunit import lifecycle, log, providers, run`, delete `from gpunit.runpod import RunPod`, and make `lazy` return `provider or providers.build(os.environ)`. In `gpunit/library.py`, change `from gpunit import lifecycle, log` to `from gpunit import lifecycle, log, providers`, delete `from gpunit.runpod import RunPod`, and make `session` call `providers.build(environ if environ is not None else os.environ)`.
+- [x] 1.2 In `gpunit/cli.py`, change `from gpunit import lifecycle, log, run` to `from gpunit import lifecycle, log, providers, run`, delete `from gpunit.runpod import RunPod`, and make `lazy` return `provider or providers.build(os.environ)`. In `gpunit/library.py`, change `from gpunit import lifecycle, log` to `from gpunit import lifecycle, log, providers`, delete `from gpunit.runpod import RunPod`, and make `session` call `providers.build(environ if environ is not None else os.environ)`.
   Verify: `grep -n "providers.build" gpunit/cli.py gpunit/library.py` prints a line in each file, and `grep -n "RunPod" gpunit/cli.py gpunit/library.py` prints nothing.
 
-- [ ] 1.3 In `live/price.py` and `live/serve_dead.py`, delete `from gpunit.runpod import RunPod`; `live/price.py` imports `os` and `from gpunit import providers` and builds `providers.build(os.environ)` where it built `RunPod()`; `live/serve_dead.py` changes `from gpunit import log` to `from gpunit import log, providers` and passes `providers.build(os.environ)` where it passed `RunPod(os.environ)`.
+- [x] 1.3 In `live/price.py` and `live/serve_dead.py`, delete `from gpunit.runpod import RunPod`; `live/price.py` imports `os` and `from gpunit import providers` and builds `providers.build(os.environ)` where it built `RunPod()`; `live/serve_dead.py` changes `from gpunit import log` to `from gpunit import log, providers` and passes `providers.build(os.environ)` where it passed `RunPod(os.environ)`.
   Verify: `grep -n "providers.build" live/price.py live/serve_dead.py` prints a line in each file, and `grep -n "RunPod" live/price.py live/serve_dead.py` prints nothing.
 
-- [ ] 1.4 In `tests/test_layers.py`, set `BUILDERS = {"gpunit.providers"}`, rename `test_runpod_is_built_in_library_and_cli_alone` to `test_runpod_is_imported_by_providers_alone`, and rename `test_a_third_runpod_importer_is_caught` to `test_a_second_runpod_importer_is_caught`: in its package `gpunit/providers.py` imports `RunPod` from `gpunit.runpod`, `gpunit/library.py` and `gpunit/cli.py` import `providers`, and `run`, `spend` and `volume` stay the importers the assertion names.
+- [x] 1.4 In `tests/test_layers.py`, set `BUILDERS = {"gpunit.providers"}`, rename `test_runpod_is_built_in_library_and_cli_alone` to `test_runpod_is_imported_by_providers_alone`, and rename `test_a_third_runpod_importer_is_caught` to `test_a_second_runpod_importer_is_caught`: in its package `gpunit/providers.py` imports `RunPod` from `gpunit.runpod`, `gpunit/library.py` and `gpunit/cli.py` import `providers`, and `run`, `spend` and `volume` stay the importers the assertion names.
   Verify: `uv run pytest tests/test_layers.py -q` exits 0.
 
-- [ ] 1.5 In `tests/test_library.py`, import `providers` in `from gpunit import library, lifecycle, providers` and patch it in place of `library`: `monkeypatch.setattr(providers, "RunPod", lambda environ: RunPod(environ, opener=opener))`. In `tests/test_runpod.py`, import `providers` from `gpunit` and add `test_the_builder_returns_runpod_for_now`, marked `architecture:layers:provider-built`: `providers.build({"RUNPOD_API_KEY": KEY})` is a `RunPod`, and `providers.build({})` raises `Refusal` matching `RUNPOD_API_KEY`.
+- [x] 1.5 In `tests/test_library.py`, import `providers` in `from gpunit import library, lifecycle, providers` and patch it in place of `library`: `monkeypatch.setattr(providers, "RunPod", lambda environ: RunPod(environ, opener=opener))`. In `tests/test_runpod.py`, import `providers` from `gpunit` and add `test_the_builder_returns_runpod_for_now`, marked `architecture:layers:provider-built`: `providers.build({"RUNPOD_API_KEY": KEY})` is a `RunPod`, and `providers.build({})` raises `Refusal` matching `RUNPOD_API_KEY`.
   Verify: `uv run pytest tests/test_library.py tests/test_runpod.py -q -k "key_comes_from_the_mapping or builder_returns"` exits 0.
 
-- [ ] 1.6 In `docs/decisions.md`, replace the statement of D51 with the text in [D2](design.md#d2), its title unchanged, and add `0022·D2` to its *Made by*.
+- [x] 1.6 In `docs/decisions.md`, replace the statement of D51 with the text in [D2](design.md#d2), its title unchanged, and add `0022·D2` to its *Made by*.
   Verify: `grep -n "which states the repo's shape" docs/decisions.md` prints a line.
 
-- [ ] 1.7 In `docs/modules.md`, make the main edges read `cli ─┬─▶ run · providers · lifecycle`, `run ─▶ library ─▶ lifecycle · providers` and `cloud       providers ─▶ runpod ─▶ contract`, and rewrite *Where RunPod is built* to say `gpunit/providers.py::build` builds it, `gpunit/library.py::session` and `gpunit/cli.py::_run` call it, and a second provider changes that function.
+- [x] 1.7 In `docs/modules.md`, make the main edges read `cli ─┬─▶ run · providers · lifecycle`, `run ─▶ library ─▶ lifecycle · providers` and `cloud       providers ─▶ runpod ─▶ contract`, and rewrite *Where RunPod is built* to say `gpunit/providers.py::build` builds it, `gpunit/library.py::session` and `gpunit/cli.py::_run` call it, and a second provider changes that function.
   Verify: `grep -n "gpunit/providers.py::build" docs/modules.md` prints a line.
 
-- [ ] 1.8 In `docs/extending.md`, in *A provider*, delete the bullet *Where it is built*, and add to the opening sentence that a second provider has `gpunit/providers.py::build` return it.
+- [x] 1.8 In `docs/extending.md`, in *A provider*, delete the bullet *Where it is built*, and add to the opening sentence that a second provider has `gpunit/providers.py::build` return it.
   Verify: `grep -n "Where it is built" docs/extending.md` prints nothing.
 
 ## 2 — The outcomes

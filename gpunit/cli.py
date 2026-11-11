@@ -9,9 +9,8 @@ from dataclasses import replace
 from pathlib import Path
 from typing import NoReturn
 
-from gpunit import lifecycle, log, run
+from gpunit import lifecycle, log, providers, run
 from gpunit.provider import Lost, Provider
-from gpunit.runpod import RunPod
 from gpunit.spec import Spec, load_spec, parse_ceiling
 from gpunit.state import State
 
@@ -160,7 +159,7 @@ def _run(argv: list[str], provider: Provider | None) -> int:
 
     # Built only when a verb asks: no key is needed to read a spec or no record.
     def lazy() -> Provider:
-        return provider or RunPod()
+        return provider or providers.build(os.environ)
 
     state = State(Path.cwd())
     try:
