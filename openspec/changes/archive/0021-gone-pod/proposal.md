@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: 0.12.2
 debt: [0020·R7]
 ---
 

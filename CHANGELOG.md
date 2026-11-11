@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-11-11
+
+Gate: local 0m13s · CI not read under mf-ship · 0.12.1: local 0m17s · CI not read under mf-ship
+
 ### Changed
 
 - The provider reads one pod, `Provider.pod`, which raises `Unknown` on a 404 and `Lost` on any other failed read, and
