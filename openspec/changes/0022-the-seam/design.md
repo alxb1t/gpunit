@@ -123,6 +123,11 @@ No test is added to the end-to-end layer, and no engine matrix applies ([T1](../
 | unit | `tests/test_runpod.py` | a step in `test_get_reads_the_direct_ssh_address_or_none`: `dead` for `EXITED`, `ERROR`, `TERMINATED` and `RUNNING` | the page is already there |
 | unit | `tests/test_runpod.py` | the delete, volume-delete and stop tests, and the stock test, assert the retyped values | D3 and D6 |
 | unit | `tests/test_layers.py` | `LAYERS`, `BUILDERS` and the RunPod-import tests renamed and re-pointed at `providers` | D2 |
+| unit | `tests/test_layers.py` | rename `test_runpod_is_built_in_library_and_cli_alone` to `test_runpod_is_imported_by_providers_alone`: the same test, re-pointed | D2; the old name is gone, the new one carries every proof |
+| unit | `tests/test_layers.py` | rename `test_a_third_runpod_importer_is_caught` to `test_a_second_runpod_importer_is_caught`: the same test, re-pointed | D2; the old name is gone, the new one carries every proof |
+| unit | `tests/test_runpod.py` | rename `test_delete_returns_the_status_and_0_without_an_answer` to `test_delete_returns_what_happened_and_the_code` | D3; the old name is gone, the new one carries every proof |
+| unit | `tests/test_runpod.py` | rename `test_delete_volume_returns_the_status_and_0_without_an_answer` to `test_delete_volume_returns_what_happened_and_the_code` | D3; the old name is gone, the new one carries every proof |
+| unit | `tests/test_runpod.py` | rename `test_stock_reads_the_secure_pod_stock_and_drops_none` to `test_stock_reads_the_secure_pod_stock_best_first` | D6; the old name is gone, the new one carries every proof |
 | fake | `tests/fakes.py` | `FakeProvider` answers `Deleted`, ranks its stock and states `log_cap`, `volume_rate`, `key_names` | the protocol gains them |
 | integration | `tests/test_library.py`, `tests/test_down.py`, `tests/test_run.py` | the `FakeProvider` subclasses return `Deleted`; the library test patches `providers.RunPod` | D1, D3 |
 | integration | `tests/test_up.py`, `tests/test_serve_session.py` | the `EXITED` fixture gains `dead=True` | D5 |
@@ -130,7 +135,7 @@ No test is added to the end-to-end layer, and no engine matrix applies ([T1](../
 
 The count of `tests/test_runpod.py` and `tests/test_layers.py` together, by `uv run pytest tests/test_runpod.py tests/test_layers.py --collect-only -q -m "not e2e"`: 71 at `54c3a97`, 74 once `0021` adds its three cases to `tests/test_runpod.py`, 76 after this change, two added.
 
-No test is deleted or merged.
+No test is deleted or merged. Five are renamed, as the table names: each old name is gone since the base and its new name, in the same file, carries every one of its proofs.
 
 ## Dependencies
 
