@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from gpunit import ledger, log, spend
-from gpunit.provider import Unknown, VolumeCost
+from gpunit.provider import Lost, PodInfo, Unknown, VolumeCost
 from gpunit.state import State, Window
 from tests.fakes import RECORD, FakeProvider
 from tests.helpers import IMAGE, NO_REQUESTS, gpunit
@@ -29,6 +29,40 @@ def test_status_as_json(cwd: Path, capsys: pytest.CaptureFixture[str]) -> None:
 def test_no_record(cwd: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert gpunit(["status"], provider=NO_REQUESTS) == 0
     assert capsys.readouterr().out == "no session is recorded\n"
+
+
+@pytest.mark.spec("cli:status:gone-clears")
+@pytest.mark.spec("cli:status:listed-keeps-record")
+@pytest.mark.parametrize(
+    ("pods", "account_pods", "cleared"),
+    [
+        ({"pod-1": Unknown("RunPod does not know pod 'pod-1'")}, [], True),
+        ({"pod-1": Unknown("RunPod does not know pod 'pod-1'")}, ["pod-1"], False),
+        (
+            {"pod-1": Unknown("RunPod does not know pod 'pod-1'")},
+            Lost("pod listing returned HTTP 403"),
+            False,
+        ),
+        ({}, [], False),
+    ],
+    ids=["gone", "still-listed", "listing-lost", "read-lost"],
+)
+def test_status_clears_a_gone_pod(
+    pods: dict[str, PodInfo | Exception],
+    account_pods: list[str] | Exception,
+    cleared: bool,
+    cwd: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    State(cwd).write(RECORD)
+    provider = FakeProvider(gets=[None], pods=pods, account_pods=account_pods)
+
+    argv = ["status", "--json"] if cleared else ["status"]
+    assert gpunit(argv, provider=provider) == 0
+    captured = capsys.readouterr()
+    assert (State(cwd).read() is None) is cleared
+    assert ("pod pod-1 is gone; its record is cleared" in captured.err) is cleared
+    assert (captured.out == "null\n") if cleared else ("status=UNKNOWN" in captured.out)
 
 
 @pytest.mark.spec("volume:status:named")

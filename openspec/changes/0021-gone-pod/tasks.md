@@ -5,7 +5,7 @@ The provider reads a pod and lists the account's, the rule clears a gone record,
 ## Progress
 
 - [x] 1 — The provider reads one pod and lists the account's · moderate
-- [ ] 2 — The rule: `status` and `down` clear a gone record · hard
+- [x] 2 — The rule: `status` and `down` clear a gone record · hard
 - [ ] 3 — The word: D57, the guide, the threat model and the specs · moderate
 
 ## 1 — The provider reads one pod and lists the account's
@@ -24,19 +24,19 @@ The provider reads a pod and lists the account's, the rule clears a gone record,
 
 ## 2 — The rule: `status` and `down` clear a gone record
 
-- [ ] 2.1 In `gpunit/lifecycle.py`, add `def pod_gone(provider: Provider, pod_id: str) -> bool` after `gone`, by the table in [D3](design.md#d3): `Unknown` from `provider.pod(pod_id)`, then `pod_id not in provider.pod_ids()`; a `Lost` from either returns `False`; a read that answers returns `False`. Docstring: `Return True when the pod's read answers 404 and the account's listing lacks it.` Comment the 404-and-wrong-key reason as `gone` does, citing decision D55; D57 lands in phase 3, and a comment citing a decision absent from `docs/decisions.md` fails the docs test.
+- [x] 2.1 In `gpunit/lifecycle.py`, add `def pod_gone(provider: Provider, pod_id: str) -> bool` after `gone`, by the table in [D3](design.md#d3): `Unknown` from `provider.pod(pod_id)`, then `pod_id not in provider.pod_ids()`; a `Lost` from either returns `False`; a read that answers returns `False`. Docstring: `Return True when the pod's read answers 404 and the account's listing lacks it.` Comment the 404-and-wrong-key reason as `gone` does, citing decision D55; D57 lands in phase 3, and a comment citing a decision absent from `docs/decisions.md` fails the docs test.
   Verify: `grep -n "def pod_gone" gpunit/lifecycle.py` prints its line.
 
-- [ ] 2.2 In `lifecycle.status`, call `built().get(record.id)` as now; when it gave `None` and `pod_gone(built(), record.id)` holds, call `state.clear_session()`, `log.say(f"pod {record.id} is gone; its record is cleared")`, then print `"null" if as_json else "no session is recorded"` ([D4](design.md#d4)); else `_report` as now. A live pod makes no further call. The window line after it stays as it is.
+- [x] 2.2 In `lifecycle.status`, call `built().get(record.id)` as now; when it gave `None` and `pod_gone(built(), record.id)` holds, call `state.clear_session()`, `log.say(f"pod {record.id} is gone; its record is cleared")`, then print `"null" if as_json else "no session is recorded"` ([D4](design.md#d4)); else `_report` as now. A live pod makes no further call. The window line after it stays as it is.
   Verify: `grep -n "pod {record.id} is gone; its record is cleared" gpunit/lifecycle.py` prints a line.
 
-- [ ] 2.3 In `lifecycle._delete_pods`, add the branch of [D5](design.md#d5) between the `DELETED` branch and the `404` branch: `elif pod_gone(provider, record.id):` clears the session with `state.clear_session()` and says `f"pod {record.id} is gone; its record is cleared"`, and sets no `failed`. The 404 and other-code branches, their messages and the sweep stay as they are. `.gpunit/pending` and the ledger are untouched ([D6](design.md#d6)).
+- [x] 2.3 In `lifecycle._delete_pods`, add the branch of [D5](design.md#d5) between the `DELETED` branch and the `404` branch: `elif pod_gone(provider, record.id):` clears the session with `state.clear_session()` and says `f"pod {record.id} is gone; its record is cleared"`, and sets no `failed`. The 404 and other-code branches, their messages and the sweep stay as they are. `.gpunit/pending` and the ledger are untouched ([D6](design.md#d6)).
   Verify: `grep -n "elif pod_gone(provider, record.id):" gpunit/lifecycle.py` prints a line.
 
-- [ ] 2.4 In `tests/test_down.py`, parametrize `test_a_404_keeps_the_record` by ids `gone`, `listing-lost`, `still-listed`, each a `FakeProvider(deletes={"pod-1": 404}, pods={"pod-1": Unknown(...)}, account_pods=...)`. `gone`: `account_pods=[]` → exit `0`, `state.pod`, `state.known_hosts`, `state.key` and `state.key_pub` gone, stderr holds `pod pod-1 is gone; its record is cleared`, `ledger.deleted()` is empty. `listing-lost`: `account_pods=Lost("pod listing returned HTTP 403")` → exit `1`, record kept, stderr holds `the key may be wrong`. `still-listed`: `account_pods=["pod-1"]` → the same as `listing-lost`. Mark it with both `session:down:404-keeps-record` and `session:down:gone-clears`; keep its name, `docs/principles.md` cites it.
+- [x] 2.4 In `tests/test_down.py`, parametrize `test_a_404_keeps_the_record` by ids `gone`, `listing-lost`, `still-listed`, each a `FakeProvider(deletes={"pod-1": 404}, pods={"pod-1": Unknown(...)}, account_pods=...)`. `gone`: `account_pods=[]` → exit `0`, `state.pod`, `state.known_hosts`, `state.key` and `state.key_pub` gone, stderr holds `pod pod-1 is gone; its record is cleared`, `ledger.deleted()` is empty. `listing-lost`: `account_pods=Lost("pod listing returned HTTP 403")` → exit `1`, record kept, stderr holds `the key may be wrong`. `still-listed`: `account_pods=["pod-1"]` → the same as `listing-lost`. Mark it with both `session:down:404-keeps-record` and `session:down:gone-clears`; keep its name, `docs/principles.md` cites it.
   Verify: `uv run pytest tests/test_down.py tests/test_library.py tests/test_run.py -q -k "test_a_404_keeps_the_record and gone"` exits 0.
 
-- [ ] 2.5 In `tests/test_status.py`, add `test_status_clears_a_gone_pod`, marked `cli:status:gone-clears` and `cli:status:listed-keeps-record`, ids `gone`, `still-listed`, `listing-lost`, `read-lost`, each with `gets=[None]` and a recorded `RECORD`. `gone` runs `["status", "--json"]` with `pods={"pod-1": Unknown(...)}` and `account_pods=[]`: stdout `null`, stderr holds the gone line, `State(cwd).read()` is `None`, exit `0`. `still-listed` and `listing-lost` keep the record and print `status=UNKNOWN`; `read-lost` has no `pods` script, so the read raises `Lost`, and keeps it too.
+- [x] 2.5 In `tests/test_status.py`, add `test_status_clears_a_gone_pod`, marked `cli:status:gone-clears` and `cli:status:listed-keeps-record`, ids `gone`, `still-listed`, `listing-lost`, `read-lost`, each with `gets=[None]` and a recorded `RECORD`. `gone` runs `["status", "--json"]` with `pods={"pod-1": Unknown(...)}` and `account_pods=[]`: stdout `null`, stderr holds the gone line, `State(cwd).read()` is `None`, exit `0`. `still-listed` and `listing-lost` keep the record and print `status=UNKNOWN`; `read-lost` has no `pods` script, so the read raises `Lost`, and keeps it too.
   Verify: `uv run pytest tests/test_down.py tests/test_status.py tests/test_runpod.py -q -k test_status_clears_a_gone_pod` exits 0.
 
 ## 3 — The word: D57, the guide, the threat model and the specs

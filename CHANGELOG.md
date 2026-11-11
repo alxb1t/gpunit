@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   lists the account's pods, `Provider.pod_ids`. `get` is unchanged. The rule that uses them lands in the next phase
   (`0021`).
 
+### Fixed
+
+- `status` and `down` clear the record of a pod gone from the account: its read answers 404 and the account's listing
+  lacks it. A wrong key, a lost answer and a listed pod keep the record as before. Gone is no delete: the ledger
+  and `.gpunit/pending` are untouched (`0021`).
+
 ## [0.12.1] - 2026-11-04
 
 Gate: local 0m17s · CI not read under mf-ship · 0.12.0: local 0m18s · CI not read under mf-ship
