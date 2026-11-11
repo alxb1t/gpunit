@@ -19,7 +19,7 @@ The OpenSpec CLI is recorded, not pinned: `@fission-ai/openspec@1.11.0`, resolve
 ## The rules for a change
 
 - An archived change is a record; a finding against it is fixed in a new change (decision D7).
-- A patch closes cards and fixes; it adds no verb, `gpunit.toml` key or exit code (decision D8).
+- A patch fixes what is there; it adds no verb, `gpunit.toml` key or exit code (decision D8).
 - A change that touches a trust boundary updates `THREAT_MODEL.md`: a new flow, secret, file mode, network call
   or log line (decision D9).
 - A decision made or overturned edits `docs/decisions.md`; the change's own `design.md` keeps the history.

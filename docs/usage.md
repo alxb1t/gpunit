@@ -44,13 +44,9 @@ How to use gpunit: from a project, from Python, and through `serve`.
    still works: gpunit reads its lines. A `boot.sh` older than `v0.6.0` is refused: its host-key line carries
    no session nonce, so `up` tears the pod down and names `v0.6.0`.
 
-3. **Install and run.** The key comes from the environment alone; gpunit reads no `.env`. `run`'s command on the
-   laptop gets no `RUNPOD_API_KEY`: it never needs the account key. It runs as you beside gpunit, though, so it can
-   still read the key from gpunit's own environment (`/proc/<pid>/environ` on Linux, `ps -E` on macOS); run nothing
-   on the laptop you would not trust with the key. The command's environment on the pod does not carry
-   `RUNPOD_API_KEY` either: boot keeps it to stop the pod. The command runs as root beside boot, though, so it can
-   still read the key from boot's own environment in `/proc`; run nothing on the pod you would not trust with the
-   key.
+3. **Install and run.** The key comes from the environment alone; gpunit reads no `.env`. Neither `run`'s command on
+   the laptop nor the command on the pod gets `RUNPOD_API_KEY` in its environment, though each can still read a key
+   beside it: [the account key](#the-account-key) on the laptop, [the pod's own key](#accepted-risks) on the pod.
 
    ```sh
    uv add --dev git+https://github.com/alxb1t/gpunit@v0.12.3
@@ -345,8 +341,10 @@ Keep private data off stdout and off the volume: both outlive the command.
 
 - **The calls gpunit makes with it:** the catalogue (GPU types, their stock, the data centres); pods (create, read,
   list, logs, delete); network volumes (create, read, list, delete); billing (read).
-- **Where it goes:** a request header to `https://api.runpod.io/v2`, never argv, never a redirect; `run`'s command
-  does not get it in its environment, though it can read gpunit's (step 3).
+- **Where it goes:** a request header to `https://api.runpod.io/v2`, never argv, never a redirect.
+- **`run`'s command** does not get it in its environment: it never needs the account key. It runs as you beside
+  gpunit, though, so it can still read the key from gpunit's own environment (`/proc/<pid>/environ` on Linux,
+  `ps -E` on macOS); run nothing on the laptop you would not trust with the key.
 - **Measured minimum:** a restricted key, made in the console with `api.runpod.io/graphql` Read / Write and
   `api.runpod.ai` None, covers every call above (2026-10-18, [the probe](../THREAT_MODEL.md#7-the-probe)). RunPod
   offers no scope finer than the account's pods, volumes and billing, so a leaked key still reaches all of them.
@@ -360,7 +358,9 @@ Keep private data off stdout and off the volume: both outlive the command.
 - **Every SSH key registered in your RunPod account opens a root shell on every gpunit pod**, through RunPod's SSH
   proxy, whatever the pod's `authorized_keys` holds. Register only keys you would trust with that, or none.
 - **The pod's own key reads the account's billing:** every pod's id and cost. It lists no pod and reads no other
-  pod; a command on the pod can read it from boot's environment.
+  pod. The command's environment does not carry it: boot keeps it to stop the pod. The command runs as root beside
+  boot, though, so it can still read the key from boot's own environment in `/proc`; run nothing on the pod you would
+  not trust with the key.
 - **The session key sits unencrypted in `.gpunit/`**, for one session: it is deleted with the pod. Keep `.gpunit/`
   out of git, backups and sync folders.
 
@@ -416,9 +416,8 @@ e.g. `2026-11-03T09:14:02Z refused: no card in 'gpus' was placed`, then exit `4`
 
 - **The ceiling is required.** `boot.py` stops the pod at it, whatever happens to the laptop.
 - **The pod stops; `down` deletes.** A stopped pod bills storage, not GPU, until the next `gpunit down`.
-- **A 404 is "gone" only with the listing.** A wrong key gets a 404 too. `status` and `down` clear a pod's record
-  only when the account's listing lacks the pod as well; a wrong key fails the listing and keeps the record. A
-  window volume follows the same rule (decisions D55, D57).
+- **A 404 is "gone" only with the listing.** `status` and `down` clear the record of a pod that is gone
+  ([D57](decisions.md#d57--a-pod-is-gone-when-its-read-and-the-accounts-listing-both-lack-it)).
 - **A lost create exits `3`.** `.gpunit/pending` stays, and `down` sweeps every live `gpunit-<project>` pod.
 - **One session per project.** `up` refuses on a record, a pending create, a listed pod, or another process's wait
   for stock in `.gpunit/waiting`. The next `up` or `volume up` removes a dead process's mark; a refusal that names a

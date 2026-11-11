@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   they stay current with the code (`0023`).
 - The docs say what the code does since the seam, the gone pod and readiness: the architecture diagram draws
   `Provider` and `providers.build`, `TeardownFailed` exits `3` after a lost create, and `pod_gone` cites D57 (`0023`).
+- Each rule has one home: the gone rule in D57, which the other pages link; the change rules in `CONTRIBUTING.md`;
+  the key's exposure in `docs/usage.md`; the install pin in `docs/usage.md` alone (`0023`).
+- `THREAT_MODEL.md` holds at the commit it is read at, with no version stamps; each residual analysis moved into its
+  decision, so a threat row is its threat, mitigation, status and citations (`0023`).
 
 ## [0.12.3] - 2026-11-11
 

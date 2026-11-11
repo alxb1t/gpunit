@@ -5,7 +5,7 @@ The phases: the root documents held by the test and every stale claim fixed, eac
 ## Progress
 
 - [x] 1 — Currency · moderate
-- [ ] 2 — One home · moderate
+- [x] 2 — One home · moderate
 - [ ] 3 — The readers' pages · hard
 
 ## 1 — Currency
@@ -44,29 +44,29 @@ The phases: the root documents held by the test and every stale claim fixed, eac
 
 ## 2 — One home
 
-- [ ] 2.1 In `docs/decisions.md`, move D55 to *The window volume* after D43, D56 to *A session* after D21 and D57 to *A session* after D23 ([D7](design.md#d7)); each id and title stands.
+- [x] 2.1 In `docs/decisions.md`, move D55 to *The window volume* after D43, D56 to *A session* after D21 and D57 to *A session* after D23 ([D7](design.md#d7)); each id and title stands.
   Verify: `git grep -nE "^(## |### D5[567] )" -- docs/decisions.md` prints `## The guide` with none of D55, D56, D57 under it.
-- [ ] 2.2 In `docs/decisions.md`, keep D57 as the one statement of the gone rule (the read's 404, the listing, the lock and the pending mark); the shared reason ("a key that fails the listing cannot pass for gone") stays in D55, which D57 links; D55 links D57 for the pod ([D5](design.md#d5)).
+- [x] 2.2 In `docs/decisions.md`, keep D57 as the one statement of the gone rule (the read's 404, the listing, the lock and the pending mark); the shared reason ("a key that fails the listing cannot pass for gone") stays in D55, which D57 links; D55 links D57 for the pod ([D5](design.md#d5)).
   Verify: `git grep -n "cannot pass for gone" -- docs/decisions.md` prints the D55 line alone, and `git grep -nE "\(#d5[57]--" -- docs/decisions.md` prints a link in D55 and in D57.
-- [ ] 2.3 Retitle [D7](../../../docs/decisions.md) and [D8](../../../docs/decisions.md) as [design](design.md#d7) says, and move each anchor off the old slugs in `docs/extending.md` and `docs/principles.md`.
+- [x] 2.3 Retitle [D7](../../../docs/decisions.md) and [D8](../../../docs/decisions.md) as [design](design.md#d7) says, and move each anchor off the old slugs in `docs/extending.md` and `docs/principles.md`.
   Verify: `git grep -nE "closes-wont-fix|a-patch-closes-cards" -- docs` prints nothing.
-- [ ] 2.4 In `docs/principles.md`, replace *The process* with a link to `CONTRIBUTING.md`'s *The rules for a change* ([D5](design.md#d5)).
+- [x] 2.4 In `docs/principles.md`, replace *The process* with a link to `CONTRIBUTING.md`'s *The rules for a change* ([D5](design.md#d5)).
   Verify: `git grep -n "^### The process" -- docs/principles.md` prints nothing.
-- [ ] 2.5 In `docs/usage.md` *The spend rules* and `docs/data-flow.md`'s `pod` bullet, link D57 and drop the restated gone rule.
+- [x] 2.5 In `docs/usage.md` *The spend rules* and `docs/data-flow.md`'s `pod` bullet, link D57 and drop the restated gone rule.
   Verify: `git grep -nE "wrong key gets a 404|404 on delete" -- docs/usage.md docs/data-flow.md` prints nothing.
-- [ ] 2.6 In `docs/usage.md`, move step 3's laptop-command `/proc` text into *The account key*, and its pod-command `/proc` text into *Accepted risks*' pod-key bullet; step 3 links both ([D5](design.md#d5)).
+- [x] 2.6 In `docs/usage.md`, move step 3's laptop-command `/proc` text into *The account key*, and its pod-command `/proc` text into *Accepted risks*' pod-key bullet; step 3 links both ([D5](design.md#d5)).
   Verify: `git grep -n "/proc" -- docs/usage.md` prints a line in *The account key* and a line in *Accepted risks*, none in step 3.
-- [ ] 2.7 In `THREAT_MODEL.md`, drop each stamp from `v0.8` to `v0.11`, each `closed in v0.N`, and the `v0.11` of the §5 and §6 lead lines, for "holds at the commit it is read at" ([D8](design.md#d8)).
+- [x] 2.7 In `THREAT_MODEL.md`, drop each stamp from `v0.8` to `v0.11`, each `closed in v0.N`, and the `v0.11` of the §5 and §6 lead lines, for "holds at the commit it is read at" ([D8](design.md#d8)).
   Verify: `git grep -nE "v0\.(8|9|10|11)([^0-9]|$)" -- THREAT_MODEL.md` prints nothing.
-- [ ] 2.8 Drop the install pin: in `README.md`, link `docs/usage.md#use-it-from-a-project` for the install; in `THREAT_MODEL.md` T15, say "a release tag, mutable" ([D9](design.md#d9)).
+- [x] 2.8 Drop the install pin: in `README.md`, link `docs/usage.md#use-it-from-a-project` for the install; in `THREAT_MODEL.md` T15, say "a release tag, mutable" ([D9](design.md#d9)).
   Verify: `git grep -n "@v0\." -- README.md THREAT_MODEL.md` prints nothing.
-- [ ] 2.9 In `THREAT_MODEL.md` §4, move each row's `Residual:` analysis out of the row ([D8](design.md#d8)): T9 to D31, T21 to D33, T47 to D57, T48 to D55, T13 and T55 to D34; T20's stays in G17. The row links its decision; a value is named by its constant.
+- [x] 2.9 In `THREAT_MODEL.md` §4, move each row's `Residual:` analysis out of the row ([D8](design.md#d8)): T9 to D31, T21 to D33, T47 to D57, T48 to D55, T13 and T55 to D34; T20's stays in G17. The row links its decision; a value is named by its constant.
   Verify: `git grep -n "Residual" -- THREAT_MODEL.md` prints nothing.
-- [ ] 2.10 Trim each §4 row to the threat, its mitigation, its status and its citations; a row of 1000 characters goes to its decision or to §3's flow.
+- [x] 2.10 Trim each §4 row to the threat, its mitigation, its status and its citations; a row of 1000 characters goes to its decision or to §3's flow.
   Verify: `git grep -nE "^\| T[0-9]+ (.{250}){4}" -- THREAT_MODEL.md` prints nothing.
-- [ ] 2.11 In `THREAT_MODEL.md` §5, keep G4, G7 and G14 to G17 in full and cut each closed gap to one row of 300 characters or fewer.
+- [x] 2.11 In `THREAT_MODEL.md` §5, keep G4, G7 and G14 to G17 in full and cut each closed gap to one row of 300 characters or fewer.
   Verify: `git grep -nE "^\| G(1|2|3|5|6|8|9|10|11|12|13) (.{150}){2}" -- THREAT_MODEL.md` prints nothing.
-- [ ] 2.12 Run the test and fix each link, anchor or decision citation the moves and trims broke.
+- [x] 2.12 Run the test and fix each link, anchor or decision citation the moves and trims broke.
   Verify: `uv run pytest tests/test_docs.py` exits 0.
 
 ## 3 — The readers' pages

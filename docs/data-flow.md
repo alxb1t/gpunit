@@ -75,7 +75,7 @@ In `.gpunit/` beside the spec, each written whole, the directory `0700`
 
 - `pending` marks a create that may have made a pod no record names; `State.began` says this process wrote it.
 - `pod` is the record: the pod's id, image, address and create time. A delete whose `Deleted.kind` is not `gone`
-  keeps it unless the pod is gone, its read and the account's listing both lacking it
+  keeps it unless the pod is gone
   ([D23](decisions.md#d23--teardown-the-recorded-pod-and-the-projects-pods-are-swept),
   [D57](decisions.md#d57--a-pod-is-gone-when-its-read-and-the-accounts-listing-both-lack-it)).
 - `key` and `key.pub` are the session's keypair, deleted with the pod

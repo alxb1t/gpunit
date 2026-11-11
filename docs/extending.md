@@ -12,7 +12,7 @@ cut, built, checked and released as one OpenSpec change under `openspec/changes/
 - **Tests:** `tests/test_cli.py` and the module's own `tests/test_<module>.py`, on `tests/fakes.py::FakeProvider`.
 - **Docs:** `docs/usage.md`'s *The verbs*, and a line in [modules](modules.md) for a new module.
 - **Version:** a new verb needs a `vX.Y`, never a patch
-  ([D8](decisions.md#d8--a-patch-closes-cards-it-adds-no-verb-gpunittoml-key-or-exit-code)).
+  ([D8](decisions.md#d8--a-patch-fixes-what-is-there-it-adds-no-verb-gpunittoml-key-or-exit-code)).
 
 ## A gpunit.toml key
 

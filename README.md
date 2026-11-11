@@ -32,8 +32,8 @@ all open, use and close, from the CLI or from Python.
 
 ## Try it
 
-A `gpunit.toml` at the project root, for an image whose entrypoint is `boot.py`
-([how](docs/usage.md#use-it-from-a-project)):
+A `gpunit.toml` at the project root, for an image whose entrypoint is `boot.py`, and gpunit installed from a release
+tag ([how](docs/usage.md#use-it-from-a-project)):
 
 ```toml
 project = "demo"
@@ -45,7 +45,7 @@ disk_gb = 20
 ```
 
 ```sh
-uv add --dev git+https://github.com/alxb1t/gpunit@v0.12.3
+uv add --dev git+https://github.com/alxb1t/gpunit@<tag>
 export RUNPOD_API_KEY=...
 uv run gpunit run -- sh -c '$GPUNIT_SSH nvidia-smi'
 ```
