@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `status` and `down` clear the record of a pod gone from the account: its read answers 404 and the account's listing
   lacks it. A wrong key, a lost answer and a listed pod keep the record as before. Gone is no delete: the ledger
   and `.gpunit/pending` are untouched (`0021`).
+- The guide states the rule: decision D57 holds it, D23 and D55 point to it, and `docs/principles.md`, `docs/usage.md`,
+  `docs/data-flow.md`, `README.md` and `THREAT_MODEL.md` (T47) carry it. The principles row for pinned inputs names
+  its breach (`0021`).
 
 ## [0.12.1] - 2026-11-04
 

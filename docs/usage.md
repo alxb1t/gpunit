@@ -373,7 +373,7 @@ billing and the ledger.
 | verb | does |
 |---|---|
 | `gpunit up` | places a pod, waits for SSH, verifies its host key, records it in `.gpunit/` |
-| `gpunit status [--json]` | prints the recorded session to stdout |
+| `gpunit status [--json]` | prints the recorded session to stdout; clears the record of a gone pod |
 | `gpunit ssh` | opens a shell on the recorded pod |
 | `gpunit down` | deletes the recorded pod, then every other live pod of the project |
 | `gpunit run -- <cmd>` | the Python session around `<cmd>`: `up`, the tunnel, `<cmd>`, then `down`, however `<cmd>` ends |
@@ -416,8 +416,9 @@ e.g. `2026-11-03T09:14:02Z refused: no card in 'gpus' was placed`, then exit `4`
 
 - **The ceiling is required.** `boot.py` stops the pod at it, whatever happens to the laptop.
 - **The pod stops; `down` deletes.** A stopped pod bills storage, not GPU, until the next `gpunit down`.
-- **A 404 is not "gone".** A wrong key gets a 404 too; `down` keeps a pod's record and exits `1`. A window
-  volume is gone only when the account's listing lacks it too; then its record clears (decision D55).
+- **A 404 is "gone" only with the listing.** A wrong key gets a 404 too. `status` and `down` clear a pod's record
+  only when the account's listing lacks the pod as well; a wrong key fails the listing and keeps the record. A
+  window volume follows the same rule (decisions D55, D57).
 - **A lost create exits `3`.** `.gpunit/pending` stays, and `down` sweeps every live `gpunit-<project>` pod.
 - **One session per project.** `up` refuses on a record, a pending create, a listed pod, or another process's wait
   for stock in `.gpunit/waiting`; when no gpunit waits there, after a crash, remove that file.

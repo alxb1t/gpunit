@@ -63,7 +63,7 @@ In `.gpunit/` beside the spec, each written whole, the directory `0700`
 ([D15](decisions.md#d15--gpunit-in-the-working-directory-each-record-written-whole-the-directory-0700)).
 
 ```
- pod:     pending ──create answered──▶ pod ──down, 204──▶ (gone)
+ pod:     pending ──create answered──▶ pod ──down, 204 / status or down finds it gone──▶ (gone)
             │                           also: key, key.pub, known_hosts
             └──lost──▶ kept; the next down sweeps by name and image
 
@@ -73,8 +73,10 @@ In `.gpunit/` beside the spec, each written whole, the directory `0700`
 ```
 
 - `pending` marks a create that may have made a pod no record names; `State.began` says this process wrote it.
-- `pod` is the record: the pod's id, image, address and create time. A 404 on delete keeps it
-  ([D23](decisions.md#d23--teardown-a-404-keeps-the-record-the-projects-pods-are-swept)).
+- `pod` is the record: the pod's id, image, address and create time. A 404 on delete keeps it unless the pod is gone, its
+  read and the account's listing both lacking it
+  ([D23](decisions.md#d23--teardown-the-recorded-pod-and-the-projects-pods-are-swept),
+  [D57](decisions.md#d57--a-pod-is-gone-when-its-read-and-the-accounts-listing-both-lack-it)).
 - `key` and `key.pub` are the session's keypair, deleted with the pod
   ([D16](decisions.md#d16--a-keypair-per-session-deleted-at-teardown)).
 - `volume` and `volume.pending` are the window's record and mark, beside the pod's.

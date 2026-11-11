@@ -6,7 +6,7 @@ The provider reads a pod and lists the account's, the rule clears a gone record,
 
 - [x] 1 — The provider reads one pod and lists the account's · moderate
 - [x] 2 — The rule: `status` and `down` clear a gone record · hard
-- [ ] 3 — The word: D57, the guide, the threat model and the specs · moderate
+- [x] 3 — The word: D57, the guide, the threat model and the specs · moderate
 
 ## 1 — The provider reads one pod and lists the account's
 
@@ -41,23 +41,23 @@ The provider reads a pod and lists the account's, the rule clears a gone record,
 
 ## 3 — The word: D57, the guide, the threat model and the specs
 
-- [ ] 3.1 In `docs/decisions.md`, add D57 after D56, with the text in [D7](design.md#d7): title `A pod is gone when its read and the account's listing both lack it`, `Made by: 0021·D1`. **HALT CHECK**: `git grep -n "^### D5[67]" -- docs/decisions.md` prints only D56's heading before this task; if it prints D57 too, the id is taken and the plan is wrong.
+- [x] 3.1 In `docs/decisions.md`, add D57 after D56, with the text in [D7](design.md#d7): title `A pod is gone when its read and the account's listing both lack it`, `Made by: 0021·D1`. **HALT CHECK**: `git grep -n "^### D5[67]" -- docs/decisions.md` prints only D56's heading before this task; if it prints D57 too, the id is taken and the plan is wrong.
   Verify: `git grep -n "^### D57 · A pod is gone" -- docs/decisions.md` prints its heading.
 
-- [ ] 3.2 In `docs/decisions.md`, retitle D23 `Teardown: the recorded pod and the project's pods are swept`, set its statement and Why to the text in [D7](design.md#d7), and end D55's last sentence with `A pod is gone by the same rule (decision D57).` in place of `A pod's `404` still keeps its record (decision D23).` Edit the D23 and D55 text where they stand.
+- [x] 3.2 In `docs/decisions.md`, retitle D23 `Teardown: the recorded pod and the project's pods are swept`, set its statement and Why to the text in [D7](design.md#d7), and end D55's last sentence with `A pod is gone by the same rule (decision D57).` in place of `A pod's `404` still keeps its record (decision D23).` Edit the D23 and D55 text where they stand.
   Verify: `git grep -n "^### D23 · Teardown: the recorded pod and the project's pods are swept" -- docs/decisions.md` prints its heading.
 
-- [ ] 3.3 Repoint D23's anchor to `d23--teardown-the-recorded-pod-and-the-projects-pods-are-swept` in `README.md`, `docs/principles.md` (each row citing it) and `docs/data-flow.md`, and state the new rule beside each link, linking D57's anchor `d57--a-pod-is-gone-when-its-read-and-the-accounts-listing-both-lack-it` where the line states the rule. In `docs/principles.md`, the row `A pod's 404 is never gone; …` becomes `A pod's 404 is gone only when the account's listing lacks it too, as a window volume's is`, from D57 and D55, held by the old tests plus `test_status_clears_a_gone_pod`.
+- [x] 3.3 Repoint D23's anchor to `d23--teardown-the-recorded-pod-and-the-projects-pods-are-swept` in `README.md`, `docs/principles.md` (each row citing it) and `docs/data-flow.md`, and state the new rule beside each link, linking D57's anchor `d57--a-pod-is-gone-when-its-read-and-the-accounts-listing-both-lack-it` where the line states the rule. In `docs/principles.md`, the row `A pod's 404 is never gone; …` becomes `A pod's 404 is gone only when the account's listing lacks it too, as a window volume's is`, from D57 and D55, held by the old tests plus `test_status_clears_a_gone_pod`.
   Verify: `git grep -n "d23--teardown-the-recorded-pod-and-the-projects-pods-are-swept" -- README.md docs/principles.md docs/data-flow.md` prints a line in each file.
 
-- [ ] 3.4 In `docs/principles.md`, in the row `Every input that shapes a pod is pinned`, replace the breach `—` with `breached: a draft model or LoRA another argument names is fetched unpinned (`gpunit/serve/table.py::_args`, T55)`, closing debt `0020·R7`. **HALT CHECK**: `git grep -n "def _args" -- gpunit/serve/table.py` prints a line.
+- [x] 3.4 In `docs/principles.md`, in the row `Every input that shapes a pod is pinned`, replace the breach `—` with `breached: a draft model or LoRA another argument names is fetched unpinned (`gpunit/serve/table.py::_args`, T55)`, closing debt `0020·R7`. **HALT CHECK**: `git grep -n "def _args" -- gpunit/serve/table.py` prints a line.
   Verify: `grep -n "a draft model or LoRA another argument names is fetched unpinned" docs/principles.md` prints a line.
 
-- [ ] 3.5 In `docs/usage.md`, make the `status` row say it clears the record of a gone pod, and replace the bullet `A 404 is not "gone".` with the rule: a 404 clears a pod's record, in `status` and `down`, only when the account's listing lacks the pod too; a wrong key fails the listing and keeps it; a window volume follows the same rule (decisions D55, D57).
+- [x] 3.5 In `docs/usage.md`, make the `status` row say it clears the record of a gone pod, and replace the bullet `A 404 is not "gone".` with the rule: a 404 clears a pod's record, in `status` and `down`, only when the account's listing lacks the pod too; a wrong key fails the listing and keeps it; a window volume follows the same rule (decisions D55, D57).
   Verify: `grep -n "D57" docs/usage.md` prints a line.
 
-- [ ] 3.6 In `docs/data-flow.md`, make the state line `pod: pending ──create answered──▶ pod ──down, 204──▶ (gone)` name the gone path as well (`status` and `down` clear a gone pod's record), and the `pod` bullet say `A 404 on delete keeps it unless the pod is gone`, linking D57's anchor.
+- [x] 3.6 In `docs/data-flow.md`, make the state line `pod: pending ──create answered──▶ pod ──down, 204──▶ (gone)` name the gone path as well (`status` and `down` clear a gone pod's record), and the `pod` bullet say `A 404 on delete keeps it unless the pod is gone`, linking D57's anchor.
   Verify: `grep -n "unless the pod is gone" docs/data-flow.md` prints a line.
 
-- [ ] 3.7 In `THREAT_MODEL.md`, edit T47: replace `a 404 never read as gone` with the rule, its controls `gpunit/lifecycle.py::pod_gone` and `gpunit/provider.py::Provider.pod_ids`, and the residual of [D6](design.md#d6): a key of another RunPod account reads a pod as gone, accepted because the person runs one account; a pod-scoped key fails the listing. Add `session:down:gone-clears` and `cli:status:gone-clears` to its evidence. Name the new line `pod <id> is gone; its record is cleared` in T47's controls: it holds a pod id gpunit already logs, no secret and no file.
+- [x] 3.7 In `THREAT_MODEL.md`, edit T47: replace `a 404 never read as gone` with the rule, its controls `gpunit/lifecycle.py::pod_gone` and `gpunit/provider.py::Provider.pod_ids`, and the residual of [D6](design.md#d6): a key of another RunPod account reads a pod as gone, accepted because the person runs one account; a pod-scoped key fails the listing. Add `session:down:gone-clears` and `cli:status:gone-clears` to its evidence. Name the new line `pod <id> is gone; its record is cleared` in T47's controls: it holds a pod id gpunit already logs, no secret and no file.
   Verify: `grep -n "pod_gone" THREAT_MODEL.md` prints a line.

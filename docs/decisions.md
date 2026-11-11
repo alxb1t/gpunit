@@ -229,14 +229,15 @@ writes `known_hosts`. Behaviour: [session](../openspec/specs/session/spec.md).
 - **Why:** A command's output cannot supply the key, and nothing connects first.
 - **Made by:** `0001·D8`, `0003·D2`, `0006·D1`, `0009·D3`, `0010·D14`, `0010·R3`, `0011·D8`, `0015·D7`, `0015·D8`.
 
-### D23 · Teardown: a 404 keeps the record; the project's pods are swept
+### D23 · Teardown: the recorded pod and the project's pods are swept
 
-**`down` deletes the recorded pod and sweeps the project's by name and image; a 404 keeps the record.**
+**`down` deletes the recorded pod and sweeps the project's by name and image; a failed delete keeps the record unless
+the pod is gone (decision D57).**
 
 `gpunit/provider.py::DELETED` is the success set.
 
-- **Why:** A false "gone" leaves a pod billing, and a wrong key gets a 404 too.
-- **Made by:** `0001·D9`, `0002·D5`.
+- **Why:** A false "gone" leaves a pod billing, and the project's pods are swept whatever the record says.
+- **Made by:** `0001·D9`, `0002·D5`, `0021·D1`.
 
 ### D24 · gpunit's ssh is its own; the tools checked before any request
 
@@ -539,8 +540,8 @@ socket is marked `e2e` and runs in `make e2e`, which `.github/workflows/gate.yml
 
 **A recorded volume whose read answers `404` and which the account's listing, read with the same key, does not hold is
 gone: `volume up` makes a new window, `volume down` and the ceiling's sweep clear the record. Gone is no delete: the
-ledger records no `deleted` line for it, so `gpunit spend` still names it once it passes its end and bills. A pod's
-`404` still keeps its record (decision D23).**
+ledger records no `deleted` line for it, so `gpunit spend` still names it once it passes its end and bills. A pod is
+gone by the same rule (decision D57).**
 
 `gpunit/lifecycle.py::gone` holds the check; `gpunit/provider.py::Provider.volume_ids` is the listing.
 
@@ -565,3 +566,17 @@ and `volume up` beside another live process's mark, and removes a dead one's.
 - **Why:** A data centre's stock runs out for hours, and every caller would write the same retry loop. A mark the
   process owns guards the checkout while it sleeps, and one `kill -9` cannot leave it stuck.
 - **Made by:** `0019·D6`, `0020·D5`.
+
+### D57 · A pod is gone when its read and the account's listing both lack it
+
+**A recorded pod whose read answers `404` and which the account's listing, read with the same key, does not hold is
+gone: `status` and `down` clear its record. Gone is no delete: the ledger records no line for it, and `.gpunit/pending`
+stays for the sweep to clear.**
+
+`gpunit/lifecycle.py::pod_gone` holds the check; `gpunit/provider.py::Provider.pod` is the read and
+`gpunit/provider.py::Provider.pod_ids` the listing.
+
+- **Why:** A key that fails the listing cannot pass for gone, and a pod deleted outside gpunit left a record nothing
+  cleared. A valid key of another RunPod account reads a pod as gone too; the person runs one account, so the case
+  does not apply.
+- **Made by:** `0021·D1`.
