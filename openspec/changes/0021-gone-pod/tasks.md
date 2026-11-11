@@ -4,22 +4,22 @@ The provider reads a pod and lists the account's, the rule clears a gone record,
 
 ## Progress
 
-- [ ] 1 — The provider reads one pod and lists the account's · moderate
+- [x] 1 — The provider reads one pod and lists the account's · moderate
 - [ ] 2 — The rule: `status` and `down` clear a gone record · hard
 - [ ] 3 — The word: D57, the guide, the threat model and the specs · moderate
 
 ## 1 — The provider reads one pod and lists the account's
 
-- [ ] 1.1 In `gpunit/provider.py`, add `pod(self, pod_id: str) -> PodInfo` to `Provider` after `get`, and `pod_ids(self) -> list[str]` after `volume_ids`, per [D1](design.md#d1) and [D2](design.md#d2). Docstrings follow `volume` and `volume_ids`: `pod` raises `Unknown` on a 404, else `Lost`; `pod_ids` raises `Lost`.
+- [x] 1.1 In `gpunit/provider.py`, add `pod(self, pod_id: str) -> PodInfo` to `Provider` after `get`, and `pod_ids(self) -> list[str]` after `volume_ids`, per [D1](design.md#d1) and [D2](design.md#d2). Docstrings follow `volume` and `volume_ids`: `pod` raises `Unknown` on a 404, else `Lost`; `pod_ids` raises `Lost`.
   Verify: `grep -n -E "def pod(_ids)?\(" gpunit/provider.py` prints a line for each.
 
-- [ ] 1.2 In `gpunit/runpod.py`, add `RunPod.pod` and `RunPod.pod_ids`. `pod` calls `GET /pods/<id>`, raises `Unknown(f"RunPod does not know pod {pod_id!r}")` on a 404, raises `Lost(_report(f"pod read of {pod_id!r}", answer))` on a body that does not parse, and builds its `PodInfo` by the code `get` builds it with, moved to one helper both call. `pod_ids` is `self._walk("/pods", "pods", "pod listing", lambda pod: str(pod["id"]))`. `get` still returns `None` on any failed read.
+- [x] 1.2 In `gpunit/runpod.py`, add `RunPod.pod` and `RunPod.pod_ids`. `pod` calls `GET /pods/<id>`, raises `Unknown(f"RunPod does not know pod {pod_id!r}")` on a 404, raises `Lost(_report(f"pod read of {pod_id!r}", answer))` on a body that does not parse, and builds its `PodInfo` by the code `get` builds it with, moved to one helper both call. `pod_ids` is `self._walk("/pods", "pods", "pod listing", lambda pod: str(pod["id"]))`. `get` still returns `None` on any failed read.
   Verify: `grep -n -E "def pod(_ids)?\(" gpunit/runpod.py` prints a line for each.
 
-- [ ] 1.3 In `tests/fakes.py`, give `FakeProvider` the keyword arguments `pods: Mapping[str, PodInfo | Exception] | None = None` and `account_pods: Sequence[str] | Exception = ()`, and the methods `pod` and `pod_ids` beside `volume` and `volume_ids`, each recording its call. `pod` answers the pod's script through `_raise_or`; an id not in `pods` raises `Lost("pod read")` ([D8](design.md#d8)). `pod_ids` answers `account_pods` through `_raise_or`.
+- [x] 1.3 In `tests/fakes.py`, give `FakeProvider` the keyword arguments `pods: Mapping[str, PodInfo | Exception] | None = None` and `account_pods: Sequence[str] | Exception = ()`, and the methods `pod` and `pod_ids` beside `volume` and `volume_ids`, each recording its call. `pod` answers the pod's script through `_raise_or`; an id not in `pods` raises `Lost("pod read")` ([D8](design.md#d8)). `pod_ids` answers `account_pods` through `_raise_or`.
   Verify: `grep -n -E "def pod(_ids)?\(" tests/fakes.py` prints a line for each.
 
-- [ ] 1.4 In `tests/test_runpod.py`, add `test_a_pod_read_answers_the_pod_unknown_or_lost`, parametrized as `test_an_unreadable_stock_is_unknown_or_lost` is, ids `200`, `404`, `500`: `200` with `fixture("pod_running.json")` gives `PodInfo("RUNNING", "203.0.113.7", 40022)`, `404` raises `Unknown`, `500` raises `Lost`. Mark it `session:down:gone-clears`. In `test_the_listing_names_the_projects_live_pods`, add a step: `pod_ids()` on a `page(...)` holding a `TERMINATED` pod and a pod of another name returns every id.
+- [x] 1.4 In `tests/test_runpod.py`, add `test_a_pod_read_answers_the_pod_unknown_or_lost`, parametrized as `test_an_unreadable_stock_is_unknown_or_lost` is, ids `200`, `404`, `500`: `200` with `fixture("pod_running.json")` gives `PodInfo("RUNNING", "203.0.113.7", 40022)`, `404` raises `Unknown`, `500` raises `Lost`. Mark it `session:down:gone-clears`. In `test_the_listing_names_the_projects_live_pods`, add a step: `pod_ids()` on a `page(...)` holding a `TERMINATED` pod and a pod of another name returns every id.
   Verify: `uv run pytest tests/test_runpod.py -q -k test_a_pod_read_answers_the_pod_unknown_or_lost` exits 0.
 
 ## 2 — The rule: `status` and `down` clear a gone record

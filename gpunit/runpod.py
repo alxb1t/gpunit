@@ -161,17 +161,19 @@ class RunPod:
         """Return the pod, or None on any failed read."""
         answer = self._call("GET", f"/pods/{_quote(pod_id)}")
         try:
-            body = answer.json(200)
-            direct = (body.get("ssh") or {}).get("direct") or {}
-            port = direct.get("port")
-            return PodInfo(
-                status=str(body["status"]),
-                host=direct.get("host") or None,
-                port=int(port) if port else None,
-                datacenter=body.get("dataCenterId") or None,
-            )
+            return _pod_info(answer.json(200))
         except (AttributeError, TypeError, KeyError, ValueError):
             return None
+
+    def pod(self, pod_id: str) -> PodInfo:
+        """Return the pod; raise `Unknown` on a 404, else `Lost`."""
+        answer = self._call("GET", f"/pods/{_quote(pod_id)}")
+        if answer.status == 404:
+            raise Unknown(f"RunPod does not know pod {pod_id!r}")
+        try:
+            return _pod_info(answer.json(200))
+        except (AttributeError, TypeError, KeyError, ValueError):
+            raise Lost(_report(f"pod read of {pod_id!r}", answer)) from None
 
     def log(self, pod_id: str, *, tail: int, since: str | None = None) -> list[str]:
         """Return the container log's last `tail` lines; empty on a failed read.
@@ -243,6 +245,10 @@ class RunPod:
             "volume listing",
             lambda volume: str(volume["id"]),
         )
+
+    def pod_ids(self) -> list[str]:
+        """Return the id of every pod of the key's account; raise `Lost`."""
+        return self._walk("/pods", "pods", "pod listing", lambda pod: str(pod["id"]))
 
     def _walk(
         self,
@@ -380,6 +386,17 @@ class RunPod:
 
 def _quote(part: str) -> str:
     return urllib.parse.quote(part, safe="")
+
+
+def _pod_info(body: Any) -> PodInfo:  # noqa: ANN401 — any shape until read
+    direct = (body.get("ssh") or {}).get("direct") or {}
+    port = direct.get("port")
+    return PodInfo(
+        status=str(body["status"]),
+        host=direct.get("host") or None,
+        port=int(port) if port else None,
+        datacenter=body.get("dataCenterId") or None,
+    )
 
 
 def _ours(pod_image: str, repo: str) -> bool:
