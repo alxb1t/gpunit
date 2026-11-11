@@ -6,7 +6,7 @@ The phases: the root documents held by the test and every stale claim fixed, eac
 
 - [x] 1 — Currency · moderate
 - [x] 2 — One home · moderate
-- [ ] 3 — The readers' pages · hard
+- [x] 3 — The readers' pages · hard
 
 ## 1 — Currency
 
@@ -71,21 +71,21 @@ The phases: the root documents held by the test and every stale claim fixed, eac
 
 ## 3 — The readers' pages
 
-- [ ] 3.1 Reorder `docs/usage.md` as [D6](design.md#d6) lists, moving whole sections; no heading changes.
+- [x] 3.1 Reorder `docs/usage.md` as [D6](design.md#d6) lists, moving whole sections; no heading changes.
   Verify: `git grep -n "^## " -- docs/usage.md` prints the headings in [design](design.md#d6)'s order, *Security and privacy* last.
-- [ ] 3.2 Thin `docs/usage.md`'s *Security and privacy*: keep its subsection headings, make each bullet one line ending in a link into `THREAT_MODEL.md`.
+- [x] 3.2 Thin `docs/usage.md`'s *Security and privacy*: keep its subsection headings, make each bullet one line ending in a link into `THREAT_MODEL.md`.
   Verify: `git grep -n "THREAT_MODEL.md#" -- docs/usage.md` prints a link on each bullet of the section.
-- [ ] 3.3 In `README.md`, rename `## Built so` to `## What holds` and make the table a rule a row with at most one link a row; the gone rule links D57 alone ([D13](design.md#d13)). Rename `[the guide](ARCHITECTURE.md)` to `[architecture](ARCHITECTURE.md)`.
+- [x] 3.3 In `README.md`, rename `## Built so` to `## What holds` and make the table a rule a row with at most one link a row; the gone rule links D57 alone ([D13](design.md#d13)). Rename `[the guide](ARCHITECTURE.md)` to `[architecture](ARCHITECTURE.md)`.
   Verify: `git grep -nE "Built so|the guide.\(ARCHITECTURE" -- README.md` prints nothing.
-- [ ] 3.4 In `README.md`, add the `gpunit.session()` example of [D13](design.md#d13) and a line on `serve` linking `docs/usage.md#serve-a-model`. To stay within the front-page test, cut in this order until it fits: the `uv add` line, the `## Read more` heading (its links stay), the license badge line, the row on the layers and the docs.
+- [x] 3.4 In `README.md`, add the `gpunit.session()` example of [D13](design.md#d13) and a line on `serve` linking `docs/usage.md#serve-a-model`. To stay within the front-page test, cut in this order until it fits: the `uv add` line, the `## Read more` heading (its links stay), the license badge line, the row on the layers and the docs.
   Verify: `uv run pytest tests/test_docs.py -k front_page` exits 0, and `git grep -n "gpunit.session" -- README.md` prints a line.
-- [ ] 3.5 In `ARCHITECTURE.md`, add the table `layer | holds` of [D15](design.md#d15) below the diagram.
+- [x] 3.5 In `ARCHITECTURE.md`, add the table `layer | holds` of [D15](design.md#d15) below the diagram.
   Verify: `git grep -n "^| layer | holds |" -- ARCHITECTURE.md` prints a line.
-- [ ] 3.6 Rewrite `AGENTS.md` per [D14](design.md#d14): drop *What holds* and *Tests*, keep the `Worktrees:` and `Workspace setup:` lines word for word, add how to run one test and the `e2e` mark.
+- [x] 3.6 Rewrite `AGENTS.md` per [D14](design.md#d14): drop *What holds* and *Tests*, keep the `Worktrees:` and `Workspace setup:` lines word for word, add how to run one test and the `e2e` mark.
   Verify: `git grep -n "^## Tests" -- AGENTS.md` prints nothing, and `git grep -n "pytest tests/" -- AGENTS.md` prints a line.
-- [ ] 3.7 In `CONTRIBUTING.md`, add the human's path and the test-placement policy from `AGENTS.md` ("the lowest layer that can fail for it", [D11](design.md#d11)); keep the `@fission-ai/openspec@1.11.0` pin, which the CI test reads.
+- [x] 3.7 In `CONTRIBUTING.md`, add the human's path and the test-placement policy from `AGENTS.md` ("the lowest layer that can fail for it", [D11](design.md#d11)); keep the `@fission-ai/openspec@1.11.0` pin, which the CI test reads.
   Verify: `git grep -n "make e2e" -- CONTRIBUTING.md` prints a line, and `git grep -n "lowest layer" -- CONTRIBUTING.md` prints a line.
-- [ ] 3.8 In `CODING_STANDARDS.md` *Project rules*, add the paragraph of [D10](design.md#d10): standard library alone, the pod's entrypoint on Python 3.10 at full coverage, names not counts.
+- [x] 3.8 In `CODING_STANDARDS.md` *Project rules*, add the paragraph of [D10](design.md#d10): standard library alone, the pod's entrypoint on Python 3.10 at full coverage, names not counts.
   Verify: `git grep -n "Python 3.10" -- CODING_STANDARDS.md` prints a line.
-- [ ] 3.9 Run the test and fix each link, anchor, citation or length it names.
+- [x] 3.9 Run the test and fix each link, anchor, citation or length it names.
   Verify: `uv run pytest tests/test_docs.py` exits 0.

@@ -99,6 +99,54 @@ with gpunit.session("gpunit.toml", environ={"RUNPOD_API_KEY": key}, say=my_log) 
 - **The tunnel** is reopened when it dies, as in `gpunit run`. A local port another process took raises `Refused`,
   and the session is torn down.
 
+## The verbs
+
+Each verb reads `gpunit.toml` from the working directory, or the file `--spec <path>` names; `serve` and each
+`--serve` read the bundled model table and [your own rows](#your-own-rows) instead, and `spend` reads only the
+billing and the ledger.
+
+| verb | does |
+|---|---|
+| `gpunit up` | places a pod, waits for SSH, verifies its host key, records it in `.gpunit/` |
+| `gpunit status [--json]` | prints the recorded session to stdout; clears the record of a gone pod |
+| `gpunit ssh` | opens a shell on the recorded pod |
+| `gpunit down` | deletes the recorded pod, then every other live pod of the project |
+| `gpunit run -- <cmd>` | the Python session around `<cmd>`: `up`, the tunnel, `<cmd>`, then `down`, however `<cmd>` ends |
+| `gpunit serve <model> --ceiling <d> [--models PATH]` | the price and `[y/N]`, then the session around a chat; `--api` for the endpoint ([how](#serve-a-model)) |
+| `gpunit down --serve <model> [--models PATH]` | `down` for the session `serve` left for `<model>` |
+| `gpunit spend [--days N] [--json]` | the provider's billing over the last N UTC days, by project ([how](#what-it-cost)) |
+| `gpunit volume up [--yes]` | the price and `[y/N]`, then creates the window volume, or extends a live one ([how](#working-window)) |
+| `gpunit volume down` | deletes the window volume, then, after a lost create, each other `gpunit-<project>` volume you agree to |
+| `gpunit volume up --serve <model> --ceiling <d> [--models PATH]` | `volume up` for the row's volume, which `serve` mounts |
+| `gpunit volume down --serve <model> [--models PATH]` | `volume down` for the row's volume |
+
+| exit | means |
+|---|---|
+| `0` | done; for `run`, the command's own code passes through |
+| `1` | refused or failed; the teardown failed, unless a lost create ended the session, which is `3` |
+| `2` | usage: an unknown verb, a missing command, an unreadable spec path, `serve` or `volume up --serve` without `--ceiling`, `--models` without a model, an unknown model, `spend --days` under 1 or over 3660, `volume` without `up` or `down`, a `--stock-wait` that is no duration |
+| `3` | a create's answer was lost; a pod may exist and bill — run `gpunit down`; for a volume's create, `gpunit volume down` |
+| `4` | no capacity: every create of a session answered 400, or `volume up` found no card in stock; worth a retry, which `stock_wait` or `--stock-wait` on `up`, `run`, `serve` and `volume up` makes every 60s until it passes |
+| `5` | no card of `gpus`, or of `serve`'s row, meets `vram_gb` and `max_hourly`; edit the spec, or `--max-hourly` |
+| `128+n` | signal `n` stopped `run` or `serve`, or killed `run`'s command, and the teardown succeeded; a failed teardown is still `1`; Ctrl-C at `volume down`'s sweep question or `volume up`'s price question is `130` |
+
+gpunit's own lines go to stderr, each opening with the UTC time; stdout belongs to the command, or to `serve`'s
+chat and `--api`'s two lines, or to `spend`'s report.
+
+## The lines a caller reads
+
+**These lines keep their form, so a caller may parse them** ([cli](../openspec/specs/cli/spec.md)). Each is one
+stderr line, after the UTC time.
+
+| line | when |
+|---|---|
+| `refused: <reason>` | a refusal; the exit code says its kind |
+| `skipped: <card> has <n> GB, under <vram_gb>` | a card of `gpus` under the floor |
+| `skipped: <card> costs $<hourly>/h, over <max_hourly>` | a card of `gpus` over the price |
+| `no capacity: attempt <n>; next in 60s, waiting until <UTC>` | each attempt of a wait for stock |
+
+e.g. `2026-11-03T09:14:02Z refused: no card in 'gpus' was placed`, then exit `4`.
+
 ## Serve a model
 
 `gpunit serve <model> --ceiling 2h` boots vLLM on a rented card and opens a chat in the terminal; `--api` gives an
@@ -308,110 +356,6 @@ total                                  $1.79
 - **The current UTC day is still being billed**: its figures can change, and stderr says so.
 - **An unreadable billing exits `1`**, with no table: a table of zeros would read as a free week.
 
-## Security and privacy
-
-**What gpunit puts on RunPod, where it can land, and what gpunit cannot protect.** The full model, its threats and
-its gaps: [the threat model](../THREAT_MODEL.md).
-
-### Where your data lands
-
-- **The pod's environment:** `[env]`, the session's public key, the ceiling, the nonce and, for `serve`, the vLLM
-  key. RunPod returns it to any read of the pod through the API or the console, until `down` deletes the pod.
-- **The pod's log:** boot's lines, and the command's or vLLM's stdout and stderr. Any account key reads it while the
-  pod exists; RunPod documents no retention. `serve` turns vLLM's request logging off.
-- **The window volume:** unencrypted, since RunPod offers no encryption for network volumes, and reachable through
-  RunPod's S3 API without a pod, until `volume down` or the first command past its ceiling deletes it.
-- **Placement:** `datacenters` names where pods and window volumes may go. A pod RunPod places elsewhere is torn
-  down, and bills until its delete. `serve` takes no `datacenters` yet: a served model's pod and its window volume go
-  wherever RunPod places them.
-- **The laptop:** `.gpunit/`, at `0700`, holds the session key, the record and the host key; `serve`'s `pod.log` is
-  at `0600`; the ledger, pod and volume ids, project, card, image and times, is at `0600`.
-
-Keep private data off stdout and off the volume: both outlive the command.
-
-### Secrets
-
-- **`[env]` is plain pod env**, readable as above. Put a token in a RunPod secret and name it:
-  `HF_TOKEN = "{{ RUNPOD_SECRET_hf_token }}"`. gpunit passes the value as written; that RunPod substitutes it
-  through REST v2's create is not yet proven.
-- **`[env]` refuses `GPUNIT_*` and `RUNPOD_*` names:** an `[env]` `RUNPOD_API_KEY` would put the account key on
-  the pod.
-
-### The account key
-
-- **The calls gpunit makes with it:** the catalogue (GPU types, their stock, the data centres); pods (create, read,
-  list, logs, delete); network volumes (create, read, list, delete); billing (read).
-- **Where it goes:** a request header to `https://api.runpod.io/v2`, never argv, never a redirect.
-- **`run`'s command** does not get it in its environment: it never needs the account key. It runs as you beside
-  gpunit, though, so it can still read the key from gpunit's own environment (`/proc/<pid>/environ` on Linux,
-  `ps -E` on macOS); run nothing on the laptop you would not trust with the key.
-- **Measured minimum:** a restricted key, made in the console with `api.runpod.io/graphql` Read / Write and
-  `api.runpod.ai` None, covers every call above (2026-10-18, [the probe](../THREAT_MODEL.md#7-the-probe)). RunPod
-  offers no scope finer than the account's pods, volumes and billing, so a leaked key still reaches all of them.
-
-### Accepted risks
-
-- **RunPod's hosts can read a pod's memory and disk.** gpunit creates on Secure Cloud alone, whose terms forbid
-  the inspection; no confidential computing is offered.
-- **Every local user reaches `GPUNIT_PORT_*`.** A forwarded port listens on loopback with no authentication of its
-  own: on a shared machine, the app behind it needs its own.
-- **Every SSH key registered in your RunPod account opens a root shell on every gpunit pod**, through RunPod's SSH
-  proxy, whatever the pod's `authorized_keys` holds. Register only keys you would trust with that, or none.
-- **The pod's own key reads the account's billing:** every pod's id and cost. It lists no pod and reads no other
-  pod. The command's environment does not carry it: boot keeps it to stop the pod. The command runs as root beside
-  boot, though, so it can still read the key from boot's own environment in `/proc`; run nothing on the pod you would
-  not trust with the key.
-- **The session key sits unencrypted in `.gpunit/`**, for one session: it is deleted with the pod. Keep `.gpunit/`
-  out of git, backups and sync folders.
-
-## The verbs
-
-Each verb reads `gpunit.toml` from the working directory, or the file `--spec <path>` names; `serve` and each
-`--serve` read the bundled model table and [your own rows](#your-own-rows) instead, and `spend` reads only the
-billing and the ledger.
-
-| verb | does |
-|---|---|
-| `gpunit up` | places a pod, waits for SSH, verifies its host key, records it in `.gpunit/` |
-| `gpunit status [--json]` | prints the recorded session to stdout; clears the record of a gone pod |
-| `gpunit ssh` | opens a shell on the recorded pod |
-| `gpunit down` | deletes the recorded pod, then every other live pod of the project |
-| `gpunit run -- <cmd>` | the Python session around `<cmd>`: `up`, the tunnel, `<cmd>`, then `down`, however `<cmd>` ends |
-| `gpunit serve <model> --ceiling <d> [--models PATH]` | the price and `[y/N]`, then the session around a chat; `--api` for the endpoint ([how](#serve-a-model)) |
-| `gpunit down --serve <model> [--models PATH]` | `down` for the session `serve` left for `<model>` |
-| `gpunit spend [--days N] [--json]` | the provider's billing over the last N UTC days, by project ([how](#what-it-cost)) |
-| `gpunit volume up [--yes]` | the price and `[y/N]`, then creates the window volume, or extends a live one ([how](#working-window)) |
-| `gpunit volume down` | deletes the window volume, then, after a lost create, each other `gpunit-<project>` volume you agree to |
-| `gpunit volume up --serve <model> --ceiling <d> [--models PATH]` | `volume up` for the row's volume, which `serve` mounts |
-| `gpunit volume down --serve <model> [--models PATH]` | `volume down` for the row's volume |
-
-| exit | means |
-|---|---|
-| `0` | done; for `run`, the command's own code passes through |
-| `1` | refused or failed; the teardown failed, unless a lost create ended the session, which is `3` |
-| `2` | usage: an unknown verb, a missing command, an unreadable spec path, `serve` or `volume up --serve` without `--ceiling`, `--models` without a model, an unknown model, `spend --days` under 1 or over 3660, `volume` without `up` or `down`, a `--stock-wait` that is no duration |
-| `3` | a create's answer was lost; a pod may exist and bill — run `gpunit down`; for a volume's create, `gpunit volume down` |
-| `4` | no capacity: every create of a session answered 400, or `volume up` found no card in stock; worth a retry, which `stock_wait` or `--stock-wait` on `up`, `run`, `serve` and `volume up` makes every 60s until it passes |
-| `5` | no card of `gpus`, or of `serve`'s row, meets `vram_gb` and `max_hourly`; edit the spec, or `--max-hourly` |
-| `128+n` | signal `n` stopped `run` or `serve`, or killed `run`'s command, and the teardown succeeded; a failed teardown is still `1`; Ctrl-C at `volume down`'s sweep question or `volume up`'s price question is `130` |
-
-gpunit's own lines go to stderr, each opening with the UTC time; stdout belongs to the command, or to `serve`'s
-chat and `--api`'s two lines, or to `spend`'s report.
-
-## The lines a caller reads
-
-**These lines keep their form, so a caller may parse them** ([cli](../openspec/specs/cli/spec.md)). Each is one
-stderr line, after the UTC time.
-
-| line | when |
-|---|---|
-| `refused: <reason>` | a refusal; the exit code says its kind |
-| `skipped: <card> has <n> GB, under <vram_gb>` | a card of `gpus` under the floor |
-| `skipped: <card> costs $<hourly>/h, over <max_hourly>` | a card of `gpus` over the price |
-| `no capacity: attempt <n>; next in 60s, waiting until <UTC>` | each attempt of a wait for stock |
-
-e.g. `2026-11-03T09:14:02Z refused: no card in 'gpus' was placed`, then exit `4`.
-
 ## The spend rules
 
 - **The ceiling is required.** `boot.py` stops the pod at it, whatever happens to the laptop.
@@ -426,3 +370,38 @@ e.g. `2026-11-03T09:14:02Z refused: no card in 'gpus' was placed`, then exit `4`
 - **A fresh keypair per session**, in `.gpunit/`, deleted with the pod.
 - **gpunit's ssh is its own.** No ssh_config is read, and only the session's key is offered; a user who wants
   their own config runs `ssh -i .gpunit/key` themselves.
+
+## Security and privacy
+
+**What gpunit puts on RunPod, where it can land, and what gpunit cannot protect.** The full model, its threats and
+its gaps: [the threat model](../THREAT_MODEL.md).
+
+### Where your data lands
+
+- **The pod's environment:** `[env]`, the public key, the ceiling, the nonce and `serve`'s vLLM key, readable through RunPod's API and console until `down` ([T25, T27](../THREAT_MODEL.md#4-threats)).
+- **The pod's log:** boot's lines and the command's or vLLM's output, readable by any account key while the pod exists; RunPod documents no retention ([T29](../THREAT_MODEL.md#4-threats)).
+- **The window volume:** unencrypted, and reachable through RunPod's S3 API without a pod, until it is deleted ([T31](../THREAT_MODEL.md#4-threats)).
+- **Placement:** `datacenters` bounds where pods and window volumes go; `serve` takes no `datacenters` yet ([T34](../THREAT_MODEL.md#4-threats)).
+- **The laptop:** `.gpunit/` at `0700` holds the session key, the record and the host key; `pod.log` and the ledger are `0600` ([T35](../THREAT_MODEL.md#4-threats)).
+
+Keep private data off stdout and off the volume: both outlive the command.
+
+### Secrets
+
+- **`[env]` is plain pod env:** name a RunPod secret for a token, `HF_TOKEN = "{{ RUNPOD_SECRET_hf_token }}"`; its substitution through REST v2 is unproven ([T25](../THREAT_MODEL.md#4-threats)).
+- **`[env]` refuses `GPUNIT_*` and `RUNPOD_*` names,** so it cannot put the account key on the pod ([T26](../THREAT_MODEL.md#4-threats)).
+
+### The account key
+
+- **The calls gpunit makes with it:** the catalogue; pods: create, read, list, logs, delete; network volumes: create, read, list, delete; billing: read ([T22](../THREAT_MODEL.md#4-threats)).
+- **Where it goes:** a request header to `https://api.runpod.io/v2`, never argv, never a redirect ([T2, T19](../THREAT_MODEL.md#4-threats)).
+- **`run`'s command** is not given it, but runs as you and can read it from gpunit's `/proc/<pid>/environ` on Linux or `ps -E` on macOS: run nothing you would not trust with it ([T21](../THREAT_MODEL.md#4-threats)).
+- **Measured minimum:** a restricted key, `api.runpod.io/graphql` Read / Write and `api.runpod.ai` None, covers every call, and no scope is finer ([the probe](../THREAT_MODEL.md#7-the-probe)).
+
+### Accepted risks
+
+- **RunPod's hosts can read a pod's memory and disk;** Secure Cloud's terms forbid it, and no confidential computing is offered ([T33](../THREAT_MODEL.md#4-threats)).
+- **Every local user reaches `GPUNIT_PORT_*`:** a forward has no authentication of its own, so on a shared machine the app needs its own ([T37](../THREAT_MODEL.md#4-threats)).
+- **Every SSH key registered in your RunPod account opens a root shell on every gpunit pod** through RunPod's SSH proxy: register only keys you trust with that ([T54](../THREAT_MODEL.md#4-threats)).
+- **The pod's own key reads the account's billing,** and the command, root beside boot, can read it from boot's `/proc`: run nothing on the pod you would not trust with it ([T23, T24](../THREAT_MODEL.md#4-threats)).
+- **The session key sits unencrypted in `.gpunit/`** for one session: keep `.gpunit/` out of git, backups and sync folders ([T36](../THREAT_MODEL.md#4-threats)).
