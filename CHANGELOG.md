@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.3] - 2026-11-11
+
+Gate: local 0m14s · CI not read under mf-ship · 0.12.2: local 0m13s · CI not read under mf-ship
+
 ### Changed
 
 - `gpunit/providers.py::build` is the one place that builds the provider; `cli`, `library`, `live/price.py` and

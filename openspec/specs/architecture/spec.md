@@ -9,8 +9,8 @@ the guide's links, decision ids and code citations resolve, all checked by the g
 
 The gate SHALL fail when a module of the package imports a module of a higher layer, lazy imports inside functions
 included. The layers, lowest first: foundation, model, cloud, lifecycle, session, serve, interface. A module MAY import
-its own layer, without a cycle. No module SHALL import the package `gpunit` itself. Only the session layer's
-`library` and the interface's `cli` SHALL import the RunPod module. The package SHALL import the standard library and
+its own layer, without a cycle. No module SHALL import the package `gpunit` itself. Only the cloud layer's `providers`
+SHALL import the RunPod module. The package SHALL import the standard library and
 the package alone, and nothing in the package SHALL import `boot`, `live` or `tests`. The serve image's launch script
 SHALL import the standard library alone. Only `cli` SHALL call `sys.exit`. The guide's modules page SHALL name every
 module of the package in the layer the gate holds it to.
@@ -33,7 +33,7 @@ module of the package in the layer the gate holds it to.
 #### Scenario: the provider is built in two places alone
 - **Key:** `architecture:layers:provider-built`
 - **WHEN** the gate reads every import of the RunPod module
-- **THEN** its importers are `library` and `cli` alone, and a third importer is named
+- **THEN** its importer is `providers` alone, and any other importer is named
 
 #### Scenario: the standard library alone
 - **Key:** `architecture:layers:stdlib-only`

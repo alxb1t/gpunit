@@ -1,5 +1,6 @@
 ---
 bump: patch
+version: v0.12.3
 after: [0021-gone-pod]
 ---
 
