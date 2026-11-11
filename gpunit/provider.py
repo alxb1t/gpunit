@@ -99,6 +99,10 @@ class Provider(Protocol):
         """Return the pod, or None on any failed read."""
         ...
 
+    def pod(self, pod_id: str) -> PodInfo:
+        """Return the pod; raise `Unknown` on a 404, else `Lost`."""
+        ...
+
     def log(self, pod_id: str, *, tail: int, since: str | None = None) -> list[str]:
         """Return the container log's last `tail` lines; empty on a failed read.
 
@@ -144,6 +148,10 @@ class Provider(Protocol):
 
     def volume_ids(self) -> list[str]:
         """Return the id of every volume of the key's account; raise `Lost`."""
+        ...
+
+    def pod_ids(self) -> list[str]:
+        """Return the id of every pod of the key's account; raise `Lost`."""
         ...
 
     def delete_volume(self, volume_id: str) -> int:

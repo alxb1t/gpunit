@@ -10,7 +10,7 @@ from email.message import Message
 from pathlib import Path
 from typing import TypeVar
 
-from gpunit.provider import GpuInfo, PodCost, PodInfo, VolumeCost, VolumeInfo
+from gpunit.provider import GpuInfo, Lost, PodCost, PodInfo, VolumeCost, VolumeInfo
 from gpunit.spec import Spec
 from gpunit.state import Record
 from tests.helpers import IMAGE
@@ -72,6 +72,7 @@ class FakeProvider:
         volumes: Mapping[str, VolumeInfo | Exception] | None = None,
         creates: Sequence[str | Exception] = ("pod-1",),
         gets: Sequence[PodInfo | None] = (RUNNING,),
+        pods: Mapping[str, PodInfo | Exception] | None = None,
         logs: Sequence[list[str]] = (BOOT_LOG,),
         since_logs: Sequence[list[str]] = ([],),
         listings: Sequence[list[tuple[str, str]] | Exception] = ([],),
@@ -84,15 +85,18 @@ class FakeProvider:
         volume_listings: Sequence[list[str] | Exception] = ([],),
         volume_deletes: Mapping[str, int] | None = None,
         account_volumes: Sequence[str] | Exception = (),
+        account_pods: Sequence[str] | Exception = (),
     ) -> None:
         """Script the answers; a card or volume not named answers `CARD` or fails.
 
-        A card with no stock scripted is in stock in `EU-RO-1` alone.
+        A card with no stock scripted is in stock in `EU-RO-1` alone; a pod read of an
+        id not in `pods` fails as a lost answer does.
         """
         self.gpus = dict(gpus or {})
         self.volume_infos = dict(volumes or {})
         self.creates = list(creates)
         self.gets = list(gets)
+        self.pods = dict(pods or {})
         self.logs = [list(lines) for lines in logs]
         self.since_logs = [list(lines) for lines in since_logs]
         self.listings = list(listings)
@@ -105,6 +109,7 @@ class FakeProvider:
         self.volume_listings = list(volume_listings)
         self.volume_deletes = dict(volume_deletes or {})
         self.account_volumes = account_volumes
+        self.account_pods = account_pods
         self.calls: list[tuple[str, tuple[object, ...]]] = []
 
     def named(self, verb: str) -> list[tuple[object, ...]]:
@@ -132,6 +137,11 @@ class FakeProvider:
         """Answer the next poll in the script."""
         self.calls.append(("get", (pod_id,)))
         return _next(self.gets)
+
+    def pod(self, pod_id: str) -> PodInfo:
+        """Answer the pod's script; an unscripted pod read is lost."""
+        self.calls.append(("pod", (pod_id,)))
+        return _raise_or(self.pods.get(pod_id) or Lost("pod read"))
 
     def log(self, pod_id: str, *, tail: int, since: str | None = None) -> list[str]:
         """Answer the next log read in its script: `since_logs` for a `since` read.
@@ -186,6 +196,11 @@ class FakeProvider:
         """Answer the account's scripted volumes."""
         self.calls.append(("volume_ids", ()))
         return list(_raise_or(self.account_volumes))
+
+    def pod_ids(self) -> list[str]:
+        """Answer the account's scripted pods."""
+        self.calls.append(("pod_ids", ()))
+        return list(_raise_or(self.account_pods))
 
     def delete_volume(self, volume_id: str) -> int:
         """Answer the volume's scripted status, or 204."""
