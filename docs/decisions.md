@@ -22,11 +22,10 @@ decision names the file.
 
 **The session talks to a GPU cloud through `gpunit/provider.py::Provider`; RunPod is one implementation of it.**
 
-Its nouns are gpunit's: a card, a pod, a volume, a log, a bill. Breached: `gpunit/lifecycle.py::_delete_pods` compares
-HTTP codes (`0015·F3`); `gpunit/lifecycle.py::DEAD` and `gpunit/volume.py::STOCK` are RunPod's words (`0015·F5`).
+Its nouns are gpunit's: a card, a pod, a volume, a log, a bill.
 
 - **Why:** The contract must not be RunPod's shape by accident, so a second provider is one more implementation.
-- **Made by:** `0001·D2`, `0007·D2`, `0010·D1`.
+- **Made by:** `0001·D2`, `0007·D2`, `0010·D1`, `0022·D1`, `0022·D3`, `0022·D5`, `0022·D6`, `0022·D7`, `0022·D8`.
 
 ### D3 · RunPod on `urllib`: bounded calls, the key in a header, no redirect, quiet log reads end
 
@@ -234,7 +233,7 @@ writes `known_hosts`. Behaviour: [session](../openspec/specs/session/spec.md).
 **`down` deletes the recorded pod and sweeps the project's by name and image; a failed delete keeps the record unless
 the pod is gone (decision D57).**
 
-`gpunit/provider.py::DELETED` is the success set.
+`gpunit/provider.py::Deleted` says what a delete did, in its `kind`.
 
 - **Why:** A false "gone" leaves a pod billing, and the project's pods are swept whatever the record says.
 - **Made by:** `0001·D9`, `0002·D5`, `0021·D1`.
@@ -506,11 +505,12 @@ Each page links the spec for behaviour and names the file for a value.
 
 ### D51 · A refactor changes no scenario, message or exit code
 
-**A change that moves or renames code leaves every spec scenario, message and exit code as it was; tests change in
-names and imports alone.**
+**A change that moves or renames code leaves every spec scenario of behaviour, message and exit code as it was; the
+`architecture` spec, which states the repo's shape, moves with it. Tests change in names, imports, fakes and the
+expected value of a retyped seam answer alone.**
 
 - **Why:** The unchanged tests prove nothing moved.
-- **Made by:** `0015·D1`.
+- **Made by:** `0015·D1`, `0022·D2`.
 
 ### D52 · README is a one-screen front page
 

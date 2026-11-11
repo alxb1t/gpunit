@@ -29,6 +29,7 @@ LAYERS = {
     "gpunit.spend": "lifecycle",
     "gpunit.hostkey": "lifecycle",
     "gpunit.runpod": "cloud",
+    "gpunit.providers": "cloud",
     "gpunit.spec": "model",
     "gpunit.state": "model",
     "gpunit.provider": "model",
@@ -43,7 +44,7 @@ RANK = {
         ["foundation", "model", "cloud", "lifecycle", "session", "serve", "interface"]
     )
 }
-BUILDERS = {"gpunit.library", "gpunit.cli"}
+BUILDERS = {"gpunit.providers"}
 EXITERS = {"gpunit.cli"}
 # Outside the package and copied alone into the serve image: the stdlib alone, not
 # gpunit. The repo holds each; a twin's tree may lack it.
@@ -278,18 +279,19 @@ def test_a_cycle_is_caught(tmp_path: Path, back: str) -> None:
 
 
 @pytest.mark.spec("architecture:layers:provider-built")
-def test_runpod_is_built_in_library_and_cli_alone() -> None:
+def test_runpod_is_imported_by_providers_alone() -> None:
     assert importers(ROOT, "gpunit.runpod") == BUILDERS
 
 
 @pytest.mark.spec("architecture:layers:provider-built")
-def test_a_third_runpod_importer_is_caught(tmp_path: Path) -> None:
+def test_a_second_runpod_importer_is_caught(tmp_path: Path) -> None:
     root = package(
         tmp_path,
         {
             "gpunit/runpod.py": "",
-            "gpunit/library.py": "from gpunit.runpod import RunPod\n",
-            "gpunit/cli.py": "from gpunit.runpod import RunPod\n",
+            "gpunit/providers.py": "from gpunit.runpod import RunPod\n",
+            "gpunit/library.py": "from gpunit import providers\n",
+            "gpunit/cli.py": "from gpunit import providers\n",
             "gpunit/run.py": "def go():\n    from gpunit import runpod\n",
             "gpunit/spend.py": "from . import runpod\n",
             "gpunit/volume.py": "from .runpod import RunPod\n",

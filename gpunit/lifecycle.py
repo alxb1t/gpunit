@@ -13,7 +13,7 @@ from typing import NoReturn, TypeVar
 
 from gpunit import hostkey, ledger, log
 from gpunit.provider import (
-    DELETED,
+    Deleted,
     Lost,
     NoImage,
     PodInfo,
@@ -27,8 +27,6 @@ from gpunit.state import Record, State, Window
 
 POLL_S = 5
 STOCK_ROUND_S = 60
-# The statuses of a container that is not running; two polls in a row end the wait.
-DEAD = ("EXITED", "ERROR", "TERMINATED")
 # Checked before the create: a tool missing after it leaves a pod rented.
 SSH_TOOLS = ("ssh", "ssh-keygen", "ssh-keyscan")
 
@@ -62,7 +60,7 @@ class DeadPod:
     def seen(self, info: PodInfo | None) -> bool:
         """Return True when this poll and the one before both read a dead status."""
         # A restart may show a dead status once, so only a second poll in a row ends it.
-        dead = info is not None and info.status in DEAD
+        dead = info is not None and info.dead
         twice, self._last = dead and self._last, dead
         return twice
 
@@ -194,13 +192,13 @@ def _delete_pods(spec: Spec, provider: Provider, state: State) -> int:
     failed = False
     record = state.read()
     if record is not None:
-        code = provider.delete(record.id)
-        if code in DELETED:
+        deleted = provider.delete(record.id)
+        if deleted.kind == "gone":
             state.clear_session()
             log.say(f"pod {record.id} deleted")
         elif pod_gone(provider, record.id) and state.clear_gone(record.id):
             log.say(f"pod {record.id} is gone; its record is cleared")
-        elif code == 404:
+        elif deleted.kind == "missing":
             # A wrong key also gets a 404: a false "gone" leaves a pod billing.
             log.say(
                 f"the API does not know pod {record.id}: it may be gone, or the key "
@@ -209,7 +207,8 @@ def _delete_pods(spec: Spec, provider: Provider, state: State) -> int:
             failed = True
         else:
             log.say(
-                f"delete of pod {record.id} answered HTTP {code}; the record is kept"
+                f"delete of pod {record.id} answered HTTP {deleted.code}; "
+                "the record is kept"
             )
             failed = True
     try:
@@ -222,11 +221,11 @@ def _delete_pods(spec: Spec, provider: Provider, state: State) -> int:
             continue
         # Before the delete: a pod the delete fails on is still named.
         ledger.record(spec.project, pod_id, None, spec.image)
-        code = provider.delete(pod_id)
-        if code in DELETED:
+        deleted = provider.delete(pod_id)
+        if deleted.kind == "gone":
             log.say(f"swept pod {pod_id} ({pod_status})")
         else:
-            log.say(f"delete of swept pod {pod_id} answered HTTP {code}")
+            log.say(f"delete of swept pod {pod_id} answered HTTP {deleted.code}")
             failed = True
     if failed:
         return 1
@@ -236,12 +235,12 @@ def _delete_pods(spec: Spec, provider: Provider, state: State) -> int:
     return 0
 
 
-def delete_volume(provider: Provider, volume_id: str) -> int:
-    """Return the delete's status; on a 204, record `deleted` in the ledger."""
-    code = provider.delete_volume(volume_id)
-    if code == 204:
+def delete_volume(provider: Provider, volume_id: str) -> Deleted:
+    """Return what the delete did; when `gone`, record `deleted` in the ledger."""
+    deleted = provider.delete_volume(volume_id)
+    if deleted.kind == "gone":
         ledger.record_deleted(volume_id)
-    return code
+    return deleted
 
 
 def gone(provider: Provider, volume_id: str) -> bool:
@@ -283,13 +282,13 @@ def sweep_window(state: State, provider: Callable[[], Provider]) -> None:
     if window is None or not window.ends_within(0):
         return
     built = provider()
-    code = delete_volume(built, window.id)
-    if code == 204:
+    deleted = delete_volume(built, window.id)
+    if deleted.kind == "gone":
         state.clear_window()
         # A record beside the mark: the create came back. decision D43.
         state.clear_volume_pending()
         log.say(f"volume {window.id} passed its ceiling at {window.ends}; deleted")
-    elif code == 404 and gone(built, window.id):
+    elif deleted.kind == "missing" and gone(built, window.id):
         # No `deleted` line: one misjudged gone bills, and `spend` names it. D55.
         state.clear_window()
         state.clear_volume_pending()
@@ -300,7 +299,7 @@ def sweep_window(state: State, provider: Callable[[], Provider]) -> None:
     else:
         log.say(
             f"warning: volume {window.id} passed its ceiling at {window.ends}; its "
-            f"delete answered HTTP {code}, so the record is kept"
+            f"delete answered HTTP {deleted.code}, so the record is kept"
         )
 
 

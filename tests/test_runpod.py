@@ -10,9 +10,11 @@ from pathlib import Path
 
 import pytest
 
+from gpunit import providers
 from gpunit.contract import fingerprint
 from gpunit.log import Refusal
 from gpunit.provider import (
+    Deleted,
     GpuInfo,
     Lost,
     NoImage,
@@ -47,6 +49,26 @@ SPEC = Spec(
 )
 
 
+@pytest.mark.spec("architecture:layers:provider-built")
+def test_the_builder_returns_runpod_for_now() -> None:
+    assert isinstance(providers.build({"RUNPOD_API_KEY": KEY}), RunPod)
+    with pytest.raises(Refusal, match="RUNPOD_API_KEY"):
+        providers.build({})
+
+
+@pytest.mark.spec(
+    "session:hostkey:tail-bound",
+    "volume:up:price-names-the-window",
+    "run:handover:no-account-key",
+)
+def test_runpod_states_its_own_words() -> None:
+    provider, _ = runpod()
+
+    assert provider.log_cap == 5000
+    assert provider.volume_rate == "0.07"
+    assert provider.key_names == ("RUNPOD_API_KEY",)
+
+
 @pytest.mark.spec("session:place:under-floor-skipped")
 def test_gpu_reads_the_memory_and_the_secure_price() -> None:
     provider, opener = runpod((200, fixture("gpu.json")))
@@ -55,7 +77,7 @@ def test_gpu_reads_the_memory_and_the_secure_price() -> None:
     url = opener.requests[0].full_url
     assert url.endswith("/catalog/gpus/NVIDIA%20GeForce%20RTX%204090")
     assert opener.requests[0].get_header("Authorization") == f"Bearer {KEY}"
-    assert opener.requests[0].get_header("User-agent") == "gpunit/0.12.2"
+    assert opener.requests[0].get_header("User-agent") == "gpunit/0.12.3"
 
 
 @pytest.mark.spec("session:place:unknown-card-refuses")
@@ -182,17 +204,26 @@ def test_a_transport_failure_is_lost(fault: Exception) -> None:
 
 @pytest.mark.spec("session:wait:failed-poll-is-not-yet")
 def test_get_reads_the_direct_ssh_address_or_none() -> None:
+    running = json.loads(fixture("pod_running.json"))
     provider, _ = runpod(
         (200, fixture("pod_created.json")),
         (200, fixture("pod_pending.json")),
         (500, b"oops"),
         (200, fixture("pod_running.json")),
+        *[
+            (200, json.dumps(running | {"status": status}).encode())
+            for status in ("EXITED", "ERROR", "TERMINATED")
+        ],
     )
 
     assert provider.get("pod-abc123") == PodInfo("PENDING", None, None)
     assert provider.get("pod-abc123") == PodInfo("RUNNING", None, None)
     assert provider.get("pod-abc123") is None
     assert provider.get("pod-abc123") == PodInfo("RUNNING", "203.0.113.7", 40022)
+    for status in ("EXITED", "ERROR", "TERMINATED"):
+        pod = provider.get("pod-abc123")
+        assert pod is not None
+        assert (pod.status, pod.dead) == (status, True)
 
 
 @pytest.mark.spec("session:datacenters:pod-outside-tears-down")
@@ -439,10 +470,14 @@ def test_an_unreadable_listing_is_lost() -> None:
 
 
 @pytest.mark.spec("session:down:404-keeps-record")
-def test_delete_returns_the_status_and_0_without_an_answer() -> None:
+def test_delete_returns_what_happened_and_the_code() -> None:
     provider, opener = runpod((204, b""), (404, fixture("problem.json")), OSError())
 
-    assert [provider.delete("p1") for _ in range(3)] == [204, 404, 0]
+    assert [provider.delete("p1") for _ in range(3)] == [
+        Deleted("gone", 204),
+        Deleted("missing", 404),
+        Deleted("no answer", 0),
+    ]
     assert opener.requests[0].get_method() == "DELETE"
 
 
@@ -450,7 +485,7 @@ def test_delete_returns_the_status_and_0_without_an_answer() -> None:
 def test_stop_posts_the_stop_action() -> None:
     provider, opener = runpod((200, b"{}"))
 
-    assert provider.stop("p1") == 200
+    assert provider.stop("p1") == Deleted("gone", 200)
     assert opener.requests[0].full_url.endswith("/pods/p1/action")
     assert opener.sent() == {"action": "stop"}
 
@@ -535,10 +570,10 @@ def test_an_unreadable_billing_is_lost(answer: Answer, read: str, key: bytes) ->
 
 
 @pytest.mark.spec("volume:up:datacenter-from-stock")
-def test_stock_reads_the_secure_pod_stock_and_drops_none() -> None:
+def test_stock_reads_the_secure_pod_stock_best_first() -> None:
     provider, opener = runpod((200, fixture("gpu_stock.json")))
 
-    assert provider.stock("NVIDIA A40") == [("EU-RO-1", "MEDIUM"), ("CA-MTL-4", "HIGH")]
+    assert provider.stock("NVIDIA A40") == [("CA-MTL-4", "HIGH"), ("EU-RO-1", "MEDIUM")]
     url = urllib.parse.urlsplit(opener.requests[0].full_url)
     assert url.path == "/v2/catalog/gpus/NVIDIA%20A40"
     assert urllib.parse.parse_qs(url.query) == {
@@ -654,9 +689,13 @@ def test_an_unreadable_volume_listing_is_lost() -> None:
 
 
 @pytest.mark.spec("volume:down:sweeps-by-name")
-def test_delete_volume_returns_the_status_and_0_without_an_answer() -> None:
+def test_delete_volume_returns_what_happened_and_the_code() -> None:
     provider, opener = runpod((204, b""), (409, fixture("problem.json")), OSError())
 
-    assert [provider.delete_volume("v1") for _ in range(3)] == [204, 409, 0]
+    assert [provider.delete_volume("v1") for _ in range(3)] == [
+        Deleted("gone", 204),
+        Deleted("refused", 409),
+        Deleted("no answer", 0),
+    ]
     assert opener.requests[0].get_method() == "DELETE"
     assert opener.requests[0].full_url.endswith("/network-volumes/v1")

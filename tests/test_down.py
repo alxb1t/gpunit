@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from gpunit import ledger, log
-from gpunit.provider import Lost, Unknown
+from gpunit.provider import Deleted, Lost, Unknown
 from gpunit.state import State, Window
 from tests.fakes import RECORD, FakeProvider
 from tests.helpers import gpunit
@@ -133,9 +133,9 @@ def test_down_deletes_an_overdue_volume_after_its_pods(cwd: Path) -> None:
 class HeldVolume(FakeProvider):
     """Refuse a volume's delete while the recorded pod, which holds it, stands."""
 
-    def delete_volume(self, volume_id: str) -> int:
-        code = super().delete_volume(volume_id)
-        return code if self.named("delete") else 409
+    def delete_volume(self, volume_id: str) -> Deleted:
+        deleted = super().delete_volume(volume_id)
+        return deleted if self.named("delete") else Deleted("refused", 409)
 
 
 @pytest.mark.spec("volume:ceiling:down-after-the-pod")

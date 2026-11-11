@@ -11,11 +11,7 @@ from gpunit.provider import Lost, Provider, Unknown, Unplaceable, pod_name
 from gpunit.spec import Spec
 from gpunit.state import State, Window
 
-# RunPod's standard storage under 1 TB, billed by the hour: decision D41.
-VOLUME_GB_MONTH = Decimal("0.07")
 HOURS_A_MONTH = 730
-# The stock levels a volume may be placed on, best first.
-STOCK = ("HIGH", "MEDIUM", "LOW")
 
 
 def up(
@@ -51,7 +47,14 @@ def up(
         log.say(f"volume {window.id} is gone; creating a new one")
         window = None
     if window is not None:
-        return _extend(spec.project, state, window, spec.volume_ceiling_s, yes)
+        return _extend(
+            spec.project,
+            state,
+            window,
+            spec.volume_ceiling_s,
+            Decimal(provider.volume_rate),
+            yes,
+        )
 
     try:
         datacenter = _datacenter(spec, provider, state)
@@ -61,6 +64,7 @@ def up(
     _agree(
         spec.volume_gb,
         spec.volume_ceiling_s,
+        Decimal(provider.volume_rate),
         f"create volume {name}",
         "not created",
         yes,
@@ -93,17 +97,18 @@ def down(spec: Spec, provider: Provider, state: State) -> int:
     failed = False
     window = state.window()
     if window is not None:
-        code = lifecycle.delete_volume(provider, window.id)
-        if code == 204:
+        deleted = lifecycle.delete_volume(provider, window.id)
+        if deleted.kind == "gone":
             state.clear_window()
             log.say(f"volume {window.id} deleted")
-        elif code == 404 and lifecycle.gone(provider, window.id):
+        elif deleted.kind == "missing" and lifecycle.gone(provider, window.id):
             state.clear_window()
             log.say(f"volume {window.id} is gone; the record is cleared")
         else:
             # A 404 is gone only when the listing lacks it too: decision D55.
             log.say(
-                f"delete of volume {window.id} answered HTTP {code}; the record is kept"
+                f"delete of volume {window.id} answered HTTP {deleted.code}; "
+                "the record is kept"
             )
             failed = True
     if not state.volume_pending.exists():
@@ -155,10 +160,10 @@ def _sweep(name: str, provider: Provider, state: State) -> int:
             settled = False
         elif not answer:
             log.say(f"volume {volume_id} kept")
-        elif (code := lifecycle.delete_volume(provider, volume_id)) == 204:
+        elif (deleted := lifecycle.delete_volume(provider, volume_id)).kind == "gone":
             log.say(f"swept volume {volume_id}")
         else:
-            log.say(f"delete of swept volume {volume_id} answered HTTP {code}")
+            log.say(f"delete of swept volume {volume_id} answered HTTP {deleted.code}")
             settled = False
     if not settled:
         return 1
@@ -166,13 +171,13 @@ def _sweep(name: str, provider: Provider, state: State) -> int:
     return 0
 
 
-def most_cost(size_gb: int, ceiling_s: int) -> Decimal:
-    """Return the most `size_gb` can cost over `ceiling_s`, up to the cent.
+def most_cost(size_gb: int, ceiling_s: int, rate: Decimal) -> Decimal:
+    """Return the most `size_gb` can cost over `ceiling_s` at `rate`, to the cent.
 
-    e.g. 60 GB over 14400s → Decimal("0.03")
+    e.g. 60 GB over 14400s at 0.07 → Decimal("0.03")
     """
     hours = math.ceil(ceiling_s / 3600)
-    month = size_gb * VOLUME_GB_MONTH * hours / HOURS_A_MONTH
+    month = size_gb * rate * hours / HOURS_A_MONTH
     return month.quantize(Decimal("0.01"), ROUND_UP)
 
 
@@ -181,6 +186,7 @@ def _extend(
     state: State,
     window: Window,
     ceiling_s: int,
+    rate: Decimal,
     yes: bool,
 ) -> int:
     if window.ends_within(0):
@@ -190,7 +196,7 @@ def _extend(
             "run gpunit volume down"
         )
     question = f"extend volume {window.id}"
-    _agree(window.size_gb, ceiling_s, question, "not extended", yes)
+    _agree(window.size_gb, ceiling_s, rate, question, "not extended", yes)
     # Never earlier: a session may be running to the recorded end. decision D41.
     extended = replace(window, ends=max(window.ends, log.utc(ceiling_s)))
     state.write_window(extended)
@@ -233,18 +239,16 @@ def _stocked(cards: list[str], standard: set[str], provider: Provider) -> str | 
             stocked = provider.stock(card)
         except (Unknown, Lost) as fault:
             log.refuse(f"the stock of {card!r} could not be read: {fault}")
-        placed = [
-            (dc, level) for dc, level in stocked if dc in standard and level in STOCK
-        ]
-        if placed:
-            # `min` keeps the provider's order among equal levels.
-            return min(placed, key=lambda pair: STOCK.index(pair[1]))[0]
+        for dc, _ in stocked:
+            if dc in standard:
+                return dc
     return None
 
 
 def _agree(
     size_gb: int,
     ceiling_s: int,
+    rate: Decimal,
     question: str,
     refused: str,
     yes: bool,
@@ -253,8 +257,8 @@ def _agree(
 
     Ctrl-C writes the refusal and re-raises `KeyboardInterrupt`: decision D32.
     """
-    most = most_cost(size_gb, ceiling_s)
-    log.say(f"price: ${VOLUME_GB_MONTH}/GB a month")
+    most = most_cost(size_gb, ceiling_s, rate)
+    log.say(f"price: ${rate}/GB a month")
     log.say(f"at most ${most} for {size_gb} GB over {_hours(ceiling_s)}")
     try:
         agreed = yes or _ask(f"{question} for at most ${most}?")

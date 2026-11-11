@@ -11,9 +11,9 @@ from types import FrameType
 
 import pytest
 
-from gpunit import library, lifecycle
+from gpunit import library, lifecycle, providers
 from gpunit.library import Interrupted, Refused, Session, TeardownFailed
-from gpunit.provider import Lost, Provider, Unplaceable
+from gpunit.provider import Deleted, Lost, Provider, Unplaceable
 from gpunit.runpod import RunPod
 from gpunit.spec import Spec, load_spec
 from gpunit.state import State
@@ -80,7 +80,7 @@ def saved_handlers() -> Iterator[None]:
 class SignallingProvider(FakeProvider):
     """Send this process `SIGINT` from inside the teardown's delete."""
 
-    def delete(self, pod_id: str) -> int:
+    def delete(self, pod_id: str) -> Deleted:
         os.kill(os.getpid(), signal.SIGINT)
         return super().delete(pod_id)
 
@@ -469,7 +469,7 @@ def test_the_key_comes_from_the_mapping(
     monkeypatch.delenv("RUNPOD_API_KEY", raising=False)
     opener = session_opener()
     monkeypatch.setattr(
-        library, "RunPod", lambda environ: RunPod(environ, opener=opener)
+        providers, "RunPod", lambda environ: RunPod(environ, opener=opener)
     )
 
     with library.session(

@@ -275,7 +275,7 @@ def test_the_price_names_the_window(
 def test_the_price_counts_whole_hours_up_to_the_cent(
     size_gb: int, ceiling_s: int, most: str
 ) -> None:
-    assert most_cost(size_gb, ceiling_s) == Decimal(most)
+    assert most_cost(size_gb, ceiling_s, Decimal("0.07")) == Decimal(most)
 
 
 @pytest.mark.spec("volume:up:needs-volume-gb")

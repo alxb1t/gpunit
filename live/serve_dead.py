@@ -13,8 +13,7 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
-from gpunit import log
-from gpunit.runpod import RunPod
+from gpunit import log, providers
 from gpunit.serve import session, table
 from live.window import report, serve_window
 
@@ -83,7 +82,7 @@ def prove() -> int:
             max_hourly=None,
             yes=True,
             think=False,
-            provider=RunPod(os.environ),
+            provider=providers.build(os.environ),
         )
     failures = check(lines, code)
     if not failures:

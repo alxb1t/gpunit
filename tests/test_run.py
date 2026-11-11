@@ -11,7 +11,7 @@ from types import SimpleNamespace
 import pytest
 
 from gpunit import library, run
-from gpunit.provider import GpuInfo, Lost
+from gpunit.provider import Deleted, GpuInfo, Lost
 from gpunit.runpod import RunPod
 from gpunit.state import State
 from tests.fakes import (
@@ -48,7 +48,7 @@ class InterruptingProvider(FakeProvider):
         super().__init__()
         self.number = number
 
-    def delete(self, pod_id: str) -> int:
+    def delete(self, pod_id: str) -> Deleted:
         os.kill(os.getpid(), self.number)
         return super().delete(pod_id)
 

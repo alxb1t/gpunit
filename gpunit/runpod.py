@@ -13,7 +13,7 @@ from typing import IO, Any, TypeVar
 
 from gpunit import contract, log
 from gpunit.provider import (
-    DELETED,
+    Deleted,
     GpuInfo,
     Lost,
     NoImage,
@@ -37,6 +37,16 @@ LOG_IDLE_S = 3
 MAX_PAGES = 100
 # The most lines a log read backfills.
 MAX_TAIL = 5000
+# RunPod's standard storage under 1 TB, billed by the hour: decision D41.
+VOLUME_RATE = "0.07"
+# The statuses of a container that is not running.
+DEAD_STATUSES = ("EXITED", "ERROR", "TERMINATED")
+# The stock levels that offer the card, best first.
+STOCK_LEVELS = ("HIGH", "MEDIUM", "LOW")
+# The statuses each call succeeds with.
+DELETED = (200, 204)
+VOLUME_DELETED = (204,)
+STOPPED = (200,)
 VOLUME_PATH = "/runpod-volume"
 
 T = TypeVar("T")
@@ -72,6 +82,10 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 class RunPod:
     """RunPod's REST v2; the key travels only in a request header."""
+
+    log_cap = MAX_TAIL
+    volume_rate = VOLUME_RATE
+    key_names = ("RUNPOD_API_KEY",)
 
     def __init__(
         self,
@@ -278,18 +292,19 @@ class RunPod:
             seen.add(cursor)
         raise Lost(f"the {what} ran past {MAX_PAGES} pages")
 
-    def delete(self, pod_id: str) -> int:
-        """Delete the pod and return the HTTP status; 0 when no answer came."""
+    def delete(self, pod_id: str) -> Deleted:
+        """Delete the pod and return what happened; `no answer` when none came."""
         answer = self._call("DELETE", f"/pods/{_quote(pod_id)}")
         if answer.status not in DELETED:
             log.say(_report(f"delete of {pod_id}", answer))
-        return answer.status
+        return outcome(answer.status, DELETED)
 
-    def stop(self, pod_id: str) -> int:
-        """Stop the pod and return the HTTP status; 0 when no answer came."""
-        return self._call(
+    def stop(self, pod_id: str) -> Deleted:
+        """Stop the pod and return what happened; `no answer` when none came."""
+        answer = self._call(
             "POST", f"/pods/{_quote(pod_id)}/action", {"action": "stop"}
-        ).status
+        )
+        return outcome(answer.status, STOPPED)
 
     def stock(self, card: str) -> list[tuple[str, str]]:
         """Return (data centre, availability) where the card is in stock.
@@ -309,7 +324,7 @@ class RunPod:
             ]
         except (AttributeError, TypeError, KeyError, ValueError):
             raise Lost(_report(f"stock read of {card!r}", answer)) from None
-        return [(dc, level) for dc, level in stocked if level != "NONE"]
+        return ranked(stocked)
 
     def volume_datacenters(self) -> set[str]:
         """Return the data centres offering standard volumes; raise `Lost`."""
@@ -339,12 +354,12 @@ class RunPod:
             return volume_id
         raise Lost(_report(call, answer))
 
-    def delete_volume(self, volume_id: str) -> int:
-        """Delete the volume and return the HTTP status; 0 when no answer came."""
+    def delete_volume(self, volume_id: str) -> Deleted:
+        """Delete the volume and return what happened; `no answer` when none came."""
         answer = self._call("DELETE", f"/network-volumes/{_quote(volume_id)}")
-        if answer.status != 204:
+        if answer.status not in VOLUME_DELETED:
             log.say(_report(f"delete of volume {volume_id}", answer))
-        return answer.status
+        return outcome(answer.status, VOLUME_DELETED)
 
     def list(self, project: str, image: str) -> list[tuple[str, str]]:
         """Return (id, status) of each live project pod; raise `Lost` or `NoImage`."""
@@ -388,6 +403,29 @@ def _quote(part: str) -> str:
     return urllib.parse.quote(part, safe="")
 
 
+def outcome(status: int, taken: tuple[int, ...]) -> Deleted:
+    """Return what `status` means for a call that `taken` succeeds with.
+
+    e.g. (404, (204,)) → Deleted("missing", 404)
+    """
+    if status in taken:
+        return Deleted("gone", status)
+    if status == 404:
+        return Deleted("missing", status)
+    if status == 0:
+        return Deleted("no answer", status)
+    return Deleted("refused", status)
+
+
+def ranked(stocked: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """Return the pairs in stock, best level first, equal levels in their order.
+
+    e.g. [("A", "LOW"), ("B", "HIGH"), ("C", "NONE")] → [("B", "HIGH"), ("A", "LOW")]
+    """
+    offered = [pair for pair in stocked if pair[1] in STOCK_LEVELS]
+    return sorted(offered, key=lambda pair: STOCK_LEVELS.index(pair[1]))
+
+
 def _pod_info(body: Any) -> PodInfo:  # noqa: ANN401 — any shape until read
     direct = (body.get("ssh") or {}).get("direct") or {}
     port = direct.get("port")
@@ -396,6 +434,7 @@ def _pod_info(body: Any) -> PodInfo:  # noqa: ANN401 — any shape until read
         host=direct.get("host") or None,
         port=int(port) if port else None,
         datacenter=body.get("dataCenterId") or None,
+        dead=str(body["status"]) in DEAD_STATUSES,
     )
 
 

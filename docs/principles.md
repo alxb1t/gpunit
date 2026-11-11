@@ -93,7 +93,7 @@ and where the code breaches it. **A rule claims no more than what holds it**: a 
 | The standard library alone: the package, `boot.py`, `serve/launch.py` | [D1](decisions.md#d1--a-flat-stdlib-package-python-311-no-runtime-dependency), [D45](decisions.md#d45--bootpy-one-stdlib-file-for-python-310-no-gpunit-import) | `architecture:layers:stdlib-only`, `test_boot_imports_the_stdlib_alone` | — |
 | `sys.exit` in `cli` alone | [D4](decisions.md#d4--gpunits-lines-utc-stamped-to-stderr-or-a-sink-refused-opens-a-refusal-a-dead-pipe-swallowed-sysexit-in-cli-alone) | `architecture:layers:exit-in-cli` | — |
 | Imports point down the layers | [D49](decisions.md#d49--the-layers-held-by-teststest_layerspy) | `architecture:layers:hold` | — |
-| The seam names no provider noun | [D2](decisions.md#d2--a-provider-protocol-its-nouns-not-runpods) | nothing | breached: `gpunit/lifecycle.py::_delete_pods` compares HTTP codes (`0015·F3`); `gpunit/lifecycle.py::DEAD` and `gpunit/volume.py::STOCK` are RunPod's words (`0015·F5`); `gpunit/library.py::session` builds `RunPod` (`0015·F2`) |
+| The seam names no provider noun | [D2](decisions.md#d2--a-provider-protocol-its-nouns-not-runpods) | `architecture:layers:provider-built` | — |
 | Every scenario has a test, every test a key | [D5](decisions.md#d5--the-gate-fakes-every-provider-answer-bootpy-at-100-) | `--strict-markers` in `pyproject.toml`; the one-to-one, review | — |
 
 ### The process
@@ -104,4 +104,4 @@ and where the code breaches it. **A rule claims no more than what holds it**: a 
 | A patch adds no verb, key or exit code | [D8](decisions.md#d8--a-patch-closes-cards-it-adds-no-verb-gpunittoml-key-or-exit-code) | review | — |
 | A trust-boundary change edits the threat model | [D9](decisions.md#d9--the-threat-model-is-threat_modelmd-and-moves-with-every-trust-boundary-change) | review | — |
 | The live proofs run by hand, outside CI; the price prints first | [D6](decisions.md#d6--the-metered-proofs-run-by-hand-the-price-first-their-tails-committed-a-boot-change-rebuilds-the-images) | review | — |
-| A refactor changes no scenario | [D51](decisions.md#d51--a-refactor-changes-no-scenario-message-or-exit-code) | the unchanged tests; review | — |
+| A refactor changes no behaviour scenario; the `architecture` spec moves with it | [D51](decisions.md#d51--a-refactor-changes-no-scenario-message-or-exit-code) | the unchanged tests; review | — |
