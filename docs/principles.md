@@ -12,6 +12,7 @@ and where the code breaches it. **A rule claims no more than what holds it**: a 
 - **pending** — `.gpunit/pending`: a create was sent and no record names its pod yet; `.gpunit/volume.pending` is
   the same for a volume. **`began`** — `State.began`: this process wrote `pending` itself, so a teardown is its to
   do. **waiting** — `.gpunit/waiting`: the id of a process waiting for stock in the checkout.
+  **lock** — `.gpunit/lock`: held by `up` from its keypair to its record, and by a gone clear.
 - **refusal** — gpunit declined and left nothing it rented: a `refused:` line, `gpunit.Refused`, exit `1`, or `4`
   on no capacity and `5` on no card that fits.
   **lost** — a create's answer did not arrive, so a pod may exist: `gpunit.Lost`, exit `3`. **teardown failed** —

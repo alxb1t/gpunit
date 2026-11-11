@@ -154,8 +154,8 @@ Behaviour: [spec](../openspec/specs/spec/spec.md).
 
 **A session's state lives in `.gpunit/` beside the spec, each file replaced whole, the directory `0700`.**
 
-`gpunit/state.py::State` holds `pod`, `pending`, `known_hosts`, `key`, `key.pub`, `volume`, `volume.pending` and
-`waiting`.
+`gpunit/state.py::State` holds `pod`, `pending`, `known_hosts`, `key`, `key.pub`, `volume`, `volume.pending`,
+`waiting` and `lock`.
 
 - **Why:** One session per working directory, as isekai's dotfiles; a found directory may carry a loose mode.
 - **Made by:** `0001·D5`, `0010·D4`, `0013·D3`, `0020·D5`.
@@ -571,12 +571,13 @@ and `volume up` beside another live process's mark, and removes a dead one's.
 
 **A recorded pod whose read answers `404` and which the account's listing, read with the same key, does not hold is
 gone: `status` and `down` clear its record. Gone is no delete: the ledger records no line for it, and `.gpunit/pending`
-stays for the sweep to clear.**
+stays for the sweep to clear. The clear holds `.gpunit/lock`, which `up` holds from its keypair to its record, and clears
+only a record that still names the pod.**
 
 `gpunit/lifecycle.py::pod_gone` holds the check; `gpunit/provider.py::Provider.pod` is the read and
-`gpunit/provider.py::Provider.pod_ids` the listing.
+`gpunit/provider.py::Provider.pod_ids` the listing; `gpunit/state.py::State.clear_gone` is the clear.
 
 - **Why:** A key that fails the listing cannot pass for gone, and a pod deleted outside gpunit left a record nothing
   cleared. A valid key of another RunPod account reads a pod as gone too; the person runs one account, so the case
   does not apply.
-- **Made by:** `0021·D1`.
+- **Made by:** `0021·D1`, `0021·D11`.

@@ -80,30 +80,33 @@ def up(spec: Spec, provider: Provider, state: State) -> Record:
     spec = _guarded(spec, provider, state)
     cards = placeable(spec, provider)
 
-    pubkey = state.keygen(pod_name(spec.project))
-    nonce = NONCE()
-    deadline, until = stock_deadline(spec)
-    attempt = 1
-    try:
-        while True:
-            # Before the create, so a log read `since` it misses none of the pod's
-            # lines within the provider's tail (decision D22).
-            created = log.utc()
-            state.mark_pending()
-            pod_id = _create(spec, provider, cards, pubkey, nonce)
-            if pod_id is not None:
-                break
-            # No pending mark outlives a round of 400s, so no create began: D56.
-            state.clear_round()
-            if not stock_round(state, attempt, deadline, until):
-                log.refuse("no card in 'gpus' was placed", log.NO_CAPACITY)
-            attempt += 1
-            # Another session, or the window's end, may have come during the wait.
-            spec = _guarded(spec, provider, state)
-    finally:
-        state.clear_waiting()
-    record = Record(pod_id, spec.image, host=None, port=None, created=created)
-    state.write(record)
+    # Held from the keypair to the record: a gone clear in another process must not
+    # take this session's key or record.
+    with state.locked():
+        pubkey = state.keygen(pod_name(spec.project))
+        nonce = NONCE()
+        deadline, until = stock_deadline(spec)
+        attempt = 1
+        try:
+            while True:
+                # Before the create, so a log read `since` it misses none of the
+                # pod's lines within the provider's tail (decision D22).
+                created = log.utc()
+                state.mark_pending()
+                pod_id = _create(spec, provider, cards, pubkey, nonce)
+                if pod_id is not None:
+                    break
+                # No pending mark outlives a round of 400s, so no create began: D56.
+                state.clear_round()
+                if not stock_round(state, attempt, deadline, until):
+                    log.refuse("no card in 'gpus' was placed", log.NO_CAPACITY)
+                attempt += 1
+                # Another session, or the window's end, may have come during the wait.
+                spec = _guarded(spec, provider, state)
+        finally:
+            state.clear_waiting()
+        record = Record(pod_id, spec.image, host=None, port=None, created=created)
+        state.write(record)
     state.clear_pending()
     log.say(f"pod {pod_id} created; waiting for SSH")
 
@@ -160,8 +163,11 @@ def status(provider: Callable[[], Provider], state: State, *, as_json: bool) -> 
     record = state.read()
     if record is not None:
         info = built().get(record.id)
-        if info is None and pod_gone(built(), record.id):
-            state.clear_session()
+        if (
+            info is None
+            and pod_gone(built(), record.id)
+            and state.clear_gone(record.id)
+        ):
             log.say(f"pod {record.id} is gone; its record is cleared")
             record = None
         else:
@@ -192,8 +198,7 @@ def _delete_pods(spec: Spec, provider: Provider, state: State) -> int:
         if code in DELETED:
             state.clear_session()
             log.say(f"pod {record.id} deleted")
-        elif pod_gone(provider, record.id):
-            state.clear_session()
+        elif pod_gone(provider, record.id) and state.clear_gone(record.id):
             log.say(f"pod {record.id} is gone; its record is cleared")
         elif code == 404:
             # A wrong key also gets a 404: a false "gone" leaves a pod billing.

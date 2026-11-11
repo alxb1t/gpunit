@@ -1,4 +1,6 @@
+import fcntl
 import json
+import os
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -33,36 +35,60 @@ def test_no_record(cwd: Path, capsys: pytest.CaptureFixture[str]) -> None:
 
 @pytest.mark.spec("cli:status:gone-clears")
 @pytest.mark.spec("cli:status:listed-keeps-record")
+@pytest.mark.spec("session:down:gone-clears-its-own")
 @pytest.mark.parametrize(
-    ("pods", "account_pods", "cleared"),
+    ("pods", "account_pods", "cleared", "held"),
     [
-        ({"pod-1": Unknown("RunPod does not know pod 'pod-1'")}, [], True),
-        ({"pod-1": Unknown("RunPod does not know pod 'pod-1'")}, ["pod-1"], False),
+        ({"pod-1": Unknown("RunPod does not know pod 'pod-1'")}, [], True, False),
+        (
+            {"pod-1": Unknown("RunPod does not know pod 'pod-1'")},
+            ["pod-1"],
+            False,
+            False,
+        ),
         (
             {"pod-1": Unknown("RunPod does not know pod 'pod-1'")},
             Lost("pod listing returned HTTP 403"),
             False,
+            False,
         ),
-        ({}, [], False),
+        ({}, [], False, False),
+        ({"pod-1": Unknown("RunPod does not know pod 'pod-1'")}, [], False, True),
     ],
-    ids=["gone", "still-listed", "listing-lost", "read-lost"],
+    ids=["gone", "still-listed", "listing-lost", "read-lost", "held"],
 )
 def test_status_clears_a_gone_pod(
     pods: dict[str, PodInfo | Exception],
     account_pods: list[str] | Exception,
     cleared: bool,
+    held: bool,
     cwd: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    State(cwd).write(RECORD)
+    state = State(cwd)
+    state.write(RECORD)
     provider = FakeProvider(gets=[None], pods=pods, account_pods=account_pods)
 
-    argv = ["status", "--json"] if cleared else ["status"]
-    assert gpunit(argv, provider=provider) == 0
+    argv = ["status", "--json"] if cleared or held else ["status"]
+    if held:
+        holder = os.open(state.lock, os.O_RDWR | os.O_CREAT, 0o600)
+        fcntl.flock(holder, fcntl.LOCK_EX)
+    try:
+        assert gpunit(argv, provider=provider) == 0
+    finally:
+        if held:
+            os.close(holder)
     captured = capsys.readouterr()
     assert (State(cwd).read() is None) is cleared
     assert ("pod pod-1 is gone; its record is cleared" in captured.err) is cleared
-    assert (captured.out == "null\n") if cleared else ("status=UNKNOWN" in captured.out)
+    if held:
+        assert json.loads(captured.out)["status"] == "UNKNOWN"
+    else:
+        assert (
+            (captured.out == "null\n")
+            if cleared
+            else ("status=UNKNOWN" in captured.out)
+        )
 
 
 @pytest.mark.spec("volume:status:named")

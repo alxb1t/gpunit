@@ -1,8 +1,11 @@
 """Read and write the session's files under `.gpunit/`, and name gpunit's home state."""
 
+import fcntl
 import json
 import os
 import subprocess
+from collections.abc import Generator
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -59,6 +62,7 @@ class State:
         self.volume = self.dir / "volume"
         self.volume_pending = self.dir / "volume.pending"
         self.waiting = self.dir / "waiting"
+        self.lock = self.dir / "lock"
         # Set by this process's own `mark_pending`: a create began here, whatever
         # files an earlier session left.
         self.began = False
@@ -165,6 +169,39 @@ class State:
         """Remove the record, the host key and the keypair; `pending` is the sweep's."""
         for path in (self.pod, self.known_hosts, self.key, self.key_pub):
             path.unlink(missing_ok=True)
+
+    @contextmanager
+    def locked(self) -> Generator[None]:
+        """Hold .gpunit/lock, waiting for it."""
+        descriptor = self._open_lock()
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX)
+            yield
+        finally:
+            os.close(descriptor)
+
+    def clear_gone(self, pod_id: str) -> bool:
+        """Clear the session when the record names the pod and the lock is free.
+
+        Return True when cleared; a lock another process holds is not waited for.
+        """
+        descriptor = self._open_lock()
+        try:
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                return False
+            record = self.read()
+            if record is None or record.id != pod_id:
+                return False
+            self.clear_session()
+            return True
+        finally:
+            os.close(descriptor)
+
+    def _open_lock(self) -> int:
+        self._mkdir()
+        return os.open(self.lock, os.O_RDWR | os.O_CREAT, 0o600)
 
     def _mkdir(self) -> None:
         self.dir.mkdir(mode=0o700, exist_ok=True)

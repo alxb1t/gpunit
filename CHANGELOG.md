@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The guide states the rule: decision D57 holds it, D23 and D55 point to it, and `docs/principles.md`, `docs/usage.md`,
   `docs/data-flow.md`, `README.md` and `THREAT_MODEL.md` (T47) carry it. The principles row for pinned inputs names
   its breach (`0021`).
+- A gone clear takes `.gpunit/lock` without waiting and clears only a record that names the judged pod; `up` holds the
+  lock from its keypair to its record. A `status` or `down` overlapping an `up` no longer removes the new session's
+  key and record. D57, the principles words and the threat model (T35, T47) carry it (`0021`).
 
 ## [0.12.1] - 2026-11-04
 
